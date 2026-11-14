@@ -1,0 +1,199 @@
+# IDE: órdenes y salidas — TradingNote
+URL: https://tradingnote.co/es/docs/ide-ordenes
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+IDE: indicadores y datos
+IDE: órdenes y salidas
+IDE: parámetros, validación e historial
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+IDE: órdenes y salidas
+IDE: órdenes y salidas
+Abrir y cerrar posiciones, calcular el tamaño, poner stops y take-profits, y escribir condiciones de entrada.
+Abrir en la app
+7
+min
+La API de trading dentro de on_bar(): self.buy / self.sell para abrir, self.close() para cerrar y self.log() para dejar rastros.
+Aquí está la API para operar desde tu código: abrir posiciones largas o cortas, dimensionarlas correctamente, asignarles stops y objetivos, y cerrarlas cuando quieras. Todos los métodos están disponibles dentro de tu clase de estrategia.
+Abrir una posición
+`self.buy(...)` abre una posición larga (compra) y `self.sell(...)` abre una posición corta (venta). Ambos métodos aceptan los mismos argumentos para dimensionar y fijar salidas.
+python
+self.buy(sl_atr=1.5, tp_atr=3.0)    # largo con SL a 1.5*ATR y TP a 3*ATR
+self.sell(sl_atr=1.5, tp_atr=3.0)   # corto
+Las unidades de sl_atr y tp_atr son múltiplos del ATR calculado en cada barra.
+Tamaño de la posición (obligatorio elegir uno)
+Debes indicar cómo se calcula el tamaño de cada orden con uno de estos tres argumentos. Si no incluyes ninguno, la orden no sabe cuánto arriesgar y no se ejecutará.
+Argumento
+Qué hace
+Ejemplo
+lots=0.1
+Lotes fijos, sin importar el balance ni la volatilidad.
+lots=0.05
+risk_pct=0.02
+Arriesga el 2% del balance. Calcula los lotes automáticamente según la distancia al SL. Es una FRACCIÓN, no un porcentaje: 0.02 = 2%, 0.005 = 0,5%.
+risk_pct=0.005 (0,5%)
+risk_usd=100
+Arriesga exactamente 100 USD fijos por operación.
+risk_usd=50
+python
+self.buy(sl_atr=1.5, tp_atr=3.0, lots=0.1)
+self.buy(sl_atr=1.5, tp_atr=3.0, risk_pct=0.02)
+self.buy(sl_atr=1.5, tp_atr=3.0, risk_usd=100)
+Elige solo uno de los tres. Combinarlos generará un error de validación.
+`risk_pct` es una FRACCIÓN del balance, no un porcentaje. `risk_pct=0.5` significa arriesgar el 50% de la cuenta en una sola operación — si querías 0,5%, escribe `risk_pct=0.005`. Para que ese error de unidades no liquide una cuenta, por encima de `max_risk_pct` (atributo de clase, por defecto `0.2` = 20%) la orden se rechaza con un error que explica cómo escribirlo. Si de verdad quieres arriesgar más, declara `max_risk_pct = 0.5` (o `0` = sin tope) en tu clase.
+python
+class MiBot(Strategy):
+    max_risk_pct = 0.2   # tope por defecto: 20% del balance por operación
+
+    def on_bar(self):
+        self.buy(sl_atr=1.5, tp_atr=3.0, risk_pct=0.005)  # 0,5% del balance
+        # self.buy(..., risk_pct=0.5)  → ERROR: 0.5 = 50%. Para 0,5% usa 0.005
+El tope solo frena valores que casi seguro son un error de unidades. Todo lo que esté por debajo sigue funcionando exactamente igual que antes.
+`risk_pct` es lo más recomendable: mantiene el riesgo constante aunque cambie el balance o la volatilidad del instrumento. También existe `self.sizer` con métodos `fixed`, `risk_percent`, `risk_currency` y `kelly` para cálculos avanzados de lotaje cuando necesites lógica más elaborada.
+Stops en porcentaje del precio: sl_pct y tp_pct
+Si prefieres fijar el stop y el objetivo como distancia porcentual al precio de entrada en vez de múltiplos de ATR, usa `sl_pct` y `tp_pct`. Son FRACCIONES del precio: `0.01` = 1%, `0.005` = 0,5%. En un largo, `sl_pct=0.01` pone el SL en `entrada × 0.99` y `tp_pct=0.02` el TP en `entrada × 1.02`; en un corto, al revés. Cada lado acepta UNA de las dos formas (`sl_atr` o `sl_pct`, `tp_atr` o `tp_pct`) y se pueden mezclar lados: `sl_pct=0.01, tp_atr=4.0` es válido.
+python
+self.buy(sl_pct=0.01, tp_pct=0.02, risk_pct=0.01)   # SL −1%, TP +2% del precio de entrada
+self.sell(sl_pct=0.01, tp_pct=0.02, risk_pct=0.01)  # corto: SL +1%, TP −2%
+self.buy(sl_pct=0.015, tp_atr=4.0, risk_pct=0.01)   # mezclar lados: SL en %, TP en ATR
+
+# self.buy(sl_atr=1.5, sl_pct=0.01)  → ERROR: el mismo lado dos veces
+# self.buy(sl_pct=1.0)               → ERROR: 1.0 = 100% del precio; para 1% usa 0.01
+Reglas: cada valor debe ser mayor que 0 y como máximo 0.5 (50% del precio). No se combinan con los exit_mode `fixed_pips` ni `percent` (ya definen su propio SL/TP), y `sl_pct` tampoco con `structure` (su SL lo pone la estructura; `tp_pct` sí). Con `breakeven`, `trailing_atr`, `time_exit` y `partial_tp` funcionan como el SL/TP inicial.
+Los dos motores del Probador (velas y ticks) calculan los mismos niveles, y el puente en vivo recibe el SL/TP ya convertido a precio absoluto, así que la orden real en el broker lleva exactamente el porcentaje que pediste.
+Stops y take-profits: modos de salida
+Por defecto se usan múltiplos de ATR con `sl_atr` y `tp_atr`, pero puedes pasar un argumento `exit_mode` para cambiar el comportamiento de salida. Cada modo tiene sus propios parámetros.
+Modo
+Para qué
+Parámetros
+atr (por defecto)
+SL y TP en múltiplos del ATR actual, o en porcentaje del precio con sl_pct/tp_pct.
+sl_atr, tp_atr (o sl_pct, tp_pct)
+fixed_pips
+Distancias fijas en pips.
+slPips, tpPips
+percent
+SL y TP como porcentaje del precio de entrada.
+slPct, tpPct
+trailing_atr
+Trailing stop que persigue al precio a medida que sube.
+trailAtr
+breakeven
+Mueve el SL al precio de entrada cuando la posición gana X ATR.
+beActivationAtr (+ sl_atr, tp_atr para el SL/TP inicial)
+structure
+SL en el mínimo (o máximo para cortos) de las últimas N velas.
+lookback (+ tp_atr para el objetivo)
+time_exit
+Cierra la posición automáticamente tras N velas.
+maxBars (+ sl_atr para protección)
+partial_tp
+Cierra un porcentaje de la posición en TP1, el resto en TP2.
+tp1Atr, tp2Atr, partialPct
+python
+# ATR (por defecto)
+self.buy(sl_atr=1.5, tp_atr=3.0)
+
+# Pips fijos
+self.buy(exit_mode={"type": "fixed_pips", "slPips": 20, "tpPips": 40})
+
+# Porcentaje del precio
+self.buy(exit_mode={"type": "percent", "slPct": 1.0, "tpPct": 2.0})
+
+# Trailing stop (persigue al precio)
+self.buy(exit_mode={"type": "trailing_atr", "trailAtr": 1.5})
+
+# Breakeven (mueve el SL a entrada al ganar X*ATR)
+self.buy(exit_mode={"type": "breakeven", "beActivationAtr": 1.0}, sl_atr=2.0, tp_atr=4.0)
+
+# Estructura (SL en el mínimo de las últimas N velas)
+self.buy(exit_mode={"type": "structure", "lookback": 10}, tp_atr=3.0)
+
+# Salida por tiempo (cierra tras N velas)
+self.buy(exit_mode={"type": "time_exit", "maxBars": 20}, sl_atr=2.0)
+
+# TP parcial (cierra parte en TP1, resto en TP2)
+self.buy(exit_mode={"type": "partial_tp", "tp1Atr": 1.5, "tp2Atr": 3.0, "partialPct": 50})
+Puedes combinar exit_mode con sl_atr/tp_atr cuando el modo lo requiera (por ejemplo, breakeven necesita un SL inicial).
+Cerrar posiciones
+Método
+Qué cierra
+self.close()
+La primera posición abierta.
+self.close(position_id=N)
+Una posición concreta identificada por su ID.
+self.close_all()
+Todas las posiciones abiertas.
+self.close_longs()
+Solo las posiciones largas (compras).
+self.close_shorts()
+Solo las posiciones cortas (ventas).
+self.get_position(id)
+Devuelve el objeto de una posición abierta por su ID.
+self.get_positions_by_tag(tag)
+Devuelve todas las posiciones que tengan la etiqueta indicada.
+Escribir condiciones de entrada y salida
+Las condiciones son Python puro: comparas valores de indicadores y precios usando los operadores habituales. La tabla siguiente muestra los patrones más comunes.
+Quieres detectar
+Cómo se escribe
+Precio por encima de la EMA
+self.bar.close > self.ema.value
+RSI en sobreventa
+self.rsi.value < 30
+Cruce alcista precio/EMA
+self.data.close.crossover(self.ema.value)
+Cruce bajista precio/EMA
+self.data.close.crossunder(self.ema.value)
+Cruce alcista del MACD sobre su señal
+self.macd.prev < self.macd.signal and self.macd.value > self.macd.signal
+Ruptura de máximos de las últimas 20 velas
+self.bar.close > self.data.high.highest(20)
+python
+def on_bar(self):
+    tendencia_alcista = self.bar.close > self.ema.value
+    momentum_ok = self.rsi.value < 35
+    if not self.in_position and tendencia_alcista and momentum_ok:
+        self.buy(sl_atr=1.5, tp_atr=3.0, risk_pct=0.01)
+Combina condiciones con and / or igual que en cualquier programa Python. Aquí exigimos que se cumplan las dos antes de entrar.
+Varias posiciones a la vez (avanzado)
+Por defecto tu estrategia trabaja con una sola posición activa. Si quieres operar varias a la vez, establece `max_positions` en la clase y usa la propiedad `position_count` para controlarlo. Las etiquetas (`tag`) te ayudan a agruparlas y buscarlas después.
+python
+class MiBot(Strategy):
+    max_positions = 3
+
+    def on_bar(self):
+        if self.position_count < self.max_positions and self.entrada():
+            self.buy(sl_atr=1.5, tag="scalp", risk_pct=0.01)
+        for p in self.get_positions_by_tag("scalp"):
+            if p.pnl_pct > 0.015:
+                self.close(position_id=p.id)
+Abre hasta 3 posiciones en paralelo y cierra cada una en cuanto supere el 1.5 % de ganancia.
+Si no indicas `lots`, `risk_pct` o `risk_usd`, la orden no sabe cuánto arriesgar y no se ejecutará. Elige siempre uno de los tres antes de hacer tu primera prueba. Y recuerda: `risk_pct` es fracción (0.01 = 1%).
+Usa `self.log("...")` para dejar rastros de depuración y entender por qué tu bot entró o salió en un momento concreto cuando revises el backtest.
+Para aprender a ajustar el comportamiento de tu estrategia con parámetros configurables y a revisar el historial de operaciones, continúa con el artículo «IDE: parámetros, validación e historial».

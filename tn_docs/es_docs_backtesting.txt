@@ -1,0 +1,111 @@
+# Backtesting — TradingNote
+URL: https://tradingnote.co/es/docs/backtesting
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Backtesting
+Backtesting
+Prueba una estrategia contra datos históricos con costos reales antes de arriesgar dinero — y aprende a leer los resultados como un profesional.
+Abrir en la app
+11
+min
+Backtesting de algoritmos: tutorial completo
+Backtesting manual: registra y evalúa tu estrategia
+Backtesting significa «probar hacia atrás»: tomar una estrategia y ver cómo se habría comportado en el pasado, usando datos históricos reales, vela por vela. Es el paso de validación antes de poner dinero en juego. La diferencia entre un backtest serio y uno de juguete está en una sola cosa: si incluye los costos de verdad. TradingNote los incluye siempre (comisión, swap, spread y deslizamiento), así que el resultado es realista y no una fantasía optimista.
+Cómo funciona, paso a paso
+1
+Elige qué probar
+Seleccionas el algoritmo o estrategia, el instrumento (EURUSD, US30, XAUUSD…), el timeframe (M5, H1, D1…) y el rango de fechas histórico sobre el que quieres probar.
+2
+Define los costos de tu cuenta
+Spread, comisión por lote y swap. Si pruebas contra una cuenta conectada, TradingNote usa las specs reales de ese bróker; si es genérico, usa valores por defecto del instrumento que puedes ajustar.
+3
+Ejecuta el backtest
+La plataforma simula vela por vela cada operación que la estrategia habría hecho, aplicando los costos en cada entrada y salida, y descontando swap por cada noche que la posición quede abierta.
+4
+Lee los resultados
+Obtienes la curva de equity, las métricas (Sharpe, Profit Factor, Drawdown…) y la lista completa de operaciones simuladas, para juzgar si la estrategia vale la pena.
+Los costos reales: el detalle que lo cambia todo
+La mayoría de los backtests de internet ignoran los costos y por eso muestran curvas hermosas que jamás se repiten en real. Una estrategia de scalping puede verse rentable sin costos y perder dinero en cuanto restas spread y comisión. Estos son los cuatro costos que TradingNote descuenta:
+Costo
+Qué es
+A quién golpea más
+Spread
+La diferencia entre compra y venta. Lo pagas al entrar.
+Scalping y timeframes bajos (M1-M5).
+Comisión
+Cargo fijo por lote que cobra el bróker por abrir y cerrar.
+Estrategias de muchas operaciones.
+Swap
+Interés por mantener la posición abierta de un día para otro.
+Swing y posiciones largas (días/semanas).
+Deslizamiento
+La diferencia entre el precio que pediste y el que te dieron.
+Noticias y baja liquidez (rollover, madrugada).
+Regla de oro: si una estrategia solo es rentable con costos en cero, no es una estrategia, es un espejismo. El backtest con costos reales es justamente el filtro que separa lo que funciona de lo que solo se ve bonito.
+Dos formas de hacer un backtest
+Por algoritmo
+Manual (replay)
+Pruebas un algoritmo que ya creaste o exploraste, con sus reglas de entrada/salida y sus indicadores. Ideal para validar un algoritmo concreto antes de llevarlo a vivo o a un portafolio. Se conecta directamente con el Probador de Algoritmos, donde además puedes optimizar parámetros y correr la validación de robustez.
+El backtest manual reproduce el gráfico histórico como si el tiempo avanzara, y tú decides cuándo entrar y salir. Sirve para entrenar tu criterio discrecional, validar una idea a mano antes de programarla, o estudiar cómo se comportó un activo en un período concreto. Es la versión «entrenamiento de piloto». Cada operación se mide en lotes estándar con su tamaño de contrato real (100.000 unidades en forex, 100 oz en oro, 1 en índices y cripto), convertida a dólares y con comisión y swap descontados. Y si conectas Claude a TradingNote, puedes practicar también desde el chat: Claude avanza el replay, mira el gráfico con tus indicadores tal como estaba en ese momento, abre, ajusta y cierra operaciones simuladas y anota el porqué de cada una — sin ver nunca las velas que aún no han pasado. Es la misma sesión que ves en la web, así que puedes empezar en un lado y seguir en el otro.
+Las métricas, explicadas en cristiano
+Métrica
+Qué mide
+Qué buscar
+Ratio de Sharpe
+Cuánto ganas por cada unidad de riesgo (volatilidad) que asumes.
+Por encima de 1 es bueno; por encima de 2, excelente. Pero ojo al sobreajuste.
+Profit Factor
+Cuánto ganas por cada dólar que pierdes (ganancia bruta / pérdida bruta).
+Mayor a 1 es rentable; 1.5–2.5 es sólido y sostenible.
+Drawdown máximo
+La peor caída desde un pico hasta un valle. Tu dolor máximo.
+Cuanto menor, mejor. Pregúntate: ¿aguantaría esa racha sin cerrar todo?
+Win rate
+El porcentaje de operaciones ganadoras.
+No es lo más importante: un 40% con buen R:R bate a un 70% con malo.
+Nº de operaciones
+Cuántas operaciones generó el backtest.
+Menos de ~100 no es estadísticamente fiable: podría ser suerte.
+TradingNote calcula el Sharpe con metodología profesional (retornos diarios × √252, estilo López de Prado). Por eso sus valores no coinciden con los de MetaTrader: son comparables a la literatura académica, no a otra plataforma. Un Sharpe de 1.5 aquí es un Sharpe de 1.5 «de verdad».
+Una sutileza que descuadra a muchos: neto vs bruto
+Cuando compares las métricas del backtest con las de tu cuenta real, asegúrate de comparar lo mismo. TradingNote reporta el resultado NETO de cada operación — el que ya incluye comisión y swap — no el bruto. Es el equivalente exacto a la «ganancia» que ves en tu bróker. Si en algún reporte mezclas el bruto, los números no van a cuadrar.
+ts
+// El resultado de cada operación = neto (incluye comisión + swap)
+const resultado = operacion.pnl   // ✅ lo que cuadra con tu broker
+
+// NO el bruto:
+const resultado = operacion.profit // ❌ no incluye costos → infla las métricas
+Por qué tu backtest y tu cuenta real deben usar siempre el resultado neto.
+Backtests «ligeros» vs «pesados»
+Un backtest «ligero» es una sola corrida sobre un rango razonable: instantáneo y sin límite. Un backtest «pesado» (rangos de varios años o muchas combinaciones de parámetros a la vez) consume cupo mensual según tu plan, porque corre en infraestructura dedicada. Si te quedas sin cupo, continúas el mes siguiente o subes de plan.
+El error nº1: confiar en un solo backtest
+Un backtest excelente NO garantiza ganancias futuras. Es fácil encontrar, por pura casualidad, una combinación de parámetros que se ve perfecta en el pasado y fracasa en cuanto la mercado cambia. A eso se le llama sobreajuste (overfitting), y es el cementerio de la mayoría de las estrategias.
+Nunca lleves a vivo un algoritmo basándote solo en un backtest bonito. Pásalo siempre por los tres filtros de robustez ortogonales de «Mis Algoritmos»: DSR (descuenta la suerte del muestreo), Walk-Forward (lo prueba en datos que nunca vio) y Multiverso (lo somete a miles de mercados sintéticos). Solo lo que sobrevive a los tres merece tu dinero.

@@ -1,0 +1,183 @@
+# Salidas, riesgo y horarios — TradingNote
+URL: https://tradingnote.co/es/docs/explorar-gestion
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Salidas, riesgo y horarios
+Salidas, riesgo y horarios
+Cómo la exploración prueba stops y take-profits, las reglas de riesgo y las franjas horarias de operación.
+Abrir en la app
+7
+min
+La pestaña «Gestión de TP/SL»: cada modo de salida (ATR, trailing, breakeven…) con su propio rango «Desde / Pasos / Hasta» que la exploración barre.
+Encontrar una buena señal de entrada es solo la mitad del trabajo. Cómo y cuándo sales de una operación define la mayoría del resultado final: un buen setup con una salida pobre pierde dinero, y un setup mediocre con salidas bien calibradas puede ser rentable. En este apartado configuras los tres pilares que la exploración prueba junto con las señales: los modos de salida (TP/SL), las reglas de gestión de riesgo y las franjas horarias. Al igual que los indicadores, la mayoría de estos parámetros se barren por rango (Desde / Pasos / Hasta), de modo que la exploración prueba distintos valores y se queda con los que mejor funcionan.
+Gestión de TP/SL
+Gestión de Riesgo
+Horarios
+Gestión de TP/SL (modos de salida)
+La exploración soporta nueve modos de salida. Puedes habilitar varios a la vez y la exploración prueba cuál rinde mejor para cada combinación de indicadores. Todos los parámetros numéricos (multiplicadores, distancias, lookbacks) se barren en el rango que configures: la plataforma elige automáticamente el valor óptimo dentro de ese rango.
+Modo
+Qué hace
+Parámetros y rango típico
+ATR clásico
+Coloca el SL y el TP como múltiplos del ATR(14). Es el modo más usado: adapta la distancia de salida a la volatilidad reciente del activo.
+slAtr: 0.5–3.0 · tpAtr: 0.5–6.0
+Pips fijos
+SL y TP en una cantidad fija de pips, sin importar la volatilidad. Útil para activos con spreads estables y volatilidad predecible.
+slPips: 10–50 · tpPips: 20–100
+Porcentaje
+SL y TP como porcentaje del precio de entrada. Escala automáticamente con el precio del activo.
+slPct: 0.2–2 % · tpPct: 0.5–4 %
+Trailing Stop (ATR)
+El SL sigue al precio hacia la ganancia manteniéndose a una distancia ATR fija. Deja correr las ganancias sin dejar de proteger las abiertas.
+trailAtr: 0.5–2.5
+Breakeven
+Cuando la operación lleva X·ATR de ganancia, mueve el SL al precio de entrada. Convierte una operación ganadora en libre de riesgo.
+beActivationAtr: 0.5–2.0
+Estructura (swing)
+Coloca el SL en el mínimo (long) o máximo (short) de las últimas N velas. Respeta la estructura de precio en lugar de una distancia arbitraria.
+lookback: 10–50 velas
+Salida por tiempo
+Cierra la operación después de N velas independientemente del resultado. Evita que una operación permanezca abierta indefinidamente.
+maxBars: 5–50
+TP parcial
+Cierra una fracción de la posición en TP1 (más cercano) y el resto sigue hasta TP2 (más lejano). Asegura ganancia parcial y deja correr el remanente.
+tp1Atr: 0.5–2 · tp2Atr: 2–6 · partialPct: 30–70 %
+ATR suavizado
+Igual que el ATR clásico pero usa la media del ATR(14) de las últimas 50 velas. Reduce el impacto de picos de volatilidad puntuales.
+slMult: 0.5–3 · tpMult: 1–6
+Puedes activar varios modos a la vez: la exploración prueba cada uno de forma independiente y te muestra qué modo rindió mejor para cada algoritmo. Empieza con ATR clásico más Trailing Stop para tener una base sólida.
+Gestión de riesgo
+Las reglas de riesgo determinan cuándo el algoritmo detiene su operativa: máximo de pérdidas diarias, semanales o totales, límites de ganancias y controles operativos por operación. Configurarlas correctamente es crítico si vas a operar una cuenta real o de fondeo: la exploración las aplicará durante el backtest, de modo que los resultados que ves ya respetan esos límites.
+Regla
+Categoría
+Qué limita
+Rango típico
+maxDailyGainPct
+Ganancias
+Ganancia máxima en un día. Al alcanzarla, el algo deja de abrir nuevas operaciones ese día.
+1–5 %
+maxWeeklyGainPct
+Ganancias
+Ganancia máxima en la semana. Detiene la operativa el resto de la semana al alcanzarse.
+2–10 %
+maxMonthlyGainPct
+Ganancias
+Ganancia máxima en el mes. Al alcanzarla, el algo no abre nuevas operaciones hasta el mes siguiente.
+5–20 %
+maxAccountGainPct
+Ganancias
+Objetivo de ganancia total de la cuenta. Cuando el equity supera este porcentaje sobre el balance inicial, el algo se detiene.
+10–50 %
+maxConsecutiveWins
+Ganancias
+Detiene el algo tras N victorias consecutivas. Evita operar en modo de sobreconfianza.
+3–10
+maxDailyLossPct
+Pérdidas
+Pérdida máxima en un día. Al alcanzarla, el algo no abre nuevas operaciones ese día. Es el límite más importante para cuentas de fondeo.
+1–5 % (prop firms: 2–5 %)
+maxWeeklyLossPct
+Pérdidas
+Pérdida máxima en la semana. Al alcanzarla, el algo no opera el resto de la semana.
+2–10 %
+maxMonthlyLossPct
+Pérdidas
+Pérdida máxima en el mes. Si se alcanza, el algo no abre más operaciones hasta el mes siguiente.
+5–20 %
+maxAccountLossPct
+Pérdidas
+Drawdown máximo total permitido de la cuenta. Si el equity cae más de este porcentaje desde el balance inicial, el algo se detiene definitivamente.
+5–20 % (prop firms: 6–12 %)
+maxConsecutiveLosses
+Pérdidas
+Detiene el algo tras N pérdidas consecutivas. Protege contra rachas de pérdidas en condiciones de mercado adversas.
+3–10
+riskPerTrade
+Operativa
+Porcentaje del capital que se arriesga en cada operación. Controla el tamaño del lote junto con la distancia del SL.
+0.5–3 %
+rewardRiskRatio
+Operativa
+Relación mínima TP/SL aceptada. La exploración descarta operaciones cuya relación riesgo-beneficio esté por debajo de este valor.
+1–5
+maxOpenTrades
+Operativa
+Máximo de operaciones abiertas simultáneamente. Evita que el algo acumule exposición ilimitada en condiciones de mercado rápidas.
+1–5
+maxDailyTrades
+Operativa
+Máximo de operaciones que el algo puede abrir en un mismo día. Controla el sobretrading en días de alta actividad de señales.
+1–20
+Si vas a operar una cuenta de fondeo (prop firm), ajusta maxDailyLossPct y maxAccountLossPct a los límites de tu reto desde el principio. Así los resultados del backtest ya reflejan lo que el algoritmo puede ganar respetando esas reglas, no en un vacío de riesgo infinito.
+Horarios (sesiones de trading)
+Los mercados financieros no tienen la misma liquidez ni volatilidad a todas horas. Limitar el horario de operación a la sesión natural del activo suele mejorar la calidad de las señales y reducir el número de operaciones falsas. La exploración prueba tu algoritmo únicamente dentro de la franja que configures.
+Sesión
+Horario (UTC)
+Notas
+24 horas
+00:00–24:00 (sin restricción)
+El algo opera cualquier hora. Recomendado solo si el activo tiene liquidez continua (cripto) o si ya filtraste por otras reglas.
+Sydney
+21:00–06:00 UTC
+Liquidez baja en la mayoría de activos. AUD y NZD tienen algo más de actividad. Spreads altos en pares no relacionados con el Pacífico.
+Tokio
+00:00–09:00 UTC
+JPY, AUD y NZD están activos. Pares cruzados con JPY tienen su mejor movimiento aquí. Volumen moderado en índices asiáticos.
+Londres
+07:00–16:00 UTC
+Mayor volumen en forex. EUR, GBP y CHF tienen la mayor actividad del día. Incluye los primeros 4 horas de NY, con solapamiento de alta liquidez.
+Nueva York
+12:00–21:00 UTC
+Sesión dominante para USD, índices americanos (USTEC, US30, SPX) y commodities como el oro. Alta actividad con datos macro americanos.
+Overlap Tokio-Londres
+07:00–09:00 UTC
+Ventana corta pero con volatilidad elevada. Buena para estrategias de ruptura en JPY y pares europeos.
+Overlap Londres-NY
+12:00–16:00 UTC
+Máxima liquidez del día. Las 4 horas con mayor volumen en todos los mercados. Ideal para estrategias que necesitan movimiento limpio y spreads ajustados.
+Reglas de horario adicionales
+Además de la franja horaria, puedes activar reglas específicas que la exploración aplica como condiciones adicionales sobre cuándo puede operar el algoritmo:
+closeBeforeNyClose: cierra las posiciones y bloquea aperturas desde las 20:00 UTC (1h antes del cierre de NY). Útil para no cargar posiciones overnight en sesiones de baja liquidez.
+closeBeforeWeekend: cierra todas las posiciones abiertas el viernes desde las 19:00 UTC. Evita el riesgo de gaps del domingo cuando los mercados reabren.
+noNewTradesFriday: no abre nuevas operaciones el viernes. Las posiciones ya abiertas siguen su gestión normal; simplemente no se generan entradas nuevas.
+noMondayOpen: no opera hasta la 01:00 UTC del lunes. Da tiempo al mercado para absorber el gap del domingo antes de entrar.
+avoidRollover: evita la ventana 20:55–21:10 UTC donde los brokers aplican swaps y el libro de órdenes puede tener saltos de precio anómalos.
+Limitar el horario suele mejorar la calidad de las operaciones: muchas estrategias solo funcionan bien en su sesión natural. Un algoritmo pensado para el dólar americano tiene sentido en el overlap Londres-NY, no a las 03:00 UTC con spreads triples. Si ves que tu exploración genera pocas operaciones, amplía el rango horario; si genera muchas de baja calidad, restringe a la sesión de mayor liquidez para ese activo.
+Cerrar posiciones antes del fin de semana evita el riesgo de gaps del domingo, pero recorta el número de operaciones y puede penalizar estrategias con holds largos. Es un trade-off deliberado, no una verdad absoluta: evalúa con y sin la regla y compara los resultados antes de decidir.
+Próximo paso
+Una vez que tengas configuradas las salidas, el riesgo y los horarios, la exploración está lista para correr. Cuando termine, los algoritmos candidatos pasarán por los filtros de robustez (DSR, Walk-Forward y Multiverso) y podrás ajustar costos de comisión reales. Continúa en «Optimización, fondeo y costos» para entender esa fase.

@@ -1,0 +1,55 @@
+# Deflated Sharpe Ratio (DSR) — TradingNote
+URL: https://tradingnote.co/es/docs/deflated-sharpe-ratio
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Deflated Sharpe Ratio (DSR)
+Deflated Sharpe Ratio (DSR)
+Descuenta la suerte de haber probado miles de combinaciones. Responde: «si busqué tanto, ¿este Sharpe es real o era inevitable que algo se viera genial por azar?».
+Abrir en la app
+7
+min
+Imagina que pruebas 10.000 combinaciones de parámetros buscando un buen algoritmo. Aunque ninguna tuviera ventaja real, por pura estadística alguna saldría con un Sharpe espectacular — igual que si 10.000 personas lanzan monedas, alguna sacará 10 caras seguidas sin que su moneda esté cargada. El Deflated Sharpe Ratio (DSR) corrige justamente eso: penaliza tu Sharpe según cuántas combinaciones probaste, para distinguir la ventaja genuina del premio de lotería del muestreo masivo.
+El DSR viene de la investigación de Marcos López de Prado, referencia del trading cuantitativo institucional. TradingNote lo calcula automáticamente sobre cada algoritmo, así que heredas el rigor de un fondo sin tener que hacer las matemáticas.
+Por qué el Sharpe normal te engaña al explorar
+El Sharpe mide retorno por unidad de riesgo, y es una gran métrica… para UN sistema. El problema aparece cuando lo usas para elegir el mejor de MUCHOS. Cuantas más combinaciones pruebas, más alto será el Sharpe del «ganador» aunque todas sean ruido. Esto se llama selección bajo múltiples pruebas, y es el mecanismo por el que la mayoría de los algoritmos «optimizados» fracasan en real.
+Qué entra en el cálculo
+Factor
+Efecto sobre el DSR
+Nº de combinaciones probadas
+Cuantas más, más castigo: era más probable encontrar un ganador por azar.
+Longitud del histórico (nº de operaciones)
+Más datos = más confianza. Un Sharpe sobre 1.000 trades vale más que sobre 50.
+Asimetría y curtosis de los retornos
+Retornos con colas gordas (sustos grandes) reciben más penalización.
+Cómo leerlo
+El DSR se interpreta como una probabilidad: qué tan probable es que el Sharpe observado sea real y no fruto del azar de la búsqueda. Cuanto más alto, mejor. Un algoritmo con Sharpe altísimo en backtest pero DSR bajo es una bandera roja clara: su brillo se debe a que probaste demasiado, no a que tenga ventaja.
+Trampa común: «mi algoritmo tiene Sharpe 3.5, es buenísimo». Si ese 3.5 salió de explorar 20.000 combinaciones, el DSR puede revelar que era casi inevitable encontrar ese número por azar. El Sharpe sin contexto del número de pruebas no significa nada.
+El DSR es el primero de los cuatro filtros y el más barato de correr. Úsalo como primer corte: si un algoritmo no pasa el DSR, no malgastes tiempo en Walk-Forward ni Multiverso. Lo que sobreviva al DSR, pásalo por los otros tres.

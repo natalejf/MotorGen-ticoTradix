@@ -1,0 +1,150 @@
+# Validación: Walk-Forward y Multiverso — TradingNote
+URL: https://tradingnote.co/es/docs/explorar-validacion
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Validación: Walk-Forward y Multiverso
+Validación: Walk-Forward y Multiverso
+Las pruebas que separan un algoritmo robusto de uno sobreajustado al pasado. Actívalas antes de operar.
+Abrir en la app
+7
+min
+Cuando la exploración termina y ves un algoritmo con un Sharpe de 3, rentabilidad del 400% y un drawdown ridículamente pequeño, la reacción natural es emocionarte. Resiste ese impulso. Antes de operar cualquier algoritmo con dinero real, necesitas entender la amenaza más silenciosa del trading algorítmico: el sobreajuste.
+El sobreajuste (overfitting) es el mayor peligro del trading algorítmico. Un algoritmo sobreajustado «memorizó» el histórico concreto sobre el que fue entrenado: aprendió el ruido, no la señal. En datos nuevos —los del futuro real— fracasa de forma consistente. El problema se agrava cuando pruebas 10.000 combinaciones: por pura estadística, algunas parecerán geniales solo por suerte. Las validaciones Walk-Forward y Multiverso existen exactamente para desenmascararlas.
+Walk-Forward (validación temporal)
+La idea es simple pero poderosa: en vez de entrenar y evaluar el algoritmo sobre el mismo histórico completo, divides el tiempo en ventanas. En cada ventana, el algoritmo se «elige» o calibra sobre un tramo (in-sample) y se evalúa sobre el tramo siguiente que nunca había visto (out-of-sample, OOS). Luego la ventana avanza y se repite. Al final, solo te importa el rendimiento acumulado en los tramos OOS, porque eso simula lo que ocurriría en el futuro real.
+text
+[--- train ---][test]
+       [--- train ---][test]
+              [--- train ---][test]
+                     [--- train ---][test]
+
+   → se evalúa SOLO en los tramos "test" (datos nunca vistos)
+La ventana de entrenamiento avanza paso a paso; el algoritmo nunca «ve» el tramo de test hasta que llega el momento de evaluarlo.
+Walk-Forward activado: eliges el tamaño de la ventana de test, el modo (validación o reoptimización) y los filtros mínimos de robustez.
+Parámetros de configuración
+Parámetro
+Opciones
+Valor por defecto
+Qué hace
+Activar Walk-Forward
+Sí / No
+No
+Activa la validación temporal. Desactivado por defecto para no encarecer las exploraciones rápidas.
+Tamaño de ventana de test (testFraction)
+1/12, 1/8, 1/6, 1/4, 1/3, 1/2
+1/4 del total
+Qué fracción del histórico total se usa como «test» en cada ventana. Más pequeño = más ventanas y mayor granularidad; más grande = cada ventana OOS dura más (mejor estimación de la dispersión).
+Modo
+Validación / Reoptimización
+Validación
+Validación: prueba los mismos parámetros encontrados en la exploración en cada ventana OOS. Reoptimización: recalibra los parámetros en cada ventana train antes de evaluar. La reoptimización es más lenta pero detecta si el algo requiere ajustes frecuentes (señal de fragilidad).
+Profundidad (modo reoptimización)
+Rápida (5 gen / 20 pop) · Estándar (10 / 30) · Profunda (20 / 50)
+Estándar
+Cuánto esfuerzo genético se dedica a recalibrar en cada ventana. Mayor profundidad = más tiempo de cómputo, pero resultados más precisos.
+topN
+1 – 50
+20
+Cuántas de las mejores estrategias de la exploración se someten a Walk-Forward. Validar las 10.000 combinaciones sería prohibitivo; las 20 mejores ya capturan el grueso del valor.
+Filtros mínimos de aprobación
+WFE ≥ 0.5 · Pass rate ≥ 60% · Sharpe OOS ≥ 0.5
+Activados
+Umbrales mínimos para que un algoritmo pase la validación WF. Puedes ajustarlos según la exigencia que quieras, pero no los bajes si aún no tienes experiencia.
+Métricas que devuelve Walk-Forward
+Métrica
+Significado e interpretación
+WFE (Walk-Forward Efficiency)
+Rendimiento OOS ÷ rendimiento in-sample. >0.5 es señal de robustez; cerca de 1 es excelente (el algo no se infla en train); por debajo de 0.3 sugiere sobreajuste severo. No esperes un WFE de 1: siempre habrá algo de degradación fuera de muestra.
+Estabilidad de parámetros
+Qué tanto varían los parámetros óptimos de una ventana a otra (en modo reoptimización). Si los parámetros que funcionan cambian radicalmente cada mes, el algo no es estable; si se mantienen similares, hay una señal real de fondo.
+Pendiente de degradación
+Si el rendimiento en los tramos OOS cae ventana a ventana, el algo está perdiendo relevancia con el tiempo (las condiciones de mercado cambiaron). Una pendiente negativa pronunciada es señal de alarma.
+Sharpe OOS medio
+Sharpe promedio calculado exclusivamente sobre los tramos nunca vistos. Este es el número que más se acerca a lo que obtendrías en el futuro real. Un Sharpe OOS ≥ 0.5 ya es un resultado honesto.
+Pass rate
+Porcentaje de ventanas OOS donde la estrategia cumplió los criterios mínimos. Un pass rate del 70% significa que 7 de cada 10 periodos el algo se comportó como se esperaba. Por debajo del 60% es señal de inconsistencia.
+Guía rápida para elegir testFraction según el histórico disponible: con menos de 6 meses usa 1/4 en modo validación; con 6 a 18 meses usa 1/4 en modo reoptimización; con más de 18 meses puedes bajar a 1/6 en reoptimización para tener más ventanas y una estimación de degradación más confiable.
+Multiverso (validación sintética)
+Walk-Forward te dice si el algoritmo aguantó en el único pasado que ocurrió. El Multiverso responde una pregunta diferente: ¿y si el mercado hubiera tomado otro camino? En vez de dividir el histórico real, genera N mercados «paralelos» estadísticamente coherentes con el original: otros caminos que el precio pudo haber recorrido con la misma volatilidad, tendencias y correlaciones. Si tu algoritmo funciona bien en cientos de esos universos alternativos, es porque captó algo real —no porque se aprovechó de una anomalía exclusiva del pasado concreto que viviste.
+Parámetros de configuración
+Parámetro
+Opciones
+Valor por defecto
+Activar Multiverso
+Sí / No
+No
+Nº de universos
+50 · 100 · 250 · 500 · 1000
+100
+Motor (enginePreset)
+Equilibrado · Conservador · Agresivo
+Equilibrado
+topN
+1 – 10
+3
+Nº de regímenes de mercado
+1 – 4
+3 (alcista / bajista / crisis)
+Ejecutar validadores adicionales
+Sí / No
+Sí
+El resultado principal del Multiverso es un Score del 0 al 100. Cuánto significa cada rango:
+Score ≥ 75 — Robusto. El algoritmo funcionó consistentemente en la gran mayoría de los universos alternativos. Esta es la barra mínima para considerar operarlo en vivo.
+Score 50–74 — Moderado. Funciona bien en algunos escenarios pero no en todos. Puede ser válido, pero necesita más contexto: ¿qué escenarios falla? ¿Son probables en el futuro cercano?
+Score < 50 — Frágil. Solo funcionó en una fracción reducida de los universos simulados. Muy probablemente capturó una anomalía del histórico concreto. No lo operes con dinero real.
+Multiverso activado: defines cuántos universos sintéticos generar y el motor de generación. El resultado es un Score de robustez de 0 a 100.
+DSR y Monte Carlo (relacionados)
+Walk-Forward y Multiverso no actúan solos. Forman parte de un sistema de cuatro capas. Las otras dos son el DSR y el Monte Carlo, que también encontrarás en la plataforma. El DSR (Deflated Sharpe Ratio) se aplica automáticamente durante la exploración: corrige el Sharpe de cada candidato por el número de combinaciones probadas, porque si pruebas 10.000 combos, el Sharpe esperado del mejor por pura suerte es muy alto. El DSR baja ese umbral estadísticamente y descarta los que no justifican su Sharpe dado el tamaño de la búsqueda. El análisis Monte Carlo —que puedes ejecutar más adelante sobre un algoritmo concreto— hace algo diferente: reordena aleatoriamente el orden de los trades reales y simula miles de secuencias posibles para estresar la curva de capital y el drawdown máximo probable.
+El bucle de robustez
+Estas cuatro capas no son redundantes: son ortogonales. Cada una ataca un eje diferente del sobreajuste. Juntas forman el proceso que TradingNote llama «bucle de robustez»:
+1
+Exploración genética
+Lanzas la exploración y el motor prueba miles de combinaciones de indicadores y parámetros, guardando los candidatos con mejor desempeño en el histórico.
+2
+DSR descarta los afortunados
+El Deflated Sharpe Ratio ajusta el umbral estadístico por el tamaño de la búsqueda y elimina los algoritmos cuyo Sharpe no supera lo que esperarías por azar al probar tantas combinaciones.
+3
+Walk-Forward verifica la dimensión temporal
+Confirma que el algoritmo aguantó en tramos del histórico que no usó para optimizarse. Si el rendimiento se desploma fuera de muestra, el algoritmo memorizó, no aprendió.
+4
+Multiverso verifica la dimensión de escenarios
+Confirma que el algoritmo no dependió del camino específico que tomó el mercado. Si funciona en cientos de mercados sintéticos alternativos, es robusto al azar del histórico.
+Lo que sobrevive a las cuatro capas merece tu atención. No será el más espectacular del lote, pero será honesto.
+Walk-Forward y Multiverso solo corren sobre las topN mejores estrategias porque son operaciones costosas en cómputo. No esperes que validen las 10.000 combinaciones de la exploración: el objetivo es filtrar los finalistas, no reexplorar todo el espacio.
+No te enamores de un Sharpe alto sin validar. Un Sharpe de 4 con WFE de 0.1 es una trampa clásica de sobreajuste. Un Sharpe de 1.5 con WFE 0.7 y score Multiverso 80 es oro: ese algoritmo demostró que funciona fuera de los datos que lo parió y en escenarios que nunca ocurrieron.
+Una vez que tus mejores candidatos pasaron el bucle de robustez, el siguiente paso es explorar los resultados en profundidad y visualizar la exploración en el Neural Explorer. Continúa en «Resultados y Neural Explorer».

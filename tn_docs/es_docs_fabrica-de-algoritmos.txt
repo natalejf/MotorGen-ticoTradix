@@ -1,0 +1,86 @@
+# Fábrica de algoritmos: el paso a paso — TradingNote
+URL: https://tradingnote.co/es/docs/fabrica-de-algoritmos
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Fábrica de algoritmos: el paso a paso
+Fábrica de algoritmos: el paso a paso
+El orden exacto para producir algoritmos robustos en serie: generar mucho y barato, validar en profundidad solo los mejores, y armar una cartera diversificada. Sin este orden, terminas con backtests bonitos que pierden en vivo.
+Abrir en la app
+8
+min
+Una fábrica de algoritmos no busca «la» estrategia perfecta. Busca producir muchas estrategias diversas y quedarse solo con las que sobreviven pruebas duras. La clave es un embudo de costo: la parte barata (generar) se hace en masa; la parte cara (validar) se reserva para los pocos candidatos que ya mostraron buenas operaciones. Este artículo es el orden exacto de los pasos y qué herramienta usar en cada uno.
+La regla de oro: barato y ancho primero, caro y profundo después. Genera cientos de candidatos con un barrido corto; recién sobre los mejores gastas cómputo en validación de 3-4 años. Y nunca te quedes con una sola: la fábrica produce una cartera diversificada, no un campeón.
+El embudo en 6 pasos
+1
+1. Elige el activo y reserva el último tramo
+En el Creador de algoritmos elige un instrumento y timeframe (empieza por Oro, Nasdaq o DAX — los más tendenciales; las divisas al final). Deja fuera el último tramo de datos: es el «examen sorpresa» que el sistema no debe ver al generar. Nunca construyas hasta la fecha de ayer.
+2
+2. Barrido barato: genera cantidad
+Usa la generación genética con SL y TP por ATR (nunca pips fijos: el ATR da variedad de ratios, la materia prima de las carteras). Ordena por Calmar (retorno sobre drawdown, el fitness correcto). Corre pocos meses, sin validación todavía: en minutos tienes cientos de candidatos. Bajar los filtros aquí es una herramienta de velocidad, no de permisividad — el filtro real lo haces después ordenando.
+3
+3. Embudo profundo: validación automática
+Sobre los mejores candidatos, la exploración ya corre el Deflated Sharpe Ratio (¿el resultado es real o suerte de haber probado mucho?) y el Multiverso (¿aguanta mercados distintos?). Esto reemplaza y supera los crosschecks manuales. No hace falta re-validar a mano cada uno: quédate con los que suben arriba tras estas pruebas.
+4
+4. Análisis y descarte
+Abre el detalle de los supervivientes. Busca: curva de equity que sube parejo, drawdown máximo en años pasados (si aguantó el peor año, mejor señal), recuperación rápida de las caídas, y ratio adecuado al destino (ratio bajo → fondeo). Quédate con 1-2 por familia de indicador, no las 10: las demás suelen ser la misma estrategia disfrazada.
+5
+5. Arma la cartera diversificada
+Combina tus mejores algoritmos descorrelacionados en un Portafolio (base: Oro + DAX + Nasdaq). Revisa la matriz de correlación: dos algoritmos con correlación alta (>0,7) son la misma apuesta — quita uno. Corre el Monte Carlo del portafolio: si el peor caso expone ~el doble del drawdown, está bien; si expone el triple, saca la estrategia más agresiva y repite.
+6
+6. Papel primero, luego en vivo
+Prueba en cuenta paper (una por activo para ver el «caballo ganador»). Cuando confíes, activa la sesión en vivo directo sobre tu bróker (MT5 / cTrader / TopstepX / NT8) — el algoritmo corre en TradingNote, sin exportar código a la plataforma (cTrader y TopstepX conectan sin instalar nada; MT5 usa nuestro EA puente y NT8 nuestro AddOn, instalación de una sola vez). Define el objetivo y el riesgo (la R) de cada cuenta antes de arrancar, y no toques la gestión durante una racha mala: es el error que arruina a la mayoría.
+Los principios que no se negocian
+Fitness por Calmar (retorno sobre drawdown), nunca por ganancia neta a secas.
+SL y TP por ATR: adaptan el riesgo a la volatilidad real de cada época y generan variedad de ratios.
+Multi-estrategia descorrelacionada, no «la mejor». Diversificar es la llave.
+Robustez sobre perfección: pocos algoritmos que aguanten valen más que muchos que brillan solo en el pasado.
+El mayor error no es técnico, es humano: tocar la gestión de riesgo o cambiar los algoritmos en pleno drawdown. Un sistema rentable a años vista tendrá rachas malas al empezar; si bajas el riesgo a la mitad en plena caída, tienes que recuperarla con la mitad de fuerza. La gestión que aplicas al arrancar es la que corre hasta un año vista. No toques.
+Por dónde empezar
+Activo
+Dificultad
+Por qué
+Nasdaq / DAX
+Fácil
+Índices muy tendenciales al alza — salen muchos candidatos buenos.
+Oro
+Media
+Commodity tendencial; combínalo con un lado corto (BOS) para las correcciones.
+Divisas
+Difícil
+Déjalas para el final: si no eres rentable en índices y oro, aquí te vas a frustrar.
+Repite el ciclo por cada activo. La fábrica no es un evento, es un proceso: construyes de noche, analizas de día, y con el tiempo tienes varias carteras diversificadas que se sostienen entre sí. Ese es el objetivo — no un algoritmo genial, sino un sistema que produce robustez en serie.

@@ -1,0 +1,83 @@
+# Multiverso (robustez sintética) — TradingNote
+URL: https://tradingnote.co/es/docs/multiverso
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Multiverso (robustez sintética)
+Multiverso (robustez sintética)
+Genera miles de mercados que nunca existieron y vuelve a correr tu algoritmo en cada uno, para saber si tiene ventaja real o solo memorizó el pasado.
+Abrir en la app
+8
+min
+El Multiverso es el filtro de robustez más duro de TradingNote. Tu backtest solo conoce una historia de precios: la que ocurrió. El Multiverso fabrica miles de historias nuevas —mercados sintéticos que nunca existieron pero estadísticamente idénticos al real— y vuelve a correr tu algoritmo completo en cada una. Responde la única pregunta que de verdad importa: ¿tu algoritmo gana porque tiene una ventaja, o porque se amoldó milimétricamente a un pasado que no se repetirá?
+Dónde está: el Multiverso se ejecuta sobre un algoritmo guardado, desde su ficha en «Mis Algoritmos», o sobre los candidatos de una exploración desde el Probador de Algoritmos. No es un menú aparte: es una pestaña de validación del algoritmo.
+Cómo funciona, paso a paso
+1
+Parte de tu algoritmo y su mercado real
+El Multiverso mide las propiedades estadísticas del activo sobre el que entrenaste: su volatilidad, sus saltos, su tendencia a agruparse en rachas (clustering).
+2
+Genera miles de mercados sintéticos
+Crea series de precios nuevas que preservan esas propiedades pero con una secuencia distinta. Son indistinguibles de un mercado real para cualquier test estadístico, pero tu algoritmo nunca las vio.
+3
+Vuelve a correr el algoritmo en cada universo
+Ejecuta tu sistema completo —con sus reglas, costos y sizing— en cada mercado sintético, y registra si fue rentable.
+4
+Te da una distribución, no un número
+El resultado es en cuántos de esos miles de universos tu algoritmo siguió ganando. Esa proporción es la métrica de robustez.
+Cómo leer el resultado
+% de universos rentables
+Interpretación
+Alto (la gran mayoría)
+La ventaja no depende del histórico exacto. Candidato a dinero real (junto con los otros filtros).
+Medio
+Hay algo, pero frágil. Trátalo con cautela y exige que pase Walk-Forward y DSR holgadamente.
+Bajo (solo gana en el histórico original)
+Memorizó. Descártalo sin pena, por bonito que fuera su backtest.
+Dato real: en muchos mercados, el Multiverso descarta más del 95 % de los algoritmos con Sharpe alto. No es que el filtro sea demasiado severo — es que el 95 % de esos Sharpe altos eran ruido disfrazado de señal. Un filtro que no descarta nada no está filtrando.
+Ejemplo concreto
+Supón dos algoritmos sobre EURUSD, ambos con un Sharpe de 2.1 en el backtest. Idénticos en el papel. Los pasas por el Multiverso:
+Algoritmo A
+Algoritmo B
+Sharpe en backtest
+2.1
+2.1
+% universos rentables
+88 %
+31 %
+Veredicto
+Ventaja robusta — sigue al siguiente filtro
+Overfitting — descartar
+El mismo Sharpe escondía dos realidades opuestas. Sin el Multiverso, habrías operado el B con la misma confianza que el A — y el B se habría caído en cuanto el mercado cambiara de cara.
+Multiverso vs Monte Carlo: no confundir
+Multiverso
+Monte Carlo
+Genera MERCADOS nuevos y vuelve a correr el algoritmo entero. Valida la VENTAJA: ¿funciona en mercados que no son el que lo entrenó? Es el filtro para decidir si merece dinero real.
+Reordena y varía las OPERACIONES que el algoritmo ya hizo. Valida el RIESGO: ¿qué drawdown debo estar dispuesto a aguantar? Tiene su propia página: ver «Monte Carlo».
+El Multiverso es uno de los cuatro ángulos de la robustez, no el único. Combínalo siempre con el Deflated Sharpe Ratio (descuenta la suerte del muestreo), el Walk-Forward (datos que no vio) y el Monte Carlo (mala secuencia de trades). Un algoritmo que pasa los cuatro es lo más cerca que estarás de una ventaja genuina.

@@ -1,0 +1,77 @@
+# Mis Algoritmos — TradingNote
+URL: https://tradingnote.co/es/docs/mis-algoritmos
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Mis Algoritmos
+Mis Algoritmos
+La lista de tus algoritmos guardados, con sus métricas y los filtros de robustez para saber si son sólidos.
+Abrir en la app
+6
+min
+Mis Algoritmos es tu biblioteca de estrategias. Aquí viven todos los algoritmos que descubriste con el Creador (o importaste). Cada uno trae su «hoja de vida»: cuánto rinde, qué tan estable es y si pasó las pruebas de robustez. Desde aquí decides cuáles llevar a un portafolio o a operar en vivo.
+Cada tarjeta muestra el símbolo, el timeframe y las métricas clave: Sharpe, Win Rate, Profit Factor, Drawdown y número de trades.
+Cómo leer las métricas
+Métrica
+Qué significa
+Mejor cuando…
+Sharpe
+Rentabilidad ajustada al riesgo
+más alto (>1 es bueno)
+Win Rate
+% de operaciones ganadoras
+más alto
+Profit Factor (PF)
+ganancias ÷ pérdidas
+más alto (>1 gana dinero)
+Drawdown (DD)
+la peor caída desde un pico
+más bajo (cercano a 0)
+Trades
+número de operaciones probadas
+más alto (más confiable)
+Los filtros de robustez (lo más importante)
+Que un algoritmo rinda bien en el pasado no significa que rinda bien en el futuro. Por eso TradingNote pasa cada algoritmo por tres pruebas independientes que entras a ver con «View statistics»:
+DSR (Deflated Sharpe Ratio): corrige el Sharpe por la cantidad de combinaciones probadas. Un DSR alto significa que el resultado no fue suerte.
+Walk-Forward: prueba el algoritmo en períodos que no usó para «aprender», simulando cómo se habría comportado en el tiempo real.
+Multiverso: corre miles de variaciones para ver si el algoritmo sigue funcionando bajo condiciones distintas, o si solo funcionaba en un escenario afortunado.
+Confía en los algoritmos que pasan los tres filtros. Un Sharpe altísimo pero que NO pasa Multiverso suele ser «overfitting»: una estrategia ajustada al pasado que se rompe en cuanto el mercado cambia. Cada filtro tiene su propia guía detallada (Deflated Sharpe Ratio, Walk-Forward y Multiverso) en esta documentación.
+El ciclo de vida de un algoritmo
+Estado
+Qué significa
+Borrador / Descubierto
+Recién salido de una exploración o importado. Aún por estudiar y validar.
+Validado
+Pasó los filtros de robustez. Candidato a entrar en un portafolio.
+En vivo
+Está operando dentro de un portafolio con una sesión activa.
+Archivado / Descartado
+Lo guardaste como referencia o lo descartaste por no superar las pruebas.
+Puedes exportar un algoritmo a un archivo, importarlo en otra cuenta o compartirlo con un enlace privado. El que lo recibe corre su propio backtest: el algoritmo viaja con sus reglas, no con métricas históricas que podrían no aplicar a su bróker.

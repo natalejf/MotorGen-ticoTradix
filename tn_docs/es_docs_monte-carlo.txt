@@ -1,0 +1,73 @@
+# Monte Carlo — TradingNote
+URL: https://tradingnote.co/es/docs/monte-carlo
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Monte Carlo
+Monte Carlo
+Pone a prueba la solidez de un sistema simulando miles de escenarios posibles, no solo el que ocurrió. Responde: «¿tuve suerte o mi sistema es de verdad?».
+Abrir en la app
+9
+min
+Test de Montecarlo: ¿tu sistema sobrevive al mercado real?
+El análisis Monte Carlo responde a la pregunta más incómoda del trading: «¿tuve suerte, o mi sistema es de verdad sólido?». Tu backtest te muestra UNA historia: la que efectivamente ocurrió. Pero esa secuencia exacta de ganancias y pérdidas no se va a repetir jamás. Monte Carlo toma tus operaciones y las reordena y varía miles de veces para construir miles de historias alternativas igual de plausibles. Así dejas de ver un único resultado y empiezas a ver el rango de resultados que podrían haber ocurrido — que es lo que de verdad te va a pasar en vivo.
+Monte Carlo simula miles de variaciones para estimar drawdowns probables y la solidez del sistema.
+Qué hace por dentro
+La simulación no inventa operaciones de la nada: parte de las TUS operaciones reales (las del backtest) y las perturba de formas estadísticamente válidas. Estas son las tres técnicas principales:
+Técnica
+Qué cambia
+Qué pregunta responde
+Reordenar (shuffle)
+El orden en que ocurren tus operaciones, no cuáles.
+¿Y si la mala racha hubiera llegado al principio? ¿Habrías sobrevivido?
+Remuestrear (bootstrap)
+Toma operaciones al azar con repetición para formar nuevas historias.
+¿Qué tan dependiente es el resultado de unas pocas operaciones afortunadas?
+Saltar operaciones
+Elimina un % de operaciones al azar (las que te perdiste por estar offline, slippage, etc.).
+¿Aguanta el sistema si en la práctica no tomas todas las señales?
+Cómo leer el resultado: los percentiles
+Monte Carlo no te da un número, te da una distribución. La clave está en los percentiles: el percentil 5 es el «mal escenario» (solo 1 de cada 20 historias salió peor) y el percentil 95 es el «buen escenario». Lo que importa no es el promedio, sino qué tan malo es el peor caso realista.
+Métrica
+Cómo interpretarla
+Drawdown en el percentil 95
+El peor drawdown realista. Si tu plan de riesgo no aguanta esa caída, el sistema te va a sacar del mercado antes de funcionar.
+% de escenarios rentables
+Si solo el 60% de las historias terminó en verde, tu rentabilidad depende demasiado de la suerte.
+Rango de retorno (p5 – p95)
+Un rango estrecho = sistema consistente. Un rango enorme = el resultado es casi una lotería.
+No mires solo el escenario promedio. Fíjate en el peor 5%: si tu sistema sigue siendo rentable (o al menos no quiebra) ahí, estás preparado para la realidad del mercado. La mayoría de traders quiebra justamente porque planeó para el escenario promedio y vivió el del percentil 5.
+Monte Carlo vs Multiverso: no son lo mismo
+Es fácil confundirlos porque ambos «simulan miles de escenarios», pero atacan distintos riesgos y se complementan:
+Monte Carlo
+Multiverso
+Varía la SECUENCIA de tus operaciones ya ocurridas. Responde «dado que estas operaciones existen, ¿qué tan sensible es mi resultado a su orden y a perderme algunas?». Es rápido y se hace sobre los trades de un backtest cualquiera.
+Va más a fondo: genera miles de MERCADOS sintéticos nuevos (precios que nunca existieron pero estadísticamente parecidos) y vuelve a correr el algoritmo completo en cada uno. Responde «¿este algoritmo funciona en mercados que NO son exactamente el histórico que lo entrenó?». Es el filtro anti-overfitting más duro, y vive en «Mis Algoritmos».
+En la práctica: usa Monte Carlo para dimensionar tu riesgo (¿qué drawdown debo estar dispuesto a aguantar?) y el Multiverso para decidir si un algoritmo merece dinero real (¿generaliza o solo memorizó el pasado?). Los dos juntos, más Walk-Forward y DSR, son los cuatro ángulos de la robustez.

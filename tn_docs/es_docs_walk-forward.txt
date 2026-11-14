@@ -1,0 +1,69 @@
+# Walk-Forward (validación temporal) — TradingNote
+URL: https://tradingnote.co/es/docs/walk-forward
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Walk-Forward (validación temporal)
+Walk-Forward (validación temporal)
+Prueba tu algoritmo en datos que nunca vio durante el entrenamiento, avanzando en el tiempo como ocurriría en real. El filtro contra el sobreajuste al pasado.
+Abrir en la app
+8
+min
+Cuando optimizas un algoritmo sobre todo el histórico, haces trampa sin querer: el sistema «ve» el futuro porque lo afinaste con datos que en la realidad aún no habrían ocurrido. El Walk-Forward elimina esa trampa. Divide la historia en tramos, optimiza en un tramo y prueba en el SIGUIENTE —que el algoritmo no vio—, y avanza así por toda la serie. Es la simulación más honesta de cómo se habría comportado tu sistema operando mes a mes en el tiempo real.
+Dónde está: el Walk-Forward es una validación que corres sobre un algoritmo guardado o sobre los candidatos de una exploración, desde el Probador de Algoritmos. Aparece junto al Multiverso como una de las pestañas de robustez.
+In-sample y out-of-sample: la idea central
+Todo el método gira en torno a dos conceptos:
+In-sample (IS): el tramo donde el algoritmo se optimiza. Es «lo que el sistema estudió».
+Out-of-sample (OOS): el tramo siguiente, que el algoritmo no vio al optimizarse. Es «el examen sorpresa». Solo cuenta el rendimiento aquí.
+Paso a paso
+1
+Divide la historia en ventanas
+Por ejemplo, optimizar con 12 meses y validar con los 3 siguientes. Esas proporciones las defines tú.
+2
+Optimiza en el IS, mide en el OOS
+El sistema busca los mejores parámetros en los 12 meses, y luego —sin tocarlos— los aplica a los 3 meses siguientes y anota el resultado.
+3
+Avanza la ventana y repite
+Mueve todo el bloque hacia adelante y vuelve a optimizar/validar. Así recorres años enteros encadenando exámenes sorpresa.
+4
+Junta todos los OOS
+La curva de equity que importa es la unión de todos los tramos OOS: el rendimiento real fuera de muestra, encadenado.
+La métrica clave: WFE (Walk-Forward Efficiency)
+La WFE compara el rendimiento fuera de muestra contra el de dentro de muestra: cuánto del rendimiento «de laboratorio» sobrevive en el examen real.
+WFE (OOS ÷ IS)
+Qué significa
+Cercana a 1
+Excelente: el algoritmo casi no se infla en el entrenamiento. Generaliza muy bien.
+> 0.5
+Señal de robustez. Es normal perder algo de rendimiento fuera de muestra; más de la mitad es sano.
+< 0.3
+Sobreajuste severo: el algoritmo brillaba en el laboratorio y se apaga en el examen. Descartar.
+No esperes una WFE de 1. Siempre habrá algo de degradación fuera de muestra — eso es honesto y esperado. Desconfía más de un algoritmo cuya WFE es sospechosamente perfecta que de uno con una WFE de 0.6 estable a lo largo de los años.
+El Walk-Forward valida que el algoritmo funcione en el FUTURO temporal; el Multiverso valida que funcione en mercados ALTERNATIVOS; el Deflated Sharpe Ratio descuenta la suerte de haber probado muchas combinaciones. Son ortogonales: cada uno caza un autoengaño distinto. Úsalos juntos.

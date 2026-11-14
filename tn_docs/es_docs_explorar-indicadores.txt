@@ -1,0 +1,220 @@
+# Indicadores y rangos — TradingNote
+URL: https://tradingnote.co/es/docs/explorar-indicadores
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Indicadores y rangos
+Indicadores y rangos
+Elige qué indicadores técnicos y macro barre la exploración y define el rango de cada parámetro.
+Abrir en la app
+7
+min
+La pestaña «Indicadores»: añade indicadores con un clic y define el rango «Desde / Pasos / Hasta» de cada parámetro. Abajo, el contador de combinaciones posibles.
+La exploración no inventa indicadores de la nada: prueba combinaciones de los que tú habilitas en el panel «Indicadores». Tu selección es el universo de búsqueda. Si no activas el RSI, el motor no lo probará. Si lo activas con un rango amplio, lo probará con muchos valores de período. Cuantos más indicadores habilites y más amplios sean los rangos, más combinaciones posibles tendrás… y más tiempo tardará la exploración.
+Cómo funciona el barrido de rangos
+Cada indicador tiene parámetros numéricos (períodos, multiplicadores, umbrales…). Para cada parámetro defines tres valores: «Desde», «Pasos» y «Hasta». La exploración toma el valor inicial y lo va sumando en incrementos iguales hasta llegar al valor final, probando cada punto intermedio. Por ejemplo: RSI período Desde 7, Pasos 7, Hasta 28 → prueba los valores 7, 14, 21 y 28 (cuatro posibilidades).
+text
+Indicador   Parâmetro      Desde  Pasos  Hasta   Valores que prueba
+──────────  ─────────────  ─────  ─────  ─────   ──────────────────────
+RSI         Período           7      7     28    7, 14, 21, 28  (4 pts)
+EMA         Período          50     50    200    50, 100, 150, 200  (4 pts)
+─────────────────────────────────────────────────────────────────────────
+Combinaciones posibles = 4 × 4 = 16
+El contador de «combinaciones posibles» que ves al pie del panel es el producto de todos los valores posibles de todos los parámetros activos.
+Ampliar los rangos multiplica las combinaciones de forma exponencial. Un RSI con 4 puntos × una EMA con 4 puntos × un ATR con 4 puntos = 64 combinaciones solo con esos tres. Vigila el contador antes de lanzar para no iniciar una exploración que tarde horas sin beneficio real.
+Indicadores técnicos disponibles (28)
+Los 28 indicadores están organizados en siete familias. Activa solo los que tienen sentido para la lógica que quieres explorar.
+Indicador
+Familia
+Parámetros y defaults
+Para qué sirve
+EMA
+Tendencia
+período 200
+Media móvil exponencial; filtra el ruido y sigue la dirección del precio.
+SMA
+Tendencia
+período 50
+Media móvil simple; referencia clásica de soporte/resistencia dinámica.
+DEMA
+Tendencia
+período 21
+Doble EMA; reacciona más rápido al precio que la EMA estándar.
+TEMA
+Tendencia
+período 21
+Triple EMA; reduce el retraso al mínimo a costa de mayor sensibilidad al ruido.
+HMA
+Tendencia
+período 9
+Hull MA; casi sin retraso y más suave que TEMA; útil para detectar cambios de tendencia rápidos.
+WMA
+Tendencia
+período 20
+Media ponderada linealmente; da más peso a las velas recientes sin disparar el retraso.
+KAMA
+Tendencia
+período 10, fast 2, slow 30
+Kaufman Adaptive MA; se acelera en tendencia y se frena en rango según la eficiencia del mercado.
+SuperTrend
+Tendencia
+período 10, multiplicador 3
+Banda ATR sobre el precio; da señal de compra/venta cuando el precio cruza el canal.
+RSI
+Momentum
+período 14
+Oscilador 0-100 de velocidad relativa de cambio; identifica sobrecompra/sobreventa.
+Estocástico
+Momentum
+período 14, dPeriod 3
+Oscilador 0-100 que compara el cierre con el rango reciente; bueno en mercados laterales.
+MACD
+Momentum
+fast 12, slow 26, signal 9
+Diferencia de EMAs suavizada; da señales en cruces de línea signal e histograma.
+CCI
+Momentum
+período 20
+Commodity Channel Index; mide desviación del precio respecto a su media estadística.
+ROC
+Momentum
+período 12
+Rate of Change; porcentaje de cambio del precio respecto a N períodos atrás.
+Williams %R
+Momentum
+período 14
+Oscilador -100 a 0; similar al Estocástico pero invertido, señala agotamiento de impulso.
+Bollinger Bands
+Volatilidad
+período 20, stdDev 2.0
+Bandas de desviación estándar alrededor de la SMA; detecta expansiones y contracciones de volatilidad.
+ATR
+Volatilidad
+período 14
+Average True Range; mide el rango medio de las velas. Se usa principalmente para dimensionar el SL/TP, no como señal de entrada.
+Keltner Channel
+Volatilidad
+período 20, multiplicador 1.5
+Canal EMA ± ATR; complementa a Bollinger para detectar breakouts o reversiones de volatilidad.
+Donchian Channel
+Volatilidad
+período 20
+Máximo y mínimo de los últimos N períodos; base de sistemas de breakout clásicos.
+StdDev
+Volatilidad
+período 20
+Desviación estándar del precio; cuantifica la dispersión pura de los retornos.
+ADX
+Fuerza de tendencia
+período 14
+Average Directional Index; mide la fuerza de la tendencia sin importar la dirección (0 = rango, >25 = tendencia fuerte).
+OBV
+Volumen
+signal 20
+On Balance Volume; acumula volumen según la dirección del precio para detectar divergencias.
+MFI
+Volumen
+período 14
+Money Flow Index; RSI ponderado por volumen; más fiable en activos con datos de volumen reales.
+VWAP (aprox. SMA 20)
+Precio
+sin parámetros
+NO es un VWAP real: se calcula como una media simple de 20 velas (se conserva así para no alterar los algoritmos que ya lo usan). Ya no se genera en exploraciones nuevas. Para ponderar por volumen usa VWMA; en el IDE de código, self.indicator("VWAP") sí pondera por volumen.
+Highest
+Precio
+período 20
+Máximo de los últimos N períodos; útil para detectar nuevos máximos (breakouts alcistas).
+Lowest
+Precio
+período 20
+Mínimo de los últimos N períodos; útil para detectar nuevos mínimos (breakouts bajistas).
+Pivot Points
+Precio
+sin parámetros
+Niveles de soporte/resistencia calculados desde el OHLC anterior; muy usados en futuros e índices.
+Ichimoku
+Avanzado
+tenkan 9, kijun 26, senkou 52
+Sistema completo de soporte/resistencia, tendencia y momentum en una sola nube; requiere timeframes altos para ser fiable.
+Parabolic SAR
+Avanzado
+afStart 0.02, afStep 0.02, afMax 0.2
+Puntos aceleradores que siguen el precio; excelente como stop móvil en tendencias fuertes.
+El ATR no suele generar señales de entrada por sí solo; su valor real está en dimensionar el Stop Loss y el Take Profit de forma dinámica. Actívalo principalmente cuando uses «SL/TP como múltiplo de ATR» en la pestaña de Riesgo.
+Umbrales de entrada/salida
+Los osciladores acotados (RSI, MFI, Estocástico, Williams %R) también tienen umbrales que determinan cuándo se activa la señal: por ejemplo, RSI < 30 indica sobreventa (posible entrada larga) y RSI > 70 indica sobrecompra (posible entrada corta). La exploración puede barrer estos umbrales igual que los períodos: defines un rango «Desde / Pasos / Hasta» para cada umbral y el motor prueba todas las combinaciones. Esto permite descubrir si el algo funciona mejor con umbrales conservadores (20/80) o agresivos (40/60), sin que tú lo decidas manualmente.
+Indicadores macro (FRED)
+Además de los indicadores técnicos, puedes añadir series macroeconómicas como filtro de contexto de mercado. Están organizadas en once categorías y provienen de la base de datos FRED de la Reserva Federal de EE. UU. Su propósito es que el algoritmo solo opere cuando el entorno macro favorece la estrategia: por ejemplo, evitar operar en períodos de VIX muy alto, o entrar solo cuando el diferencial de tasas mueve el dólar en cierta dirección.
+Categoría
+Ejemplos de series
+Frecuencia típica
+Volatilidad y riesgo
+VIX (VIXCLS), MOVE (Treasury volatility)
+Diaria
+Tasas de interés US
+Treasury 10Y (DGS10), 2Y (DGS2), Fed Funds (FEDFUNDS)
+Diaria / Mensual
+Tasas internacionales
+ECB deposit rate, BoJ policy rate, BoE base rate
+Mensual
+Dólar y FX
+DXY (DTWEXBGS), USD/JPY spot (DEXJPUS)
+Diaria
+Inflación
+CPI (CPIAUCSL), PCE (PCEPI), PPI (PPIACO)
+Mensual
+Mercado laboral
+Nóminas no agrícolas (PAYEMS), desempleo (UNRATE)
+Mensual
+Actividad económica
+PIB (GDP), PMI manufacturero (MANEMP), ventas minoristas
+Trimestral / Mensual
+Monetaria y liquidez
+M2 (M2SL), base monetaria (BOGMBASE), spread TED
+Semanal / Mensual
+Commodities
+Petróleo WTI (DCOILWTICO), oro (GOLDAMGBD228NLBM), cobre
+Diaria
+Sentimiento
+Michigan Consumer Sentiment (UMCSENT), confianza empresarial
+Mensual
+Derivados calculados
+Curva de rendimientos (10Y-2Y), spread high yield, ratio cobre/oro
+Diaria
+Los datos macro respetan la fecha real de publicación (anti-lookahead): el backtest nunca «ve» un dato antes de que existiera en la vida real. Si el CPI de enero se publica el 14 de febrero, el algo lo recibe el 14 de febrero, no antes.
+Menos es más. 2-3 indicadores bien elegidos suelen producir algoritmos más robustos y rápidos de explorar que 8 indicadores activos. Más indicadores disparar el riesgo de sobreajuste (overfitting): el algo «memoriza» el ruido del pasado en lugar de aprender patrones reales.
+Una vez definidos tus indicadores y rangos, el siguiente paso es configurar las salidas, el riesgo y los horarios de operación. Encuéntralo en el artículo «Salidas, riesgo y horarios».

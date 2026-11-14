@@ -1,0 +1,124 @@
+# Resultados y Neural Explorer — TradingNote
+URL: https://tradingnote.co/es/docs/explorar-resultados
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Resultados y Neural Explorer
+Resultados y Neural Explorer
+Lee las métricas de cada candidato, compara, visualiza la búsqueda en 3D y guarda los algoritmos buenos.
+Abrir en la app
+6
+min
+El «Neural Explorer»: cada nodo es un algoritmo probado, las ramas son su linaje de mutación y los destellos viajeros son los que pasaron los filtros.
+Tan pronto como la exploración empieza a generar candidatos —y también al terminar—, el panel de resultados se puebla con los algoritmos que han superado los filtros de calidad, ordenados de mejor a peor según el TN Score. No tienes que esperar a que todo acabe: puedes echarle un ojo a los primeros resultados mientras la búsqueda sigue corriendo en segundo plano.
+El resumen de arriba (KPIs)
+Justo encima del listado de candidatos encontrarás una barra con los indicadores clave del estado de la exploración. Te permite saber de un vistazo cuánto ha avanzado la búsqueda y qué tan buenos son los mejores hallazgos hasta ahora.
+Progreso (%): qué porcentaje de la exploración ha completado la máquina. Al llegar a 100% la búsqueda terminó.
+Combinaciones testeadas: el número total de algoritmos candidatos que ya fueron evaluados sobre los datos históricos.
+Candidatos que pasaron los filtros: cuántos de los testeados superaron los criterios mínimos de calidad y aparecen en el panel.
+Mejor Sharpe encontrado: el valor más alto de Sharpe Ratio entre todos los candidatos actuales. Es una referencia rápida del techo de calidad.
+Win rate medio: el promedio de la tasa de aciertos de todos los candidatos que pasaron. Te da una idea del perfil general de los algoritmos encontrados.
+Si filtraste por un símbolo específico, también verás promedios de Sharpe, drawdown máximo, profit factor y total de operaciones para ese subconjunto.
+Filtrar y ordenar
+Encima del listado hay una barra de controles para que te concentres en lo que importa:
+Pills por símbolo: si exploraste varios instrumentos a la vez, aparece una pastilla por cada uno. Haz clic en una para quedarte solo con los candidatos de ese par o activo.
+«Solo Walk-Forward»: muestra únicamente los candidatos que superaron la validación Walk-Forward, que mide si el algoritmo se comporta bien en períodos que no usó para entrenarse.
+«Solo Multiverso»: filtra para ver solo los que pasaron el Multiverso, una prueba que evalúa si el rendimiento se mantiene bajo pequeñas variaciones de los parámetros.
+Vista en cuadrícula (tarjetas) o en lista (tabla): elige cómo prefieres ver los candidatos. Las tarjetas son más visuales; la tabla es mejor para comparar números de golpe.
+Activa «Solo Walk-Forward» y «Solo Multiverso» a la vez para quedarte con la élite robusta: los algoritmos que no solo funcionaron en el pasado, sino que también superaron dos pruebas independientes de generalización.
+Anatomía de una tarjeta de estrategia
+Cada tarjeta del panel de resultados condensa la información más importante de un candidato. Esto es lo que verás en ella:
+Ranking (#1 = mejor): el número de posición dentro de la exploración, ordenado por TN Score. El #1 es el mejor candidato según la evaluación global de la plataforma.
+Nombre editable: cada candidato recibe un nombre automático, pero puedes cambiarlo haciendo doble clic sobre él. Útil si quieres distinguir rápido tus favoritos.
+Badges de par, timeframe e indicadores: pequeñas etiquetas de colores que te dicen en qué instrumento y temporalidad opera este algoritmo y qué indicadores usa en sus señales.
+Mini-gráfico de la curva de capital: una vista en miniatura de cómo creció (o cayó) el capital durante el backtest. Verde cuando la curva sube de forma consistente; rojo cuando hay caídas o volatilidad excesiva.
+Métricas al pie: un conjunto de cifras clave (Sharpe, drawdown, win rate, profit factor, número de operaciones, TN Score) para que compares candidatos sin abrir ninguno.
+Clic en la tarjeta: abre el visualizador detallado de ese candidato, donde puedes ver la curva de capital completa, el historial de operaciones, los parámetros exactos del algoritmo y los resultados de validación si se ejecutaron.
+Glosario de métricas
+Las métricas que ves en las tarjetas y en el visualizador detallado tienen significados precisos. Esta tabla te ayuda a interpretarlas:
+Métrica
+Qué te dice
+Cómo leerla
+Sharpe Ratio
+Retorno ajustado por riesgo: cuánto ganas por cada unidad de volatilidad.
+>1 es decente, >2 es muy bueno. Pero siempre valida: un Sharpe alto con pocas operaciones no es confiable.
+Sortino
+Como el Sharpe, pero solo castiga las caídas (volatilidad negativa), no la subida.
+Cuanto más alto, mejor. Es más justo que el Sharpe para estrategias que tienen rachas ganadoras largas.
+Calmar
+Retorno anualizado dividido entre la peor caída (drawdown máximo).
+>1 significa que el retorno anual supera la peor caída. >2 es excelente.
+Drawdown máx (DD)
+La mayor caída porcentual desde un pico hasta un valle durante el backtest.
+Menor es mejor. Un DD del 5% es muy manejable; uno del 40% es difícil de aguantar emocionalmente en real.
+Win Rate
+Porcentaje de operaciones que cerraron en positivo.
+Un win rate alto con una mala relación riesgo/recompensa puede seguir perdiendo dinero. Evalúalo siempre junto al Profit Factor.
+Profit Factor (PF)
+Ganancia bruta total dividida entre la pérdida bruta total.
+>1 significa que el algoritmo gana más de lo que pierde. >1.5 es sólido; >2 es muy bueno.
+Expectancy
+Ganancia media esperada por cada operación, en términos monetarios.
+Positivo es bueno. Cuanto mayor, más «dinero por click» produce el algoritmo en promedio.
+Recovery Factor
+Cuánto gana el algoritmo en relación a su peor caída histórica.
+>3 significa que el beneficio total es al menos 3 veces el peor drawdown. Más alto = más capaz de recuperarse.
+TN Score
+La nota propia de TradingNote que resume la calidad global del algoritmo ponderando múltiples métricas.
+De 0 a 100. Es la métrica más práctica para ordenar y comparar candidatos de un vistazo.
+Ninguna métrica vale sola. Un Sharpe alto con pocas operaciones (por ejemplo, 20 trades) no es fiable estadísticamente. Busca consistencia + volumen suficiente de operaciones + validación Walk-Forward y Multiverso antes de confiar en un candidato.
+Neural Explorer (vista 3D)
+El Neural Explorer es una visualización en tres dimensiones de la exploración genética, renderizada como una red neuronal viva. Puedes abrirlo desde el botón «Neural Explorer» en la página del creador de algoritmos mientras la exploración corre (o al terminar).
+Cada nodo es un algoritmo candidato que fue evaluado. Su color y tamaño reflejan su calidad: nodos brillantes y grandes = mejor fitness / TN Score.
+Las ramas (axones) conectan padres con hijos: muestran el linaje de mutación, es decir, qué algoritmo mutó para dar origen a cuál. Puedes «ver» cómo evoluciona la búsqueda genética.
+Los destellos de luz que viajan por los axones representan los algoritmos que pasaron los filtros de calidad (DSR, Walk-Forward, Multiverso): los mejores candidatos «iluminan» la red.
+La cámara rota automáticamente alrededor de la nube de nodos. Puedes hacer clic y arrastrar para girarla tú mismo, y hacer scroll para hacer zoom.
+El panel HUD (arriba a la izquierda) muestra estadísticas en vivo: generación actual, total de nodos, candidatos vivos, mejor Sharpe. También tiene controles de velocidad (0.25× a 3×) y un botón de pausa.
+El Neural Explorer es decorativo y exploratorio: está diseñado para que puedas «sentir» la búsqueda genética de forma intuitiva, no para tomar decisiones. Las decisiones se toman en el panel de resultados.
+Guardar un algoritmo
+Cuando encuentres un candidato que te convence, puedes guardarlo en tu biblioteca personal para estudiarlo en profundidad y, eventualmente, operarlo. El proceso es deliberado: guardar no es operar.
+1
+Revisa las métricas y, si quieres, valídalo primero
+Abre el candidato haciendo clic en su tarjeta. Comprueba la curva de capital, el historial de operaciones y las métricas de detalle. Si la exploración lo ejecutó con Walk-Forward o Multiverso, verás esos resultados también. Una vez satisfecho, continúa.
+2
+Pulsa «Guardar en Mis Algoritmos»
+Encontrarás el botón tanto en la tarjeta (menú de acciones de la esquina) como dentro del visualizador detallado. Al pulsarlo, el candidato se convierte en un algoritmo activo en tu cuenta, con estado «Borrador» hasta que lo actives.
+3
+Encuéntralo en «Mis Algoritmos»
+A partir de ahí, el algoritmo vive en la sección «Mis Algoritmos» del menú lateral. Desde allí puedes re-backtestarlo en diferentes períodos o instrumentos, ejecutar el DSR, el Walk-Forward y el Multiverso, compararlo con otros y, cuando estés listo, añadirlo a un portafolio o configurarlo para live trading.
+Guardar no es operar. Guardar solo mete el algoritmo en tu biblioteca para que lo estudies sin prisas. Llevarlo a operar en real es un paso posterior y consciente: requiere meterlo en un portafolio, asignarle capital y activarlo, con todos los controles de riesgo que eso implica.
+Una vez guardado, el siguiente paso natural es profundizar el análisis en «Mis Algoritmos»: allí puedes lanzar las validaciones avanzadas (DSR, Walk-Forward, Multiverso) que determinan si el algoritmo generaliza bien fuera de muestra. Solo los que pasan esas pruebas deberían considerarse candidatos serios para un portafolio en vivo.

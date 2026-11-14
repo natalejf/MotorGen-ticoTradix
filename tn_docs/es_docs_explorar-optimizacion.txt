@@ -1,0 +1,138 @@
+# Optimización, fondeo y costos — TradingNote
+URL: https://tradingnote.co/es/docs/explorar-optimizacion
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Optimización, fondeo y costos
+Optimización, fondeo y costos
+Qué métrica priorizar, cómo simular un reto de fondeo, los costos realistas y los filtros de calidad.
+Abrir en la app
+6
+min
+La pestaña «Costos»: spread, comisión, slippage y swap por instrumento. Backtest realista = no bajes estos valores para «mejorar» los números.
+Una exploración prueba miles de combinaciones de indicadores y parámetros, pero ¿cuál resultado es «el mejor»? Eso depende del objetivo que elijas y de qué tan realistas sean los costos que aplicas al backtest. En este artículo afinas ambas cosas: el criterio de optimización y los parámetros de costos, de modo que los algoritmos que te entregue la exploración estén alineados con tu meta real —ya sea pasar un reto de fondeo o construir una curva de equity sólida a largo plazo.
+Optimización
+Fondeo
+Avanzado
+Costos
+Filtros
+Objetivo de optimización
+El objetivo de optimización es la métrica que la exploración intenta maximizar (o minimizar) al comparar combinaciones. Elegirla bien marca la diferencia entre encontrar un algo robusto y uno que solo luce bien en papel.
+Objetivo
+Qué maximiza / minimiza
+Score balanceado (default)
+Mezcla ponderada de Sharpe, drawdown y profit factor. Bueno para objetivos generales.
+Mayor Sharpe Ratio
+Retorno ajustado por volatilidad total de los retornos diarios.
+Mayor Sortino
+Como el Sharpe, pero solo penaliza la volatilidad de las pérdidas (ignora la volatilidad positiva).
+Mayor Calmar
+Retorno anualizado dividido entre el drawdown máximo. Ideal si el control de caídas es prioritario.
+Mayor PnL absoluto
+Ganancia total en USD, sin ajustar por riesgo. Puede favorecer algos agresivos.
+Menor Drawdown
+Minimiza el peor desplome desde el máximo histórico. Útil para cuentas de prop firm con límite de DD.
+Mayor Profit Factor
+Ganancia bruta dividida entre pérdida bruta. Mayor de 1 significa que ganas más de lo que pierdes en total.
+Mayor Expectancy
+Ganancia media por operación. Favorece algos con alta calidad de señal, aunque tengan pocas operaciones.
+Mayor Win Rate
+Porcentaje de operaciones ganadoras. Alto win rate no garantiza rentabilidad si las pérdidas son muy grandes.
+Mayor Recovery Factor
+PnL total dividido entre el drawdown máximo. Mide cuánto ganaste por cada dólar de caída máxima.
+Mayor pass rate de fondeo
+Porcentaje de simulaciones del reto de fondeo que se aprobarían. Requiere activar la sección «Fondeo».
+Si tu meta es pasar un reto de prop firm, elige «Mayor pass rate de fondeo» y configura las reglas del reto en la pestaña «Fondeo». Si buscas robustez general, el Score balanceado (default) es la mejor partida.
+Retos de fondeo (prop firms)
+Las prop firms te exigen cumplir reglas estrictas para darte capital: alcanzar un objetivo de ganancia, no superar una pérdida diaria máxima, no sobrepasar un drawdown total y operar un mínimo de días. La exploración puede simular ese escenario para ti.
+Al activar la simulación de fondeo, la exploración toma cada algoritmo candidato, lo «ejecuta» muchas veces sobre los datos históricos (con variación de condiciones) y calcula qué porcentaje de esas ejecuciones habrían pasado las reglas del reto. Ese porcentaje es el «pass rate». Un pass rate del 80 % significa que el algo habría superado el reto en 8 de cada 10 intentos simulados.
+1
+Activa la sección «Fondeo»
+En la configuración de la exploración encontrarás un bloque «Fondeo» o «Prop firm». Actívalo para ver los campos.
+2
+Define las reglas del reto
+Ingresa el capital inicial, el objetivo de ganancia (p. ej. 8 %), la pérdida diaria máxima (p. ej. 4 %), el drawdown total máximo (p. ej. 10 %) y los días mínimos de operación (p. ej. 5). Copia exactamente los valores de la prop firm que te interesa.
+3
+Selecciona «Mayor pass rate» como objetivo
+En la pestaña «Optimización», elige «Mayor pass rate de fondeo». La exploración priorizará los algos que más veces habrían aprobado el reto simulado.
+4
+Interpreta el pass rate
+Un pass rate muy alto (>90 %) puede indicar que las reglas del reto son fáciles para ese algo, o que el algo está sobre-ajustado al periodo. Combina el pass rate con el DSR y el Walk-Forward para confirmarlo.
+Un algo con pass rate de 95 % pero DSR muy bajo probablemente tuvo suerte estadística en ese periodo. No lo despliegues en vivo hasta validarlo con Walk-Forward y Multiverso.
+Ajustes avanzados de la exploración
+Además del instrumento, timeframe y fechas, la exploración expone ajustes que modifican cómo gestionan el riesgo los algoritmos candidatos. Úsalos para afinar el comportamiento de salida y el tamaño de posición.
+Riesgo/Recompensa fijo (fixedRR): fuerza que todos los algos candidatos usen una relación R:R predefinida (p. ej. 1:2) en sus salidas. Útil si quieres comparar combos sin que el R:R sea una variable libre.
+Multiplicador de riesgo dinámico (riskMultiplier): escala el tamaño de la posición según condiciones de mercado o resultados recientes. Un multiplicador >1 aumenta el riesgo en condiciones favorables; <1 lo reduce en condiciones adversas.
+Modificador de breakeven: ajusta a qué distancia del precio de entrada se activa el movimiento del stop a punto de equilibrio. Valores más bajos lo activan antes (mayor protección, menor potencial).
+Modificador de trailing stop: controla la agresividad del trailing (cuánto cede el stop al precio). Un trailing muy ajustado cierra más rápido, capturando menos de la tendencia.
+Averaging (averagingConfig): permite añadir unidades a una posición ya abierta cuando el precio se mueve en contra (promediar a la baja) o a favor (piramidear). Puede multiplicar ganancias pero también pérdidas.
+El averaging es una técnica avanzada y arriesgada: si el precio no regresa, la posición crece y las pérdidas se amplifican. Úsalo solo si entiendes bien el instrumento y tienes un stop de emergencia claro.
+Costos realistas: spread, comisión, slippage y swap
+Cada backtest aplica costos por instrumento: spread (la diferencia bid/ask que pagas al entrar), comisión (el cargo fijo por operación), slippage (la diferencia entre el precio que ves y el que obtienes en ejecución real) y swap (el costo de mantener posiciones abiertas de un día para otro). Puedes ver y editar estos valores en la sección «Costos del instrumento» dentro de la configuración de exploración.
+Instrumento
+Spread (pips)
+Comisión (USD)
+Slippage (pips)
+Swap Long
+Swap Short
+EURUSD
+1.5
+0
+1
+-0.5
+0.3
+Los valores por defecto reflejan condiciones típicas de mercado líquido en horario europeo. Puedes editar cada fila para ajustar a tu broker real, o pulsar «Resetear» para volver a los valores predeterminados del instrumento.
+Un algo que brilla sin costos casi siempre se desinfla cuando aplicas spread, slippage y comisiones reales. No bajes estos valores para «mejorar» los números: te estarías engañando a ti mismo y el algo fallará en vivo. Siempre usa costos iguales o ligeramente superiores a los reales.
+Filtros de calidad
+Al terminar la exploración, la plataforma no guarda todos los candidatos: solo los que superan un conjunto de umbrales mínimos de calidad. Así evitas acumular algoritmos frágiles o sin base estadística.
+Filtro
+Para qué sirve
+Valor típico
+Sharpe mínimo
+Descarta algos con retornos bajos respecto a su volatilidad. Un Sharpe <1 indica que el riesgo asumido no vale la pena.
+1.2
+Drawdown máximo
+Elimina algos que en el pasado tuvieron caídas demasiado profundas. Imprescindible si operas con prop firm.
+15 %
+Win Rate mínimo
+Asegura un porcentaje mínimo de operaciones ganadoras. Ayuda a filtrar algos que solo «ganan» por pocas operaciones grandes.
+50 %
+DSR mínimo (Deflated Sharpe Ratio)
+Corrige el Sharpe por la cantidad de combinaciones probadas en la exploración. Un Sharpe alto obtenido después de probar 10.000 combos puede ser pura suerte; el DSR lo descuenta. Un DSR alto (>0.5) indica que el algo no es solo azar del barrido.
+0.3 (mínimo) — apunta a >0.5
+Subir mucho los filtros puede dejarte con cero resultados. Si una exploración no devuelve ningún algoritmo, empieza por relajar el Sharpe mínimo o el drawdown máximo. También puedes ampliar el rango de fechas para que la búsqueda tenga más datos sobre los que actuar.
+Una vez que tengas candidatos que superaron estos filtros, el siguiente paso es validarlos: ejecutar Walk-Forward para verificar que el algo generaliza fuera del periodo de entrenamiento, y Multiverso para simular decenas de escenarios de mercado alternativos. Consulta el artículo «Validación: Walk-Forward y Multiverso» para continuar.

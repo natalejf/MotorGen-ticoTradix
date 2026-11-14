@@ -1,0 +1,235 @@
+# IDE: indicadores y datos — TradingNote
+URL: https://tradingnote.co/es/docs/ide-indicadores
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+IDE: indicadores y datos
+IDE: órdenes y salidas
+IDE: parámetros, validación e historial
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+IDE: indicadores y datos
+IDE: indicadores y datos
+Cómo registrar y leer indicadores en tu código, y cómo acceder a precios e históricos.
+Abrir en la app
+7
+min
+Registras los indicadores una vez en on_init() y luego lees su valor (.value) en on_bar().
+En el IDE registras indicadores una sola vez en `on_init()` y después lees su valor en cada vela dentro de `on_bar()`. Este artículo es tu guía de referencia: aquí está el catálogo completo de los 28 indicadores disponibles, cómo leer sus salidas y cómo acceder a los datos de precio del activo.
+Registrar un indicador
+Usa `self.indicator("NOMBRE", **parametros)` dentro de `on_init()` y guarda el resultado en una variable de instancia. El motor crea el buffer del indicador una vez y lo actualiza automáticamente en cada vela.
+python
+def on_init(self):
+    self.rsi = self.indicator("RSI", period=14)
+    self.ema = self.indicator("EMA", period=200)
+    self.macd = self.indicator("MACD", fast=12, slow=26, signal=9)
+Leer el valor de un indicador
+Acceso
+Devuelve
+.value
+Valor del indicador en la vela actual
+.prev
+Valor del indicador en la vela anterior
+.values(n)
+Lista con los últimos n valores (el índice 0 es el más reciente)
+python
+def on_bar(self):
+    if self.rsi.value < 30:                              # RSI actual por debajo de 30
+        ...
+    if self.rsi.prev > 70 and self.rsi.value < 70:       # acaba de cruzar 70 a la baja
+        ...
+Indicadores con varias salidas
+Algunos indicadores devuelven más de una línea (banda superior/inferior, línea de señal, etc.). Accedes a cada salida por su atributo específico en lugar de usar `.value`.
+python
+self.bb = self.indicator("Bollinger", period=20, stdDev=2.0)
+# self.bb.upper, self.bb.middle, self.bb.lower
+
+self.macd = self.indicator("MACD", fast=12, slow=26, signal=9)
+# self.macd.value (línea MACD), self.macd.signal, self.macd.histogram
+
+self.ichi = self.indicator("Ichimoku", tenkan=9, kijun=26, senkou=52)
+# self.ichi.tenkanSen, self.ichi.kijunSen, self.ichi.senkouA, self.ichi.senkouB
+Catálogo de indicadores (28)
+Nombre
+Familia
+Parámetros (con defaults)
+Salidas / Notas
+EMA
+Tendencia
+period=200
+.value
+SMA
+Tendencia
+period=50
+.value
+DEMA
+Tendencia
+period=21
+.value
+TEMA
+Tendencia
+period=21
+.value
+HMA
+Tendencia
+period=9
+.value — Hull Moving Average, menos lag que EMA
+WMA
+Tendencia
+period=20
+.value
+KAMA
+Tendencia
+period=10, fast=2, slow=30
+.value — se adapta a la volatilidad del mercado
+SuperTrend
+Tendencia
+period=10, multiplier=3
+.value — precio del nivel; positivo = alcista, negativo = bajista
+RSI
+Momentum
+period=14
+.value — rango 0-100
+Stochastic
+Momentum
+period=14, dPeriod=3
+.k y .d — rango 0-100
+MACD
+Momentum
+fast=12, slow=26, signal=9
+.value (línea MACD), .signal, .histogram
+CCI
+Momentum
+period=20
+.value — sobrecompra >100, sobreventa <-100
+ROC
+Momentum
+period=12
+.value — tasa de cambio en %
+WilliamsR
+Momentum
+period=14
+.value — rango -100 a 0; sobrecompra >-20, sobreventa <-80
+Bollinger
+Volatilidad
+period=20, stdDev=2.0
+.upper, .middle, .lower
+ATR
+Volatilidad
+period=14
+.value — rango verdadero promedio
+Keltner
+Volatilidad
+period=20, multiplier=1.5
+.upper, .middle, .lower
+Donchian
+Volatilidad
+period=20
+.upper (máximo del canal), .lower (mínimo del canal)
+StdDev
+Volatilidad
+period=20
+.value — desviación estándar de los cierres
+ADX
+Fuerza de tendencia
+period=14
+.value (ADX), .plusDI, .minusDI
+OBV
+Volumen
+signal=20
+.value (OBV acumulado), .signal (EMA del OBV)
+MFI
+Volumen
+period=14
+.value — Money Flow Index, rango 0-100
+VWAP
+Volumen
+sin parámetros
+.value — precio medio ponderado por volumen (se resetea cada sesión)
+Highest
+Precio
+period=20
+.value — máximo de las últimas N velas
+Lowest
+Precio
+period=20
+.value — mínimo de las últimas N velas
+PivotPoints
+Precio
+sin parámetros
+.pp (pivot), .r1/.r2 (resistencias), .s1/.s2 (soportes)
+Ichimoku
+Avanzado
+tenkan=9, kijun=26, senkou=52
+.tenkanSen, .kijunSen, .senkouA, .senkouB
+ParabolicSAR
+Avanzado
+afStart=0.02, afStep=0.02, afMax=0.2
+.value — precio del stop; está por debajo del precio en tendencia alcista y por encima en bajista
+El ATR rara vez se usa como señal directa; lo normal es usarlo para dimensionar el SL/TP dinámicamente (ej. `sl_atr=1.5`). Ve cómo hacerlo en el artículo «IDE: órdenes y salidas».
+Indicador macro (FRED)
+Puedes traer cualquier serie macroeconómica de la base de datos FRED como si fuera un indicador técnico: usa `self.indicator("Macro", seriesId="CODIGO")`. Los datos respetan la fecha real de publicación para evitar lookahead bias. Es útil para filtrar señales según el contexto macro (volatilidad, tipos de interés, empleo, etc.).
+python
+def on_init(self):
+    self.vix = self.indicator("Macro", seriesId="VIXCLS")
+
+def on_bar(self):
+    if self.vix.value > 30:   # mercado nervioso: no operar
+        return
+Acceder a precios e históricos (self.data y self.bar)
+`self.bar` contiene los datos de la vela actual de forma directa. `self.data` te da acceso a las series completas con índice relativo: `[0]` es la vela actual, `[-1]` la anterior, `[-5]` la de hace cinco velas.
+python
+self.bar.close          # cierre de la vela actual
+self.bar.high, self.bar.low, self.bar.open, self.bar.volume
+
+self.data.close[0]      # = self.bar.close
+self.data.close[-1]     # cierre anterior
+self.data.high[-3]      # máximo de hace 3 velas
+self.data.bar_count     # cuántas velas hay disponibles
+Método de serie (self.data.close, .high, .low…)
+Qué calcula
+.values(n)
+Lista con los últimos n valores; índice 0 = más reciente
+.highest(n)
+Valor máximo de las últimas n velas
+.lowest(n)
+Valor mínimo de las últimas n velas
+.avg(n)
+Promedio de las últimas n velas
+.crossover(otro)
+True si la serie acaba de cruzar al alza el valor o serie dado
+.crossunder(otro)
+True si la serie acaba de cruzar a la baja el valor o serie dado
+python
+resistencia = self.data.high.highest(20)
+if self.data.close.crossover(self.ema.value):   # precio cruza la EMA al alza
+    self.buy(sl_atr=1.5, tp_atr=3.0)
+Ejemplo: breakout de la resistencia de 20 velas con cruce de EMA como confirmación
+Registra los indicadores SIEMPRE en `on_init()`, nunca dentro de `on_bar()`. Si lo haces en `on_bar()`, el motor crearía un indicador nuevo en cada vela y nunca tendría histórico suficiente para calcular su valor.
+Los nombres de indicador distinguen mayúsculas: "RSI", "EMA", "Bollinger"… úsalos tal cual aparecen en el catálogo. Un nombre incorrecto lanzará un error al iniciar el backtest.
+Con los indicadores y los datos de precio bajo control, el siguiente paso es aprender a colocar órdenes, gestionar el SL/TP y cerrar posiciones. Continúa en «IDE: órdenes y salidas».

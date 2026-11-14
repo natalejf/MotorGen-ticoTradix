@@ -1,0 +1,75 @@
+# Creador de Algoritmos — TradingNote
+URL: https://tradingnote.co/es/docs/creador-algoritmos
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Creador de Algoritmos
+Creador de Algoritmos
+Descubre algoritmos de trading automáticamente, sin programar. Lanzas una exploración y la plataforma busca por ti — y filtra el sobreajuste antes de mostrártelos.
+Abrir en la app
+11
+min
+Crea algoritmos de trading con IA, sin programar
+Cómo crear algoritmos de trading: tutorial completo
+El Creador de Algoritmos es el corazón de TradingNote: una máquina que descubre estrategias de trading por ti, sin que escribas una sola línea de código. Lanzas una «exploración» y la plataforma prueba miles de combinaciones de indicadores y parámetros sobre datos históricos, y te devuelve los algoritmos que mejor funcionaron. Tú solo eliges cuáles te gustan. Es la diferencia entre programar un sistema a mano durante semanas y dejar que una máquina explore el espacio de posibilidades en minutos.
+Cada tarjeta es una «sesión» de exploración. Arriba ves cuántas tienes y cuántas dieron resultados.
+Cómo lanzar tu primera exploración
+1
+Crea una sesión nueva
+Pulsa «New session» (arriba a la derecha). Una sesión es un proyecto de búsqueda de algoritmos: agrupa todas las exploraciones que hagas sobre una misma idea.
+2
+Define qué buscar
+Eliges el instrumento (par o activo), el timeframe y el rango de fechas. La plataforma probará automáticamente muchos indicadores y combinaciones sobre esos datos.
+3
+Elige el motor de búsqueda
+Aleatorio (cubre mucho terreno rápido) o genético (evoluciona las mejores ideas como en la selección natural). Más abajo te explicamos cuándo usar cada uno.
+4
+Pulsa «Explore strategies»
+Comienza la exploración. La plataforma va generando algoritmos candidatos y los filtra por robustez. Puedes seguirlo en vivo, incluso en una vista 3D llamada «Neural Explorer» que dibuja la búsqueda como una red neuronal.
+5
+Revisa los candidatos
+Al terminar, los algoritmos que pasaron los filtros quedan guardados. Los encuentras en la sección «Mis Algoritmos» para estudiarlos en detalle.
+Aleatorio vs genético: qué motor elegir
+Aleatorio
+Genético
+Genera combinaciones al azar dentro del espacio que definiste. Es como echar una red ancha al mar: cubre mucho terreno rápido y es ideal para una primera exploración de un instrumento que no conoces. Si no sabes por dónde empezar, empieza aquí.
+Imita la selección natural: parte de una población de algoritmos, conserva los mejores, los «cruza» y «muta» generación tras generación. Converge hacia buenas soluciones gastando menos cómputo en las malas. Úsalo cuando ya viste que un instrumento tiene potencial y quieres afinar la búsqueda.
+Lo que pasa por debajo (y por qué importa)
+El Creador no se limita a buscar lo que más ganó: filtra agresivamente el sobreajuste antes de mostrarte nada. Ese es su verdadero valor. Es fácil encontrar por casualidad un algoritmo que se ve perfecto en el pasado; lo difícil es encontrar uno que vaya a funcionar en el futuro. Por eso cada candidato pasa por filtros de robustez, y la mayoría se descarta.
+Que una exploración devuelva pocos algoritmos (o ninguno) no es un fallo: es el sistema haciendo su trabajo. En muchos mercados, el filtro de robustez descarta más del 95% de los candidatos con Sharpe alto, justamente porque ese Sharpe era producto de la suerte. Pocos algoritmos sólidos valen más que cientos de espejismos.
+Las exploraciones pesadas corren en infraestructura dedicada que se crea solo para tu búsqueda y se apaga al terminar. Cuántas puedes correr a la vez depende de tu plan; si una queda en cola, espera a que termine la anterior o sube de plan para más capacidad.
+No te quedes con el primer algoritmo «bonito» que aparezca. Un buen resultado en el pasado no garantiza el futuro: por eso existe el paso de validación profunda (DSR, Walk-Forward, Multiverso) que verás en «Mis Algoritmos». Explorar es solo el primer paso; validar es lo que separa a un trader de un apostador.

@@ -1,0 +1,156 @@
+# Configuración de la exploración — TradingNote
+URL: https://tradingnote.co/es/docs/explorar-configuracion
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Fábrica de algoritmos: el paso a paso
+Configuración de la exploración
+Indicadores y rangos
+Salidas, riesgo y horarios
+Optimización, fondeo y costos
+Validación: Walk-Forward y Multiverso
+Resultados y Neural Explorer
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+Configuración de la exploración
+Configuración de la exploración
+Qué instrumento, timeframe, fechas y capital usar, y si conviene una búsqueda aleatoria o genética.
+Abrir en la app
+6
+min
+La pestaña «Configuración»: instrumento, timeframe, período, capital y tipo de búsqueda. Nada se ejecuta hasta pulsar «Explorar».
+La pestaña «Configuración» es lo primero que ves al abrir una sesión de exploración. Aquí defines el universo de búsqueda: qué activo probar, en qué timeframe, con qué capital y qué tipo de búsqueda usar. Hasta que no pulses «Explorar», no se ejecuta nada; puedes cambiar cualquier campo tantas veces como quieras.
+Instrumento y datos
+Estos cuatro campos determinan sobre qué datos históricos trabaja la exploración. Cuanto más datos y más instrumentos elijas, más completo (y más lento) será el barrido.
+Campo
+Descripción
+Valores / rango
+Default
+Símbolo
+Activo o par a probar. Multi-selección: puedes elegir varios a la vez (~29 disponibles: EURUSD, GBPUSD, USDJPY, USDCHF, USDCAD, AUDUSD, NZDUSD, EURJPY, GBPJPY, XAUUSD, XAGUSD, BTCUSD, ETHUSD, US30, USTEC, SPXUSD, NGAS, USOIL, entre otros). Al elegir uno, se muestra el rango de fechas con datos disponibles.
+~29 activos
+Ninguno (obligatorio)
+Intervalo (timeframe)
+Granularidad de las velas que usa el backtest. Puedes marcar varios a la vez.
+M1, M5, M15, M30, H1, H4, D1
+M15 y H1
+Período (fechas)
+Inicio y fin del intervalo de backtesting (YYYY-MM-DD). Acotado al rango con datos disponibles del instrumento. Más historia = backtest más fiable, pero la exploración tarda más.
+Según disponibilidad del activo
+Últimos 2 años del activo seleccionado
+Depósito inicial
+Capital base del backtest en USD. Afecta el cálculo del equity, el drawdown porcentual y el tamaño de posición si usas gestión de riesgo porcentual.
+1.000 · 2.000 · 5.000 · 10.000 · 25.000 · 50.000 · 100.000 · 200.000 · 500.000 · 1.000.000 USD
+10.000 USD
+Si eliges varios símbolos a la vez, la exploración los prueba a todos: el tiempo total se multiplica por el número de activos seleccionados.
+Tipo de búsqueda
+El motor de exploración puede buscar de dos maneras muy distintas. Elige la que mejor se adapte a tu momento: si es la primera vez que exploras un activo, la búsqueda aleatoria es la opción natural para barrer el espacio de posibilidades. Si ya sabes que algo funciona y quieres refinarlo, la evolución genética lleva las mejores ideas más lejos.
+Modo
+Cómo funciona
+Cuándo usarlo
+Velocidad relativa
+Aleatoria (random)
+Genera miles de combinaciones de indicadores y parámetros completamente al azar y evalúa cada una.
+Primera exploración de un activo. Quieres una visión amplia de qué puede funcionar.
+Rápida
+Evolución genética (genetic)
+Parte de las combinaciones con mejor desempeño y las «cruza» y «muta» generación a generación, como selección natural. Converge hacia mejores soluciones progresivamente.
+Ya tienes algún algoritmo prometedor y quieres afinar los parámetros. Mejor para explorar en profundidad.
+Más lenta
+Modelado del backtest
+Este ajuste controla cuánta precisión tiene la simulación de cada algoritmo. A mayor precisión, mayor fidelidad con lo que pasaría en el mercado real, pero también mayor tiempo de cómputo. Hay cuatro modos:
+Modo
+Cómo evalúa cada vela
+Precisión
+Velocidad
+Recomendado para
+Solo apertura (open_prices)
+Una sola evaluación por vela, en el precio de apertura.
+Baja
+Muy rápida
+Pre-filtros rápidos de ideas. No recomendado para resultados finales.
+OHLC (ohlc)
+Usa apertura, máximo, mínimo y cierre de cada vela. Detecta si el SL o TP fue tocado dentro de la vela.
+Media
+Rápida
+La mayoría de las exploraciones. Buen equilibrio entre precisión y velocidad.
+OHLC + M1 (ohlc_m1)
+Usa OHLC de las velas del timeframe elegido y, además, refina el orden intra-vela con datos de 1 minuto para saber con más exactitud cuándo se disparó cada orden.
+Alta
+Moderada
+Verificar algoritmos prometedores antes de pasarlos a validación DSR/WF.
+Cada tick (tick)
+Simula tick a tick: máxima fidelidad, reproduce movimientos intra-vela con el mayor detalle posible.
+Máxima
+Muy lenta
+Validación final de un algo específico. No usar para barridos grandes.
+El modelado «tick» puede tardar muchísimo en exploraciones con muchas combinaciones. Úsalo solo para validar un algoritmo concreto que ya elegiste, no para el barrido inicial.
+Dirección
+Define si los algoritmos que se generan pueden operar en largo, en corto o en ambas direcciones.
+Opción
+Qué hace
+Default
+Long (solo compras)
+El algoritmo solo abre posiciones de compra. Útil en activos con tendencia alcista secular (índices, cripto).
+Sí (por defecto)
+Short (solo ventas)
+El algoritmo solo abre posiciones de venta. Útil si buscas estrategias bajistas o de cobertura.
+No
+Both (ambas)
+El algoritmo puede abrir en ambas direcciones, alternando entre long y short según la señal. Mayor flexibilidad, pero requiere más datos para validarse bien.
+No
+Multi-timeframe
+Esta opción solo aparece cuando seleccionas dos o más timeframes. Define cómo se combinan en la exploración.
+Opción
+Comportamiento
+Default
+Individual
+Cada timeframe se explora por separado. Obtienes algoritmos independientes para M15 y para H1, por ejemplo.
+Sí (por defecto)
+Combined
+El sistema busca algoritmos que combinen señales de varios timeframes en un mismo algo (p.ej. entrada en M15 confirmada por H1).
+No
+Both
+Explora tanto en modo individual como en modo combined y te trae resultados de los dos.
+No
+Combinaciones a probar
+El slider de «combinaciones» controla cuántas estrategias distintas evaluará la exploración. Más combinaciones = mayor probabilidad de encontrar algo robusto, pero el proceso tarda más. La plataforma muestra una estimación de tiempo antes de empezar.
+Rango
+Default
+Cuándo usar el máximo
+1.000 – 50.000 combinaciones
+10.000
+Cuando has acotado bien el espacio (pocos indicadores, pocas condiciones) y quieres un barrido exhaustivo de alta calidad.
+¿Cuándo se activa el botón «Explorar»?
+El botón permanece desactivado hasta que se cumplan todas estas condiciones a la vez:
+Al menos un símbolo seleccionado.
+Al menos un timeframe marcado.
+Fechas de inicio y fin válidas (dentro del rango disponible del activo).
+Al menos un indicador configurado en la pestaña «Indicadores».
+Para tu primera exploración, deja la búsqueda en «Aleatoria», el modelado en «OHLC» y las combinaciones en 10.000. Es rápido y suficiente para ver qué indicadores tienen potencial en el activo que elijas.
+Una vez que domines esta pestaña, el siguiente paso es la pestaña «Indicadores», donde eliges qué señales técnicas quieres que la exploración combine. Cuantos más indicadores actives, más combinaciones posibles, así que empieza con 3 o 4 y amplía después.

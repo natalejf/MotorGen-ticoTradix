@@ -1,0 +1,221 @@
+# IDE interno (código) — TradingNote
+URL: https://tradingnote.co/es/docs/ide-interno
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+IDE: indicadores y datos
+IDE: órdenes y salidas
+IDE: parámetros, validación e historial
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+IDE interno (código)
+IDE interno (código)
+Escribe tus propios bots de trading en Python dentro de TradingNote, sin instalar nada. Editor estilo VS Code con backtest integrado.
+Abrir en la app
+8
+min
+El IDE interno: árbol de archivos a la izquierda, editor Python al centro, parámetros con sliders a la derecha y diagnóstico en vivo abajo.
+Además de descubrir algoritmos automáticamente con el Explorador, TradingNote tiene un IDE interno donde tú escribes la estrategia en Python. Es para quien quiere control total: una lógica concreta que el explorador aleatorio no encontraría. El editor funciona en el navegador, tiene resaltado de sintaxis estilo VS Code (Monaco), backtest integrado y no requiere instalar nada en tu computador.
+Solo necesitas saber algo de Python básico. Si no programas, el Explorador aleatorio hace el mismo trabajo sin código: lanza una exploración y la plataforma busca por ti.
+¿Explorador o IDE? Cuándo usar cada uno
+Situación
+Usa el Explorador
+Usa el IDE
+No sé programar
+✓
+—
+Tengo una idea de lógica específica
+—
+✓
+Quiero barrer miles de combos de parámetros
+✓
+—
+Quiero condiciones a medida / lógica por sesión horaria
+—
+✓
+Quiero multi-posición o gestión de riesgo avanzada
+—
+✓
+Quiero iterar rápido sin pensar en código
+✓
+—
+Cómo crear una estrategia en el IDE
+1
+Entra al Creador de Algoritmos
+En el menú principal, haz clic en «Creador de Algoritmos» (sección Lab). Verás la lista de tus sesiones de exploración.
+2
+Pulsa «Nueva sesión»
+Arriba a la derecha encontrarás el botón «New session». Esto abre el asistente de creación.
+3
+Elige «Desarrollo personalizado»
+En el asistente verás dos modos: «Exploración automática (aleatoria o genética)» y «Desarrollo personalizado». Selecciona el segundo para abrir el IDE.
+4
+Ponle nombre y abre el IDE
+Escribe un nombre descriptivo para la sesión (por ejemplo «RSI + EMA EURUSD H1») y confirma. El IDE se abre con una plantilla lista para editar.
+El layout del IDE
+El IDE está dividido en cuatro paneles principales que trabajan juntos:
+Izquierda — árbol de archivos: puedes crear varios archivos .py y carpetas, arrastrarlos, renombrarlos y borrarlos. El archivo main.py es obligatorio y es el punto de entrada de tu estrategia.
+Centro — editor de código: el editor Monaco (el mismo núcleo de VS Code) con pestañas y vista dividida para ver dos archivos a la vez. Incluye autocompletado de la API de TradingNote.
+Derecha — panel de parámetros: sliders y controles que aparecen automáticamente cuando usas Parameter() en tu código. Te permite ajustar valores sin tocar el código. Ver sub-página «Parámetros, validación e historial».
+Abajo — pestañas de Diagnóstico e Historial: Diagnóstico muestra errores y avisos en tiempo real mientras escribes; Historial lista las versiones guardadas automáticamente de tu código (cada ~30 segundos).
+Estructura mínima de una estrategia
+Toda estrategia es una clase Python que hereda de Strategy. Necesita al menos dos métodos: on_init() (se ejecuta una vez al inicio, para registrar indicadores y preparar variables) y on_bar() (se ejecuta en cada vela nueva, donde escribes la lógica para decidir cuándo comprar o vender). A continuación, la plantilla que aparece por defecto al crear una sesión IDE:
+python
+from strategy_base import Strategy, Parameter
+
+class MiEstrategia(Strategy):
+    rsi_period = Parameter(14, min_val=5, max_val=50, step=1, label="Periodo RSI")
+    rsi_oversold = Parameter(30, min_val=10, max_val=45, step=1, label="RSI Sobreventa")
+    rsi_overbought = Parameter(70, min_val=55, max_val=90, step=1, label="RSI Sobrecompra")
+    ema_period = Parameter(200, min_val=10, max_val=500, step=10, label="Periodo EMA")
+    sl_atr = Parameter(1.5, min_val=0.5, max_val=5.0, step=0.1, label="Stop Loss (ATR)")
+    tp_atr = Parameter(3.0, min_val=0.5, max_val=10.0, step=0.1, label="Take Profit (ATR)")
+
+    def on_init(self):
+        self.rsi = self.indicator("RSI", period=self.rsi_period)
+        self.ema = self.indicator("EMA", period=self.ema_period)
+
+    def on_bar(self):
+        if not self.position:
+            if self.rsi.value < self.rsi_oversold and self.bar.close > self.ema.value:
+                self.buy(sl_atr=self.sl_atr, tp_atr=self.tp_atr)
+                self.log(f"BUY @ {self.bar.close:.5f} | RSI={self.rsi.value:.1f}")
+        else:
+            if self.rsi.value > self.rsi_overbought:
+                self.close()
+Plantilla por defecto del IDE. Compra cuando el RSI está en sobreventa y el precio está sobre la EMA200; cierra cuando el RSI llega a sobrecompra.
+Veamos qué hace cada parte. Las líneas de Parameter() definen controles ajustables que aparecerán como sliders en el panel derecho del IDE: rsi_period controla el período del RSI (por defecto 14), rsi_oversold y rsi_overbought son los umbrales de entrada y salida, ema_period define la media móvil de tendencia, y sl_atr / tp_atr fijan el Stop Loss y Take Profit como múltiplos del ATR. En on_init() se registran los indicadores que usará la estrategia: un RSI con el período elegido y una EMA con su período. En on_bar(), la lógica principal: si no hay posición abierta y el RSI está por debajo del umbral de sobreventa y el precio de cierre está por encima de la EMA (filtro de tendencia), se ejecuta una compra con el stop loss y take profit configurados, y se escribe un mensaje en el log. Si ya hay posición abierta, la cierra en cuanto el RSI supera el umbral de sobrecompra.
+Empieza por la plantilla. Cámbiale un número (por ejemplo el período del RSI de 14 a 20), guárdala como algoritmo, backtestéala y mira cómo cambian las métricas: es la forma más rápida de ganar intuición sobre cómo afectan los parámetros.
+Métodos del ciclo de vida
+Además de on_init() y on_bar(), puedes sobrescribir estos métodos opcionales para responder a momentos clave de la ejecución:
+Método
+Cuándo se ejecuta
+Para qué usarlo
+on_init()
+Una vez al inicio del backtest
+Registrar indicadores, inicializar variables
+on_bar()
+En cada vela cerrada
+Lógica principal: señales de entrada y salida
+on_tick(tick)
+En cada tick intra-vela, SOLO en el backtest (en vivo no se llama)
+Scalping, gestión intra-vela, trailing stops finos en el backtest
+on_day_start()
+Primer bar de cada día
+Resets diarios, cargar niveles del día anterior
+on_day_end()
+Último bar de cada día
+Cerrar posiciones al cierre del día, guardar estado
+on_week_start()
+Primer bar del lunes
+Resets semanales, ajuste de parámetros por semana
+on_week_end()
+Último bar del viernes
+Cerrar al cierre semanal, evitar riesgo de fin de semana
+on_month_start()
+Primer bar del mes
+Resets mensuales, rotación de activos por mes
+on_month_end()
+Último bar del mes
+Cerrar al cierre mensual, reportes de rendimiento
+En vivo (portafolio con sesión activa) el bot se evalúa UNA vez por vela cerrada: solo corre on_bar al cierre de cada vela de la temporalidad del portafolio. on_tick solo se ejecuta en el backtest. Si necesitas una gestión más fina (trailing, salidas intra-vela), corre el bot en M1: la temporalidad se elige en el portafolio o se declara en la clase con timeframe = "M1". El IDE te avisa al guardar/publicar si tu código define on_tick.
+Qué puedes leer en tu código (propiedades)
+Dentro de cualquier método tienes acceso a estas propiedades del contexto de ejecución. El detalle completo de indicadores, órdenes y parámetros está en las sub-páginas correspondientes.
+Propiedad
+Qué es
+self.bar
+Vela actual: open, high, low, close, volume, timestamp (Unix en segundos, GMT/UTC), index
+self.position
+Posición abierta principal (None si no hay ninguna)
+self.positions
+Lista de todas las posiciones abiertas
+self.in_position
+Booleano: True si hay al menos una posición abierta
+self.position_count
+Número de posiciones abiertas en este momento
+self.balance
+Balance de la cuenta (capital en efectivo)
+self.equity
+Equity = balance + PnL flotante de posiciones abiertas
+self.trades
+Historial de operaciones cerradas en el backtest
+self.data
+Precios históricos con índices relativos (self.data.close[-1] = vela anterior)
+self.symbol_info
+Specs del instrumento: pip size, tick value, spread, etc.
+self.account
+Info de la cuenta: divisa base, leverage, broker
+self.calendar
+Calendario económico: próximos eventos macro para el símbolo activo
+self.log(msg)
+Escribe un mensaje en el log de diagnóstico del IDE
+El IDE corre en una caja de seguridad (sandbox): no puedes importar librerías externas (numpy, pandas, requests…) ni acceder a internet ni al sistema de archivos. Solo puedes importar from strategy_base import Strategy, Parameter y tus propios archivos dentro del proyecto. El detalle de qué se puede y qué no está en la sub-página de parámetros.
+La hora de la vela y filtros de sesión
+La marca de tiempo de la vela actual está en self.bar.timestamp (no self.bar.time). Es un número entero: tiempo Unix en segundos y referenciado a GMT/UTC. No es milisegundos ni un objeto datetime. Como el tiempo Unix está anclado a UTC, la hora que derives de él ya es GMT directa, sin conversión de zona horaria.
+Como el sandbox no permite importar datetime, la hora se calcula con aritmética simple sobre el timestamp. Estos helpers están siempre disponibles. El ejemplo siguiente solo opera entre las 07:00 y las 11:00 GMT:
+python
+def on_bar(self):
+    # segundos transcurridos dentro del día UTC
+    secs = self.bar.timestamp % 86400
+    hour_gmt   = secs // 3600          # 0..23  (GMT)
+    minute_gmt = (secs % 3600) // 60   # 0..59
+
+    # Operar solo entre 07:00 y 11:00 GMT
+    if not (7 <= hour_gmt < 11):
+        return  # fuera de ventana -> no hacer nada
+
+    # ... tu logica de entrada/salida aqui ...
+
+    # Variante con minutos exactos (p.ej. ventana 07:30-11:30 GMT):
+    # mins_of_day = (self.bar.timestamp % 86400) // 60   # 0..1439
+    # if not (7*60 + 30 <= mins_of_day < 11*60 + 30):
+    #     return
+Filtro de sesión horaria. secs = self.bar.timestamp % 86400 son los segundos dentro del día; // 3600 da la hora GMT y (% 3600) // 60 los minutos. Todo con int, %, // y divmod, que sí están permitidos en el sandbox.
+self.bar.time no existe y lanzará 'Bar' object has no attribute 'time'. Usa siempre self.bar.timestamp. Tampoco intentes from datetime import datetime: el sandbox lo bloquea — la aritmética de arriba es la forma correcta de obtener la hora.
+Guardar y backtestear tu estrategia
+Aquí hay un detalle importante: el IDE no tiene un botón de «Ejecutar» que corra el código dentro del editor. El flujo es otro — guardas el algoritmo y la prueba ocurre en el backtesting, donde además, gracias a los Parameter() que declaraste, puedes ajustar los valores y descubrir cuáles funcionan mejor para ese algoritmo en concreto.
+1
+Escribe y deja que se guarde solo
+Dentro del IDE no hay botón de «Ejecutar». Solo escribes: el IDE guarda tu trabajo automáticamente (cada ~1.5 segundos de inactividad) y crea versiones de tu código cada ~30 segundos. Puedes volver a cualquier versión anterior desde la pestaña «Historial» abajo.
+2
+Guarda como algoritmo
+Pulsa «Guardar algoritmo» (arriba a la derecha). Tu estrategia se publica en «Mis Algoritmos» con los parámetros actuales, exactamente igual que un algoritmo descubierto por el Explorador. Desde ahí se backtestea.
+3
+Backtéstalo sobre datos reales
+En el backtest eliges símbolo, timeframe, rango de fechas y capital, y la plataforma corre tu código vela por vela incluyendo spread, comisiones y swap. Obtienes la curva de capital, la lista de operaciones y las métricas clave: Sharpe, máximo drawdown, win rate, factor de beneficio y TN Score.
+4
+Ajusta los parámetros y encuentra los mejores
+Como tu estrategia declara Parameter(), en el backtesting puedes mover esos parámetros y comparar las métricas para descubrir qué valores funcionan mejor para ese algoritmo en concreto. Es la forma de afinar tu propia idea sin reescribir el código.
+5
+Valida y opera
+Cuando los números te convenzan, valídalo con Walk-Forward y Multiverso (ver la sección de Validación) para descartar el sobreajuste. Si pasa, ya puedes añadirlo a un portafolio o llevarlo a live trading como cualquier otro algoritmo.
+Sigue aprendiendo
+Este artículo cubre la visión general del IDE. Las tres sub-páginas siguientes entran en detalle en cada área especializada:
+Indicadores y datos — cómo registrar y usar indicadores técnicos (RSI, MACD, Bollinger, ATR y más de 25 disponibles), acceder a precios históricos con self.data y leer el calendario económico desde tu código.
+Órdenes y salidas — cómo abrir posiciones largas y cortas, colocar Stop Loss y Take Profit (en pips, ATR o precio exacto), usar trailing stops, escalar dentro de una posición (pyramid) y forzar cierres parciales o totales.
+Parámetros, validación e historial — cómo funciona Parameter() en detalle (tipos, rangos, etiquetas), cómo el panel de parámetros se genera automáticamente, qué está permitido importar en el sandbox y cómo usar el historial de versiones para recuperar código anterior.

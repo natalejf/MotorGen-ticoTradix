@@ -1,0 +1,114 @@
+# IDE: parámetros, validación e historial — TradingNote
+URL: https://tradingnote.co/es/docs/ide-parametros
+
+Documentación
+Documentación
+Principal
+Dashboard
+Cuentas
+Live Trading
+Contabilidad
+Copy Trading
+Copy Master
+Grupos
+Risk Management
+Laboratorio
+Creador de Algoritmos
+Deflated Sharpe Ratio (DSR)
+Walk-Forward (validación temporal)
+Multiverso (robustez sintética)
+IDE interno (código)
+IDE: indicadores y datos
+IDE: órdenes y salidas
+IDE: parámetros, validación e historial
+Mis Algoritmos
+Backtesting
+Portafolios
+Monte Carlo
+Calendario Económico
+Instalación
+Proceso de Instalación
+Conectar Claude a TradingNote
+API para desarrolladores
+Marketing
+Sistema de Afiliados
+Documentación
+IDE: parámetros, validación e historial
+IDE: parámetros, validación e historial
+Parámetros con sliders para afinar y optimizar, el diagnóstico en vivo, las versiones automáticas y la caja de seguridad.
+Abrir en la app
+6
+min
+Cada Parameter() que declaras en el código (izquierda) aparece como un slider ajustable en el panel derecho del IDE.
+Esta página cubre tres cosas que hacen del IDE algo cómodo y seguro: los parámetros ajustables con sliders, el diagnóstico en vivo que te avisa de errores mientras escribes, y el historial de versiones automáticas que guarda tu progreso. Al final encontrarás también todo lo que necesitas saber sobre la caja de seguridad (sandbox) en la que corre tu código.
+Parámetros con Parameter()
+Cuando declaras un atributo de clase con `Parameter(...)`, TradingNote lo detecta automáticamente y crea un slider en el panel derecho del IDE. De este modo puedes afinar valores sin tocar el código, y además esos mismos parámetros quedan listos para ser barridos por el optimizador cuando llegue el momento.
+python
+class MiEstrategia(Strategy):
+    rsi_period = Parameter(14, min_val=5, max_val=50, step=1, label="Periodo RSI")
+    sl_atr     = Parameter(1.5, min_val=0.5, max_val=5.0, step=0.1, label="Stop Loss (ATR)")
+Cada Parameter() genera un slider en el panel derecho del IDE.
+Argumento
+Qué define
+Primero (posicional)
+Valor por defecto del parámetro.
+min_val
+Mínimo del slider.
+max_val
+Máximo del slider.
+step
+Salto entre valores del slider.
+label
+Etiqueta visible en el panel de parámetros.
+Agrupar parámetros
+Puedes organizar los sliders en secciones con un comentario especial inmediatamente antes del grupo. El IDE reconoce la sintaxis `# ── Nombre ──` y crea una cabecera visual que separa los parámetros en el panel.
+python
+class MiEstrategia(Strategy):
+    # ── Entrada ──
+    rsi_period = Parameter(14, min_val=5, max_val=50, step=1, label="Periodo RSI")
+    # ── Salida ──
+    sl_atr = Parameter(1.5, min_val=0.5, max_val=5.0, step=0.1, label="Stop (ATR)")
+    tp_atr = Parameter(3.0, min_val=0.5, max_val=10.0, step=0.1, label="Target (ATR)")
+Los comentarios con guiones crean secciones visuales en el panel de parámetros.
+Usa Parameter() para todo lo que quieras poder ajustar. Más adelante esos mismos parámetros son los que el optimizador hará variar para buscar la mejor configuración, así que cuantos más declares desde el principio, más margen de mejora tendrás.
+Diagnóstico en vivo
+Mientras escribes, la pestaña de Diagnóstico (panel inferior del IDE) marca problemas al instante, sin que tengas que ejecutar nada. Cuando todo está correcto aparece el estado verde «código limpio»; si hay algo incorrecto, verás contadores de errores y avisos con su línea exacta.
+Imports o funciones prohibidas (acceso fuera del sandbox).
+Falta de la clase Strategy como clase base.
+Falta del método obligatorio on_bar().
+Indentación inválida (mezcla de espacios y tabs).
+Paréntesis, comillas o llaves sin cerrar.
+Historial de versiones
+No tienes que guardar a mano. El IDE auto-guarda aproximadamente cada 1,5 segundos y, si hubo cambios, crea un snapshot automático cada ~30 segundos. Se conservan hasta 100 versiones por archivo. En la pestaña Historial puedes ver todas las versiones anteriores con su timestamp y restaurar cualquiera con un solo clic.
+Si rompes algo, abre la pestaña Historial y vuelve a una versión que funcionaba. Nada se pierde: el IDE guarda silenciosamente mientras programas.
+La caja de seguridad (sandbox)
+Tu código corre aislado por seguridad: sin acceso a internet, sin disco, sin librerías del sistema operativo. Esto protege la plataforma y a todos los demás usuarios. La tabla siguiente resume qué está permitido y qué está bloqueado.
+Permitido
+Bloqueado
+`from strategy_base import Strategy, Parameter`
+Módulos de sistema: os, sys, subprocess, socket, requests, urllib, threading, multiprocessing, pickle, sqlite3 y similares.
+Importar tus propios archivos del proyecto (ej. `from helpers import mi_funcion`).
+Funciones built-in peligrosas: open(), eval(), exec(), compile(), __import__(), input().
+Python puro: cálculos, if/for, listas, diccionarios, clases propias...
+Atributos de introspección: __class__, __globals__, __subclasses__() y similares.
+Si ves un error de «import bloqueado» o «función bloqueada», no es un bug de la plataforma: es el sandbox actuando correctamente. Resuélvelo implementando la lógica con Python puro o con la API de Strategy, que ya cubre los casos de uso habituales.
+Proyectos con varios archivos
+Puedes dividir tu estrategia en varios archivos .py (por ejemplo main.py y helpers.py) y carpetas, e importar entre ellos con normalidad usando rutas relativas. El punto de entrada obligatorio es siempre main.py.
+python
+# helpers.py
+def es_sesion_londres(hora_utc):
+    return 7 <= hora_utc < 16
+
+# main.py
+from strategy_base import Strategy, Parameter
+from helpers import es_sesion_londres
+
+class MiEstrategia(Strategy):
+    def on_bar(self):
+        if not es_sesion_londres(self.current_bar.hour):
+            return
+        # ... lógica de trading
+main.py es el punto de entrada; desde ahí puedes importar cualquier módulo propio del proyecto.
+Publicar como algoritmo
+Cuando tu estrategia esté lista, pulsa «Guardar como algoritmo». Recuerda que el IDE no ejecuta el código: al guardar, la estrategia pasa a «Mis Algoritmos» como un algoritmo más, y es ahí donde la backtesteas, ajustas sus parámetros para encontrar los mejores, la validas estadísticamente (DSR, Walk-Forward, Multiverso) y, si pasa, la añades a un portafolio o la llevas a live trading.
+La iteración es la clave: ajusta un slider, ejecuta el backtest, mira el resultado y repite. Con cada vuelta afinas un poco más la estrategia. El historial automático te permite experimentar sin miedo a perder lo que ya funcionaba.
