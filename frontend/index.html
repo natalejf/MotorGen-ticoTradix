@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradingNote · Creador de Algoritmos & Motor Genético</title>
+  <title>TradingNote · Motor Genético & Portafolios</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js for High-Precision Financial Equity Curves -->
@@ -13,562 +13,638 @@
   <!-- Custom Monochrome Design System -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-[#08080a] text-white min-h-screen flex flex-col antialiased selection:bg-white selection:text-black">
+<body class="bg-[#08080a] text-white min-h-screen antialiased selection:bg-white selection:text-black">
 
-  <!-- TOP APP BAR -->
-  <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
-    <!-- Brand & Breadcrumbs -->
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded bg-white text-black font-black flex items-center justify-center text-sm tracking-tighter">TN</div>
-        <span class="font-bold text-sm tracking-widest text-white uppercase">TradingNote</span>
-      </div>
-      <div class="h-4 w-[1px] bg-[#27272f]"></div>
-      <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
-        <span>Laboratorio</span>
-        <span>/</span>
-        <span class="text-white font-medium">Creador de Algoritmos</span>
-        <span class="tn-badge text-[10px] ml-1">MOTOR GENÉTICO v2.5</span>
-      </div>
-    </div>
+  <!-- ================================================================== -->
+  <!-- LAYOUT: SIDEBAR + MAIN CONTENT                                     -->
+  <!-- ================================================================== -->
+  <div class="flex min-h-screen">
 
-    <!-- Actions & Global Status -->
-    <div class="flex items-center gap-3">
-      <div id="engine-status-badge" class="tn-badge text-[#a0a0ab] flex items-center">
-        <span class="inline-block w-2 h-2 rounded-full bg-[#71717a] mr-2"></span> LISTO
-      </div>
-
-      <button id="btn-random-mix-all" class="btn-secondary text-xs py-1.5 px-3 hover:border-white" title="Selecciona aleatoriamente indicadores, entradas y salidas">
-        <span>🎲</span> Mezcla Aleatoria
-      </button>
-
-      <button id="btn-update-data" class="btn-secondary text-xs py-1.5 px-3">
-        <span>🔄</span> Actualizar Datos
-      </button>
-
-      <button id="btn-toggle-neural" class="btn-secondary text-xs py-1.5 px-3">
-        <span>🌐</span> Neural Explorer 3D
-      </button>
-
-      <button id="btn-start-exploration" class="btn-primary text-xs py-1.5 px-4 shadow-lg shadow-white/5 font-bold">
-        <span>⚡</span> Iniciar Creación Continua
-      </button>
-      <button id="btn-stop-exploration" class="btn-secondary text-xs py-1.5 px-4 hidden text-white border-white font-bold bg-[#1e1e24]">
-        <span>⏹</span> Detener Motor
-      </button>
-    </div>
-  </header>
-
-  <!-- LIVE METRICS & TRIAGE COUNTERS BANNER -->
-  <section class="bg-[#0f0f13] border-b border-[#1c1c22] px-6 py-3">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-6">
-      
-      <!-- Live Generation & Engine Pulse -->
-      <div class="flex items-center gap-3 min-w-[180px]">
-        <div>
-          <div class="text-[10px] text-[#71717a] uppercase font-semibold">Generación Activa</div>
-          <div id="kpi-generation" class="text-base font-mono font-bold text-white">Gen 0</div>
-        </div>
-        <div id="kpi-infinite-badge" class="tn-badge text-[9px] text-[#a0a0ab]">MODO INFINITO</div>
-      </div>
-
-      <!-- Total Created / Tested -->
-      <div class="border-l border-[#24242d] pl-6">
-        <div class="text-[10px] text-[#71717a] uppercase font-semibold">Estrategias Creadas</div>
-        <div id="kpi-tested" class="text-base font-mono font-bold text-white">0</div>
-      </div>
-
-      <!-- Discarded by Classification -->
-      <div class="border-l border-[#24242d] pl-6">
-        <div class="text-[10px] text-[#71717a] uppercase font-semibold">Descartadas (Filtro)</div>
-        <div id="kpi-discarded" class="text-base font-mono font-bold text-[#888894]">0</div>
-      </div>
-
-      <!-- Approved Candidates -->
-      <div class="border-l border-[#24242d] pl-6">
-        <div class="text-[10px] text-white uppercase font-bold flex items-center gap-1.5">
-          <span class="inline-block w-2 h-2 rounded-full bg-white"></span>
-          Aceptadas / Aprobadas
-        </div>
-        <div id="kpi-candidates" class="text-base font-mono font-bold text-white">0</div>
-      </div>
-
-      <!-- Best Sharpe -->
-      <div class="border-l border-[#24242d] pl-6">
-        <div class="text-[10px] text-[#71717a] uppercase font-semibold">Mejor Sharpe</div>
-        <div id="kpi-best-sharpe" class="text-base font-mono font-bold text-white">0.00</div>
-      </div>
-
-      <!-- Avg Win Rate -->
-      <div class="border-l border-[#24242d] pl-6">
-        <div class="text-[10px] text-[#71717a] uppercase font-semibold">Win Rate Aprobadas</div>
-        <div id="kpi-avg-winrate" class="text-base font-mono font-bold text-white">0.0%</div>
-      </div>
-
-      <!-- Capital Base -->
-      <div class="border-l border-[#24242d] pl-6">
-        <div class="text-[10px] text-[#71717a] uppercase font-semibold">Depósito Inicial</div>
-        <div id="kpi-initial-capital" class="text-base font-mono font-bold text-white">$10,000 USD</div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- NAVIGATION TABS -->
-  <nav class="bg-[#0b0b0e] border-b border-[#1c1c22] px-6">
-    <div class="max-w-7xl mx-auto flex items-center space-x-1 overflow-x-auto">
-      <button class="tab-btn active" data-tab="config">
-        <span>⚙️</span> Configuración
-      </button>
-      <button class="tab-btn" data-tab="indicators">
-        <span>📊</span> Indicadores (28 Checks)
-      </button>
-      <button class="tab-btn" data-tab="orders">
-        <span>⚡</span> Entradas y Salidas
-      </button>
-      <button class="tab-btn" data-tab="classification">
-        <span>🏷️</span> Clasificación (Filtro de Admisión)
-      </button>
-      <button class="tab-btn" data-tab="risk">
-        <span>🛡️</span> Riesgo y Horarios
-      </button>
-      <button class="tab-btn" data-tab="results">
-        <span>🏆</span> Resultados y Neural Explorer
-      </button>
-    </div>
-  </nav>
-
-  <!-- MAIN VIEWPORT CONTAINER -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-6">
-
-    <!-- ================================================================== -->
-    <!-- TAB 1: CONFIGURACIÓN -->
-    <!-- ================================================================== -->
-    <div id="panel-config" class="tab-panel space-y-6">
-      
-      <!-- Symbol & Timeframe Selection -->
-      <div class="tn-card">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab] mb-4">Instrumento y Datos Históricos</h2>
-        
-        <div class="mb-4">
-          <label class="block text-xs text-[#a0a0ab] mb-2">Selecciona el Activo Principal</label>
-          <div id="symbol-pills-container" class="flex flex-wrap gap-2">
-            <!-- Populated via app.js -->
-          </div>
-        </div>
-
-        <div id="symbol-data-info" class="p-3 bg-[#0d0d10] border border-[#202026] rounded-md mb-4">
-          <!-- Populated via app.js -->
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- SIDEBAR NAVIGATION (estilo TradingNote) -->
+    <aside id="app-sidebar" class="sidebar-nav">
+      <!-- Logo -->
+      <div class="px-4 pt-5 pb-4 border-b border-[#1c1c22]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-white text-black font-black flex items-center justify-center text-sm tracking-tighter">TN</div>
           <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Timeframe (Temporalidad de Velas)</label>
-            <select id="select-timeframe" class="tn-select">
-              <option value="1h" selected>H1 (1 Hora - Granularidad Alta ~17.000 barras)</option>
-              <option value="4h">H4 (4 Horas - Swing Trading ~4.400 barras)</option>
-              <option value="1d">D1 (1 Día - Posicional 5 Años)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Capital Inicial (USD)</label>
-            <input type="number" id="input-deposit" class="tn-input num-tabular" value="10000" step="1000">
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Modo de Exploración</label>
-            <select id="select-search-mode" class="tn-select">
-              <option value="genetic" selected>Evolución Genética (Cruce, Mutación y Selección Natural)</option>
-              <option value="random">Búsqueda Aleatoria Masiva</option>
-            </select>
+            <div class="text-xs font-bold text-white uppercase tracking-widest">TradingNote</div>
+            <div class="text-[10px] text-[#71717a]">Motor Genético v2.5</div>
           </div>
         </div>
       </div>
 
-      <!-- Execution Mode: Infinite vs Programmed -->
-      <div class="tn-card">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab]">Modo de Generación: Continuo e Infinito</h2>
-            <p class="text-xs text-[#71717a] mt-0.5">El motor creará algoritmos sin parar en bucle continuo hasta que decidas detenerlo.</p>
-          </div>
-          <span class="tn-badge tn-badge-white">GENERACIÓN SIN LÍMITE</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" id="check-infinite-mode" checked class="w-4 h-4 accent-white">
-              <div>
-                <span class="text-xs font-bold text-white block">Modo Infinito Activo</span>
-                <span class="text-[11px] text-[#a0a0ab]">Crea estrategias infinitamente hasta pulsar "Detener"</span>
-              </div>
-            </label>
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Población por Generación</label>
-            <input type="number" id="input-pop-size" class="tn-input num-tabular" value="30" min="10" max="100">
-            <span class="text-[10px] text-[#71717a]">Estrategias evaluadas en paralelo por ciclo</span>
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Objetivo de Optimización (Fitness)</label>
-            <select id="opt-objective" class="tn-select">
-              <!-- Populated via loadConfigDefaults -->
-            </select>
-            <span class="text-[10px] text-[#71717a]">Criterio matemático de supervivencia</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-3">
-        <button onclick="switchTab('indicators')" class="btn-primary">
-          Continuar a Indicadores (28 Checks) →
+      <!-- Menu Items -->
+      <nav class="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+        <!-- Laboratorio -->
+        <div class="sidebar-section-label">Laboratorio</div>
+        <button class="sidebar-item active" data-section="engine" onclick="showSection('engine')">
+          <span>⚡</span> Motor Genético
         </button>
+
+        <!-- Mis Algoritmos -->
+        <div class="sidebar-section-label mt-4">Mis Algoritmos</div>
+        <button class="sidebar-item" data-section="saved-strategies" onclick="showSection('saved-strategies')">
+          <span>💾</span> Estrategias Guardadas
+        </button>
+
+        <!-- Portafolios -->
+        <div class="sidebar-section-label mt-4">Portafolios</div>
+        <button class="sidebar-item" data-section="portfolio-builder" onclick="showSection('portfolio-builder')">
+          <span>🧬</span> Creador de Portafolio
+        </button>
+        <button class="sidebar-item" data-section="saved-portfolios" onclick="showSection('saved-portfolios')">
+          <span>📁</span> Portafolios Guardados
+        </button>
+      </nav>
+
+      <!-- Footer -->
+      <div class="px-4 py-3 border-t border-[#1c1c22] text-[10px] text-[#51515a]">
+        Réplica Motor Genético · v2.5
       </div>
+    </aside>
 
-    </div>
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col min-w-0">
 
-    <!-- ================================================================== -->
-    <!-- TAB 2: INDICADORES (28 CHECKS CON PARÁMETROS GENÉRICOS) -->
-    <!-- ================================================================== -->
-    <div id="panel-indicators" class="tab-panel hidden space-y-6">
-      
-      <div class="tn-card">
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-[#202028]">
-          <div>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Los 28 Indicadores Técnicos de TradingNote</h2>
-            <p class="text-xs text-[#a0a0ab] mt-0.5">Activa o desactiva con checks los indicadores que quieres combinar. Sus parámetros cuantitativos ya vienen preconfigurados por defecto.</p>
+      <!-- ============================================================ -->
+      <!-- SECTION: ENGINE (Motor Genético) - SECCIÓN PRINCIPAL          -->
+      <!-- ============================================================ -->
+      <div id="section-engine" class="app-section">
+
+        <!-- TOP APP BAR -->
+        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
+              <span>Laboratorio</span>
+              <span>/</span>
+              <span class="text-white font-medium">Creador de Algoritmos</span>
+              <span class="tn-badge text-[10px] ml-1">MOTOR GENÉTICO v2.5</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div id="engine-status-badge" class="tn-badge text-[#a0a0ab] flex items-center">
+              <span class="inline-block w-2 h-2 rounded-full bg-[#71717a] mr-2"></span> LISTO
+            </div>
+            <button id="btn-random-mix-all" class="btn-secondary text-xs py-1.5 px-3 hover:border-white" title="Selecciona aleatoriamente indicadores, entradas y salidas">
+              <span>🎲</span> Mezcla Aleatoria
+            </button>
+            <button id="btn-update-data" class="btn-secondary text-xs py-1.5 px-3">
+              <span>🔄</span> Actualizar Datos
+            </button>
+            <button id="btn-toggle-neural" class="btn-secondary text-xs py-1.5 px-3">
+              <span>🌐</span> Neural Explorer 3D
+            </button>
+            <button id="btn-start-exploration" class="btn-primary text-xs py-1.5 px-4 shadow-lg shadow-white/5 font-bold">
+              <span>⚡</span> Iniciar Creación Continua
+            </button>
+            <button id="btn-stop-exploration" class="btn-secondary text-xs py-1.5 px-4 hidden text-white border-white font-bold bg-[#1e1e24]">
+              <span>⏹</span> Detener Motor
+            </button>
+          </div>
+        </header>
+
+        <!-- LIVE METRICS & TRIAGE COUNTERS BANNER -->
+        <section class="bg-[#0f0f13] border-b border-[#1c1c22] px-6 py-3">
+          <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-6">
+            <div class="flex items-center gap-3 min-w-[180px]">
+              <div>
+                <div class="text-[10px] text-[#71717a] uppercase font-semibold">Generación Activa</div>
+                <div id="kpi-generation" class="text-base font-mono font-bold text-white">Gen 0</div>
+              </div>
+              <div id="kpi-infinite-badge" class="tn-badge text-[9px] text-[#a0a0ab]">MODO INFINITO</div>
+            </div>
+            <div class="border-l border-[#24242d] pl-6">
+              <div class="text-[10px] text-[#71717a] uppercase font-semibold">Estrategias Creadas</div>
+              <div id="kpi-tested" class="text-base font-mono font-bold text-white">0</div>
+            </div>
+            <div class="border-l border-[#24242d] pl-6">
+              <div class="text-[10px] text-[#71717a] uppercase font-semibold">Descartadas (Filtro)</div>
+              <div id="kpi-discarded" class="text-base font-mono font-bold text-[#888894]">0</div>
+            </div>
+            <div class="border-l border-[#24242d] pl-6">
+              <div class="text-[10px] text-white uppercase font-bold flex items-center gap-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-white"></span>
+                Aceptadas / Aprobadas
+              </div>
+              <div id="kpi-candidates" class="text-base font-mono font-bold text-white">0</div>
+            </div>
+            <div class="border-l border-[#24242d] pl-6">
+              <div class="text-[10px] text-[#71717a] uppercase font-semibold">Mejor Sharpe</div>
+              <div id="kpi-best-sharpe" class="text-base font-mono font-bold text-white">0.00</div>
+            </div>
+            <div class="border-l border-[#24242d] pl-6">
+              <div class="text-[10px] text-[#71717a] uppercase font-semibold">Win Rate Aprobadas</div>
+              <div id="kpi-avg-winrate" class="text-base font-mono font-bold text-white">0.0%</div>
+            </div>
+            <div class="border-l border-[#24242d] pl-6">
+              <div class="text-[10px] text-[#71717a] uppercase font-semibold">Depósito Inicial</div>
+              <div id="kpi-initial-capital" class="text-base font-mono font-bold text-white">$10,000 USD</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- NAVIGATION TABS -->
+        <nav class="bg-[#0b0b0e] border-b border-[#1c1c22] px-6">
+          <div class="max-w-7xl mx-auto flex items-center space-x-1 overflow-x-auto">
+            <button class="tab-btn active" data-tab="config">
+              <span>⚙️</span> Configuración
+            </button>
+            <button class="tab-btn" data-tab="indicators">
+              <span>📊</span> Indicadores (28 Checks)
+            </button>
+            <button class="tab-btn" data-tab="orders">
+              <span>⚡</span> Entradas y Salidas
+            </button>
+            <button class="tab-btn" data-tab="classification">
+              <span>🏷️</span> Clasificación (Filtro de Admisión)
+            </button>
+            <button class="tab-btn" data-tab="risk">
+              <span>🛡️</span> Riesgo y Horarios
+            </button>
+            <button class="tab-btn" data-tab="results">
+              <span>🏆</span> Resultados y Neural Explorer
+            </button>
+          </div>
+        </nav>
+
+        <!-- MAIN VIEWPORT CONTAINER -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-6">
+
+          <!-- TAB 1: CONFIGURACIÓN -->
+          <div id="panel-config" class="tab-panel space-y-6">
+            <div class="tn-card">
+              <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab] mb-4">Instrumento y Datos Históricos</h2>
+              <div class="mb-4">
+                <label class="block text-xs text-[#a0a0ab] mb-2">Selecciona el Activo Principal</label>
+                <div id="symbol-pills-container" class="flex flex-wrap gap-2"></div>
+              </div>
+              <div id="symbol-data-info" class="p-3 bg-[#0d0d10] border border-[#202026] rounded-md mb-4"></div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Timeframe (Temporalidad de Velas)</label>
+                  <select id="select-timeframe" class="tn-select">
+                    <option value="1h" selected>H1 (1 Hora - Granularidad Alta ~17.000 barras)</option>
+                    <option value="4h">H4 (4 Horas - Swing Trading ~4.400 barras)</option>
+                    <option value="1d">D1 (1 Día - Posicional 5 Años)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Capital Inicial (USD)</label>
+                  <input type="number" id="input-deposit" class="tn-input num-tabular" value="10000" step="1000">
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Modo de Exploración</label>
+                  <select id="select-search-mode" class="tn-select">
+                    <option value="genetic" selected>Evolución Genética (Cruce, Mutación y Selección Natural)</option>
+                    <option value="random">Búsqueda Aleatoria Masiva</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="tn-card">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab]">Modo de Generación: Continuo e Infinito</h2>
+                  <p class="text-xs text-[#71717a] mt-0.5">El motor creará algoritmos sin parar en bucle continuo hasta que decidas detenerlo.</p>
+                </div>
+                <span class="tn-badge tn-badge-white">GENERACIÓN SIN LÍMITE</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="check-infinite-mode" checked class="w-4 h-4 accent-white">
+                    <div>
+                      <span class="text-xs font-bold text-white block">Modo Infinito Activo</span>
+                      <span class="text-[11px] text-[#a0a0ab]">Crea estrategias infinitamente hasta pulsar "Detener"</span>
+                    </div>
+                  </label>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Población por Generación</label>
+                  <input type="number" id="input-pop-size" class="tn-input num-tabular" value="30" min="10" max="100">
+                  <span class="text-[10px] text-[#71717a]">Estrategias evaluadas en paralelo por ciclo</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Objetivo de Optimización (Fitness)</label>
+                  <select id="opt-objective" class="tn-select"></select>
+                  <span class="text-[10px] text-[#71717a]">Criterio matemático de supervivencia</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button onclick="switchTab('indicators')" class="btn-primary">Continuar a Indicadores (28 Checks) →</button>
+            </div>
+          </div>
+
+          <!-- TAB 2: INDICADORES -->
+          <div id="panel-indicators" class="tab-panel hidden space-y-6">
+            <div class="tn-card">
+              <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-[#202028]">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Los 28 Indicadores Técnicos de TradingNote</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Activa o desactiva con checks los indicadores que quieres combinar. Sus parámetros cuantitativos ya vienen preconfigurados por defecto.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="btn-select-all-ind" class="btn-secondary text-xs py-1 px-3">Marcar Todos (28)</button>
+                  <button id="btn-deselect-all-ind" class="btn-secondary text-xs py-1 px-3">Desmarcar Todos</button>
+                  <button id="btn-random-ind" class="btn-primary text-xs py-1 px-3 font-semibold">🎲 Aleatorio</button>
+                </div>
+              </div>
+              <div id="indicators-container" class="space-y-6"></div>
+              <div class="mt-6 p-4 rounded-lg bg-[#14141a] border border-[#262632] flex items-center justify-between">
+                <div>
+                  <div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider">Espacio de Combinaciones con Indicadores Marcados</div>
+                  <div class="flex items-baseline gap-2">
+                    <span id="combinations-counter" class="text-2xl font-mono font-bold text-white">--</span>
+                    <span class="text-xs text-[#a0a0ab]">combinaciones potenciales</span>
+                  </div>
+                  <div class="text-xs text-[#a0a0ab] mt-1">
+                    Los parámetros <span class="text-white font-mono">[Desde / Pasos / Hasta]</span> están calibrados con estándares cuantitativos para no requerir configuración manual.
+                  </div>
+                </div>
+                <button onclick="switchTab('orders')" class="btn-primary text-xs">Continuar a Entradas y Salidas →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: ENTRADAS Y SALIDAS -->
+          <div id="panel-orders" class="tab-panel hidden space-y-6">
+            <div class="tn-card">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Tipos de Entrada de Órdenes</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Selecciona qué tipos de órdenes de apertura podrá usar el generador para ejecutar las señales.</p>
+                </div>
+                <button id="btn-random-orders" class="btn-secondary text-xs py-1 px-3">🎲 Mezcla Aleatoria</button>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="entry-market" value="MARKET" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="entry-market" class="text-xs font-bold text-white block cursor-pointer">A Mercado (Market Order)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-1">Ejecución inmediata al precio de apertura de la siguiente barra tras confirmación de la señal.</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="entry-limit" value="LIMIT" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="entry-limit" class="text-xs font-bold text-white block cursor-pointer">Orden Límite (Order Limit)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-1">Busca un retroceso favorable previo a entrar para obtener mejor precio y menor riesgo.</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="entry-stop" value="STOP" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="entry-stop" class="text-xs font-bold text-white block cursor-pointer">Orden Stop (Order Stop - Ruptura)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-1">Entra únicamente si el precio rompe el máximo/mínimo con impulso a favor de la señal.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tn-card">
+              <h2 class="text-sm font-semibold uppercase tracking-wider text-white mb-4">Tipos y Modos de Salida (Take Profit & Stop Loss)</h2>
+              <p class="text-xs text-[#a0a0ab] mb-4">Marca qué mecánicas de salida podrá mezclar el motor en los cromosomas generados.</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-atr" value="ATR_CLASSIC" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-atr" class="text-xs font-bold text-white block cursor-pointer">ATR Clásico</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">SL y TP adaptativos en múltiplos de volatilidad (slAtr: 1.0–3.0, tpAtr: 1.5–6.0).</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-trailing" value="TRAILING_ATR" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-trailing" class="text-xs font-bold text-white block cursor-pointer">Trailing Stop ATR</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">El Stop Loss sigue el precio hacia la ganancia a una distancia fija de volatilidad.</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-breakeven" value="BREAKEVEN" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-breakeven" class="text-xs font-bold text-white block cursor-pointer">Breakeven Automático</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">Al alcanzar ganancia objetivo, mueve el SL a precio de entrada eliminando el riesgo.</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-swing" value="STRUCTURE_SWING" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-swing" class="text-xs font-bold text-white block cursor-pointer">Estructura Swing</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">Coloca el SL en el mínimo (compra) o máximo (venta) de las últimas N barras.</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-time" value="TIME_EXIT" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-time" class="text-xs font-bold text-white block cursor-pointer">Salida por Tiempo (Max Bars)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">Cierra la posición si no alcanza objetivo tras un número predeterminado de velas.</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-partial" value="PARTIAL_TP" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-partial" class="text-xs font-bold text-white block cursor-pointer">Take Profit Parcial</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">Asegura 50% de la posición en TP1 y deja correr el resto hacia TP2 con Breakeven.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="switchTab('classification')" class="btn-primary">Continuar a Clasificación (Filtro de Admisión) →</button>
+            </div>
+          </div>
+
+          <!-- TAB 4: CLASIFICACIÓN -->
+          <div id="panel-classification" class="tab-panel hidden space-y-6">
+            <div class="tn-card">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Criterios de Clasificación y Aprobación</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">
+                    Cualquier estrategia creada que no cumpla con TODOS estos umbrales será contabilizada en el contador de <strong class="text-white">"Descartadas"</strong>. Solo las que superen estos filtros entrarán a la lista de <strong class="text-white">"Aceptadas / Aprobadas"</strong>.
+                  </p>
+                </div>
+                <span class="tn-badge tn-badge-white">FILTRO DE ADMISIÓN</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Win Rate Mínimo (%)</label>
+                  <input type="number" id="input-min-wr" class="tn-input num-tabular" value="35.0" step="1.0" min="0" max="100">
+                  <span class="text-[10px] text-[#71717a]">Porcentaje mínimo de operaciones ganadoras</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Cantidad Mínima de Trades</label>
+                  <input type="number" id="input-min-trades" class="tn-input num-tabular" value="8" step="1" min="1">
+                  <span class="text-[10px] text-[#71717a]">Descarta estrategias con pocas operaciones</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Max Drawdown Permitido (%)</label>
+                  <input type="number" id="input-max-dd" class="tn-input num-tabular" value="20.0" step="1.0" min="1" max="100">
+                  <span class="text-[10px] text-[#71717a]">Caída máxima tolerada desde el pico</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Net Profit Mínimo ($ USD)</label>
+                  <input type="number" id="input-min-profit" class="tn-input num-tabular" value="0.0" step="100">
+                  <span class="text-[10px] text-[#71717a]">Ganancia neta mínima para ser aceptada</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Sharpe Ratio Mínimo</label>
+                  <input type="number" id="input-min-sharpe" class="tn-input num-tabular" value="0.8" step="0.1">
+                  <span class="text-[10px] text-[#71717a]">Retorno ajustado por volatilidad</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Profit Factor Mínimo</label>
+                  <input type="number" id="input-min-pf" class="tn-input num-tabular" value="1.1" step="0.05">
+                  <span class="text-[10px] text-[#71717a]">Ganancia bruta sobre pérdida bruta</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">DSR Mínimo (Deflated Sharpe)</label>
+                  <input type="number" id="input-min-dsr" class="tn-input num-tabular" value="0.20" step="0.05">
+                  <span class="text-[10px] text-[#71717a]">Penalización matemática por azar</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#14141a] border border-[#2a2a34] flex flex-col justify-center">
+                  <div class="text-[10px] text-[#71717a] uppercase font-bold">Resumen de Clasificación</div>
+                  <div class="text-xs text-[#a0a0ab] mt-1">Los algoritmos que cumplan con todos estos parámetros aparecerán ordenados por <strong class="text-white">TN Score</strong> en Resultados.</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="switchTab('risk')" class="btn-primary">Continuar a Riesgo y Horarios →</button>
+            </div>
+          </div>
+
+          <!-- TAB 5: RIESGO Y HORARIOS -->
+          <div id="panel-risk" class="tab-panel hidden space-y-6">
+            <div class="tn-card">
+              <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab] mb-4">Gestión de Riesgo y Cuentas de Fondeo (Prop Firms)</h2>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Riesgo por Operación</label>
+                  <input type="number" class="tn-input num-tabular" value="1.0" step="0.25">
+                  <span class="text-[10px] text-[#71717a]">% del balance de la cuenta</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Pérdida Máxima Diaria</label>
+                  <input type="number" class="tn-input num-tabular" value="3.0" step="0.5">
+                  <span class="text-[10px] text-[#71717a]">Detiene el algo por el resto del día</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Drawdown Total Máximo</label>
+                  <input type="number" class="tn-input num-tabular" value="8.0" step="1.0">
+                  <span class="text-[10px] text-[#71717a]">Límite de detención de emergencia</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Máx. Operaciones Diarias</label>
+                  <input type="number" class="tn-input num-tabular" value="4" min="1" max="10">
+                  <span class="text-[10px] text-[#71717a]">Control contra el sobretrading</span>
+                </div>
+              </div>
+              <div class="mt-4 pt-4 border-t border-[#22222a] flex flex-wrap gap-6 text-xs text-[#a0a0ab]">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked class="accent-white">
+                  <span>Cerrar posiciones antes del fin de semana (Viernes 20:00 UTC)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" class="accent-white">
+                  <span>Cerrar posiciones antes del cierre de NY</span>
+                </label>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="switchTab('results')" class="btn-primary">Ir al Panel de Resultados y Neural Explorer →</button>
+            </div>
+          </div>
+
+          <!-- TAB 6: RESULTADOS -->
+          <div id="panel-results" class="tab-panel hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-lg bg-[#0e0e12] border border-[#202028]">
+              <div class="flex items-center gap-4">
+                <span class="text-xs font-semibold text-[#a0a0ab] uppercase">Filtrar Aprobadas:</span>
+                <label class="flex items-center gap-2 text-xs text-white cursor-pointer">
+                  <input type="checkbox" id="filter-wf" class="accent-white">
+                  <span>Solo Walk-Forward Aprobado</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-white cursor-pointer">
+                  <input type="checkbox" id="filter-mv" class="accent-white">
+                  <span>Solo Multiverso Aprobado</span>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-batch-save" class="btn-secondary text-xs py-1.5 px-3" onclick="saveAllApprovedBatch()" title="Guardar todas las estrategias aprobadas actuales en Mis Algoritmos">
+                  <span>💾</span> Guardar Todas (Lote)
+                </button>
+                <button id="btn-send-portfolio" class="btn-primary text-xs py-1.5 px-3 font-semibold" onclick="sendBatchToPortfolio()" title="Detiene el motor y envía todas las estrategias al Creador de Portafolio">
+                  <span>🧬</span> Enviar Lote a Portafolio →
+                </button>
+                <span id="results-count-badge" class="tn-badge text-xs font-mono">0 Algoritmos Aprobados</span>
+                <button onclick="openNeuralModal()" class="btn-secondary text-xs">
+                  <span>🌐</span> 3D Explorer
+                </button>
+              </div>
+            </div>
+            <div class="p-3 bg-[#09090c] border border-[#1a1a20] rounded-lg">
+              <div class="flex items-center justify-between text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-1">
+                <span>Registro en Vivo del Motor Genético</span>
+                <span id="engine-live-indicator" class="text-white">EN ESPERA</span>
+              </div>
+              <div id="engine-logs-container" class="h-16 overflow-y-auto space-y-0.5">
+                <div class="text-[#71717a] text-xs font-mono">Presiona 'Iniciar Creación Continua' para comenzar a explorar...</div>
+              </div>
+            </div>
+            <div id="candidates-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+          </div>
+
+        </main>
+      </div>
+      <!-- END SECTION: ENGINE -->
+
+      <!-- ============================================================ -->
+      <!-- SECTION: SAVED STRATEGIES (Estrategias Guardadas)             -->
+      <!-- ============================================================ -->
+      <div id="section-saved-strategies" class="app-section hidden">
+        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+          <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
+            <span>Mis Algoritmos</span>
+            <span>/</span>
+            <span class="text-white font-medium">Estrategias Guardadas</span>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-select-all-ind" class="btn-secondary text-xs py-1 px-3">Marcar Todos (28)</button>
-            <button id="btn-deselect-all-ind" class="btn-secondary text-xs py-1 px-3">Desmarcar Todos</button>
-            <button id="btn-random-ind" class="btn-primary text-xs py-1 px-3 font-semibold">🎲 Aleatorio</button>
+            <button id="btn-refresh-strategies" class="btn-secondary text-xs py-1.5 px-3" onclick="loadSavedStrategies()">
+              <span>🔄</span> Actualizar
+            </button>
           </div>
-        </div>
-
-        <!-- 28 Indicators Grouped by 5 Families -->
-        <div id="indicators-container" class="space-y-6">
-          <!-- Populated dynamically with all 28 indicators and their preconfigured generic ranges -->
-        </div>
-
-        <!-- Live Combinations Space Counter -->
-        <div class="mt-6 p-4 rounded-lg bg-[#14141a] border border-[#262632] flex items-center justify-between">
-          <div>
-            <div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider">Espacio de Combinaciones con Indicadores Marcados</div>
-            <div class="flex items-baseline gap-2">
-              <span id="combinations-counter" class="text-2xl font-mono font-bold text-white">--</span>
-              <span class="text-xs text-[#a0a0ab]">combinaciones potenciales</span>
+        </header>
+        <main class="max-w-7xl w-full mx-auto p-6">
+          <div class="tn-card mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Estrategias Guardadas</h2>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Aquí se almacenan las estrategias que hayas elegido guardar desde los resultados del motor genético.</p>
+              </div>
+              <span id="saved-strategies-count" class="tn-badge text-xs font-mono">0 estrategias</span>
             </div>
-            <div class="text-xs text-[#a0a0ab] mt-1">
-              Los parámetros <span class="text-white font-mono">[Desde / Pasos / Hasta]</span> están calibrados con estándares cuantitativos para no requerir configuración manual.
+            <div id="saved-strategies-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full py-12 text-center text-[#71717a]">
+                <div class="text-3xl mb-3">💾</div>
+                <div class="text-sm font-medium text-white mb-1">Aún no hay estrategias guardadas</div>
+                <div class="text-xs">Genera estrategias en el Motor Genético y guárdalas desde las tarjetas de resultados.</div>
+              </div>
             </div>
           </div>
-          <button onclick="switchTab('orders')" class="btn-primary text-xs">
-            Continuar a Entradas y Salidas →
+        </main>
+      </div>
+      <!-- END SECTION: SAVED STRATEGIES -->
+
+      <!-- ============================================================ -->
+      <!-- SECTION: PORTFOLIO BUILDER (Creador de Portafolio)            -->
+      <!-- ============================================================ -->
+      <div id="section-portfolio-builder" class="app-section hidden">
+        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+          <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
+            <span>Portafolios</span>
+            <span>/</span>
+            <span class="text-white font-medium">Creador de Portafolio</span>
+          </div>
+        </header>
+        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+          <!-- Portfolio Config -->
+          <div class="tn-card">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-white mb-4">Configuración del Portafolio</h2>
+            <p class="text-xs text-[#a0a0ab] mb-4">Combina varias estrategias guardadas en un portafolio diversificado. La descorrelación de curvas de capital reduce drawdowns y mejora la estabilidad.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs text-[#a0a0ab] mb-1">Nombre del Portafolio</label>
+                <input type="text" id="portfolio-name-input" class="tn-input" placeholder="Ej: Portfolio Forex H1 v1">
+              </div>
+              <div>
+                <label class="block text-xs text-[#a0a0ab] mb-1">Máximo de Estrategias Combinadas</label>
+                <input type="number" id="portfolio-max-strategies" class="tn-input num-tabular" value="10" min="2" max="50">
+              </div>
+              <div>
+                <label class="block text-xs text-[#a0a0ab] mb-1">Presupuesto de Riesgo (capital total = 1.0)</label>
+                <input type="number" id="portfolio-risk-budget" class="tn-input num-tabular" value="1.0" step="0.1" min="0.1">
+              </div>
+            </div>
+          </div>
+
+          <!-- Strategy Selection -->
+          <div class="tn-card">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Seleccionar Estrategias</h2>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Marca las estrategias guardadas que quieres incluir en el portafolio. Los pesos se distribuirán equitativamente si no los defines.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="btn-secondary text-xs py-1 px-3" onclick="selectAllPortfolioStrategies()">Marcar Todas</button>
+                <button class="btn-secondary text-xs py-1 px-3" onclick="deselectAllPortfolioStrategies()">Desmarcar Todas</button>
+              </div>
+            </div>
+            <div id="portfolio-strategy-checklist" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
+                Cargando estrategias guardadas...
+              </div>
+            </div>
+          </div>
+
+          <!-- Create Button -->
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-[#71717a]">
+              <span id="portfolio-selected-count">0</span> estrategias seleccionadas
+            </div>
+            <button id="btn-create-portfolio" class="btn-primary text-xs py-2 px-6 font-bold" onclick="createPortfolio()">
+              🧬 Crear Portafolio
+            </button>
+          </div>
+        </main>
+      </div>
+      <!-- END SECTION: PORTFOLIO BUILDER -->
+
+      <!-- ============================================================ -->
+      <!-- SECTION: SAVED PORTFOLIOS (Portafolios Guardados)             -->
+      <!-- ============================================================ -->
+      <div id="section-saved-portfolios" class="app-section hidden">
+        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+          <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
+            <span>Portafolios</span>
+            <span>/</span>
+            <span class="text-white font-medium">Portafolios Guardados</span>
+          </div>
+          <button class="btn-secondary text-xs py-1.5 px-3" onclick="loadSavedPortfolios()">
+            <span>🔄</span> Actualizar
           </button>
-        </div>
-
+        </header>
+        <main class="max-w-7xl w-full mx-auto p-6">
+          <div class="tn-card">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Portafolios Guardados</h2>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Tus portafolios combinados de múltiples estrategias. A futuro podrás conectarlos a tus cuentas de trading para operar automáticamente.</p>
+              </div>
+              <span id="saved-portfolios-count" class="tn-badge text-xs font-mono">0 portafolios</span>
+            </div>
+            <div id="saved-portfolios-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full py-12 text-center text-[#71717a]">
+                <div class="text-3xl mb-3">📁</div>
+                <div class="text-sm font-medium text-white mb-1">Aún no hay portafolios guardados</div>
+                <div class="text-xs">Crea un portafolio desde el "Creador de Portafolio" combinando tus estrategias guardadas.</div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
+      <!-- END SECTION: SAVED PORTFOLIOS -->
 
     </div>
+    <!-- END MAIN CONTENT AREA -->
 
-    <!-- ================================================================== -->
-    <!-- TAB 3: ENTRADAS Y SALIDAS (ORDEN MARKET, LIMIT, STOP & MODOS EXIT) -->
-    <!-- ================================================================== -->
-    <div id="panel-orders" class="tab-panel hidden space-y-6">
-      
-      <!-- Order Entry Types -->
-      <div class="tn-card">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Tipos de Entrada de Órdenes</h2>
-            <p class="text-xs text-[#a0a0ab] mt-0.5">Selecciona qué tipos de órdenes de apertura podrá usar el generador para ejecutar las señales.</p>
-          </div>
-          <button id="btn-random-orders" class="btn-secondary text-xs py-1 px-3">🎲 Mezcla Aleatoria</button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- Market -->
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="entry-market" value="MARKET" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="entry-market" class="text-xs font-bold text-white block cursor-pointer">A Mercado (Market Order)</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-1">Ejecución inmediata al precio de apertura de la siguiente barra tras confirmación de la señal.</p>
-            </div>
-          </div>
-
-          <!-- Limit -->
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="entry-limit" value="LIMIT" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="entry-limit" class="text-xs font-bold text-white block cursor-pointer">Orden Límite (Order Limit)</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-1">Busca un retroceso favorable previo a entrar para obtener mejor precio y menor riesgo.</p>
-            </div>
-          </div>
-
-          <!-- Stop -->
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="entry-stop" value="STOP" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="entry-stop" class="text-xs font-bold text-white block cursor-pointer">Orden Stop (Order Stop - Ruptura)</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-1">Entra únicamente si el precio rompe el máximo/mínimo con impulso a favor de la señal.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Exit Modes -->
-      <div class="tn-card">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-white mb-4">Tipos y Modos de Salida (Take Profit & Stop Loss)</h2>
-        <p class="text-xs text-[#a0a0ab] mb-4">Marca qué mecánicas de salida podrá mezclar el motor en los cromosomas generados.</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="exit-atr" value="ATR_CLASSIC" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="exit-atr" class="text-xs font-bold text-white block cursor-pointer">ATR Clásico</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-0.5">SL y TP adaptativos en múltiplos de volatilidad (slAtr: 1.0–3.0, tpAtr: 1.5–6.0).</p>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="exit-trailing" value="TRAILING_ATR" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="exit-trailing" class="text-xs font-bold text-white block cursor-pointer">Trailing Stop ATR</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-0.5">El Stop Loss sigue el precio hacia la ganancia a una distancia fija de volatilidad.</p>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="exit-breakeven" value="BREAKEVEN" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="exit-breakeven" class="text-xs font-bold text-white block cursor-pointer">Breakeven Automático</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-0.5">Al alcanzar ganancia objetivo, mueve el SL a precio de entrada eliminando el riesgo.</p>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="exit-swing" value="STRUCTURE_SWING" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="exit-swing" class="text-xs font-bold text-white block cursor-pointer">Estructura Swing</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-0.5">Coloca el SL en el mínimo (compra) o máximo (venta) de las últimas N barras.</p>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="exit-time" value="TIME_EXIT" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="exit-time" class="text-xs font-bold text-white block cursor-pointer">Salida por Tiempo (Max Bars)</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-0.5">Cierra la posición si no alcanza objetivo tras un número predeterminado de velas.</p>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
-            <input type="checkbox" id="exit-partial" value="PARTIAL_TP" checked class="w-4 h-4 accent-white mt-1">
-            <div>
-              <label for="exit-partial" class="text-xs font-bold text-white block cursor-pointer">Take Profit Parcial</label>
-              <p class="text-[11px] text-[#a0a0ab] mt-0.5">Asegura 50% de la posición en TP1 y deja correr el resto hacia TP2 con Breakeven.</p>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button onclick="switchTab('classification')" class="btn-primary">
-          Continuar a Clasificación (Filtro de Admisión) →
-        </button>
-      </div>
-
-    </div>
-
-    <!-- ================================================================== -->
-    <!-- TAB 4: CLASIFICACIÓN (FILTRO DE ADMISIÓN OBLIGATORIO) -->
-    <!-- ================================================================== -->
-    <div id="panel-classification" class="tab-panel hidden space-y-6">
-      
-      <div class="tn-card">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Criterios de Clasificación y Aprobación</h2>
-            <p class="text-xs text-[#a0a0ab] mt-0.5">
-              Cualquier estrategia creada que no cumpla con TODOS estos umbrales será contabilizada en el contador de <strong class="text-white">"Descartadas"</strong>. Solo las que superen estos filtros entrarán a la lista de <strong class="text-white">"Aceptadas / Aprobadas"</strong>.
-            </p>
-          </div>
-          <span class="tn-badge tn-badge-white">FILTRO DE ADMISIÓN</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">Win Rate Mínimo (%)</label>
-            <input type="number" id="input-min-wr" class="tn-input num-tabular" value="35.0" step="1.0" min="0" max="100">
-            <span class="text-[10px] text-[#71717a]">Porcentaje mínimo de operaciones ganadoras</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">Cantidad Mínima de Trades</label>
-            <input type="number" id="input-min-trades" class="tn-input num-tabular" value="8" step="1" min="1">
-            <span class="text-[10px] text-[#71717a]">Descarta estrategias con pocas operaciones</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">Max Drawdown Permitido (%)</label>
-            <input type="number" id="input-max-dd" class="tn-input num-tabular" value="20.0" step="1.0" min="1" max="100">
-            <span class="text-[10px] text-[#71717a]">Caída máxima tolerada desde el pico</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">Net Profit Mínimo ($ USD)</label>
-            <input type="number" id="input-min-profit" class="tn-input num-tabular" value="0.0" step="100">
-            <span class="text-[10px] text-[#71717a]">Ganancia neta mínima para ser aceptada</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">Sharpe Ratio Mínimo</label>
-            <input type="number" id="input-min-sharpe" class="tn-input num-tabular" value="0.8" step="0.1">
-            <span class="text-[10px] text-[#71717a]">Retorno ajustado por volatilidad</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">Profit Factor Mínimo</label>
-            <input type="number" id="input-min-pf" class="tn-input num-tabular" value="1.1" step="0.05">
-            <span class="text-[10px] text-[#71717a]">Ganancia bruta sobre pérdida bruta</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-            <label class="block text-xs font-semibold text-white mb-1">DSR Mínimo (Deflated Sharpe)</label>
-            <input type="number" id="input-min-dsr" class="tn-input num-tabular" value="0.20" step="0.05">
-            <span class="text-[10px] text-[#71717a]">Penalización matemática por azar</span>
-          </div>
-
-          <div class="p-4 rounded-lg bg-[#14141a] border border-[#2a2a34] flex flex-col justify-center">
-            <div class="text-[10px] text-[#71717a] uppercase font-bold">Resumen de Clasificación</div>
-            <div class="text-xs text-[#a0a0ab] mt-1">Los algoritmos que cumplan con todos estos parámetros aparecerán ordenados por <strong class="text-white">TN Score</strong> en Resultados.</div>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button onclick="switchTab('risk')" class="btn-primary">
-          Continuar a Riesgo y Horarios →
-        </button>
-      </div>
-
-    </div>
-
-    <!-- ================================================================== -->
-    <!-- TAB 5: RIESGO Y HORARIOS -->
-    <!-- ================================================================== -->
-    <div id="panel-risk" class="tab-panel hidden space-y-6">
-      
-      <div class="tn-card">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab] mb-4">Gestión de Riesgo y Cuentas de Fondeo (Prop Firms)</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Riesgo por Operación</label>
-            <input type="number" class="tn-input num-tabular" value="1.0" step="0.25">
-            <span class="text-[10px] text-[#71717a]">% del balance de la cuenta</span>
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Pérdida Máxima Diaria</label>
-            <input type="number" class="tn-input num-tabular" value="3.0" step="0.5">
-            <span class="text-[10px] text-[#71717a]">Detiene el algo por el resto del día</span>
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Drawdown Total Máximo</label>
-            <input type="number" class="tn-input num-tabular" value="8.0" step="1.0">
-            <span class="text-[10px] text-[#71717a]">Límite de detención de emergencia</span>
-          </div>
-
-          <div>
-            <label class="block text-xs text-[#a0a0ab] mb-1">Máx. Operaciones Diarias</label>
-            <input type="number" class="tn-input num-tabular" value="4" min="1" max="10">
-            <span class="text-[10px] text-[#71717a]">Control contra el sobretrading</span>
-          </div>
-        </div>
-
-        <div class="mt-4 pt-4 border-t border-[#22222a] flex flex-wrap gap-6 text-xs text-[#a0a0ab]">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked class="accent-white">
-            <span>Cerrar posiciones antes del fin de semana (Viernes 20:00 UTC)</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" class="accent-white">
-            <span>Cerrar posiciones antes del cierre de NY</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button onclick="switchTab('results')" class="btn-primary">
-          Ir al Panel de Resultados y Neural Explorer →
-        </button>
-      </div>
-
-    </div>
-
-    <!-- ================================================================== -->
-    <!-- TAB 6: RESULTADOS Y NEURAL EXPLORER -->
-    <!-- ================================================================== -->
-    <div id="panel-results" class="tab-panel hidden space-y-6">
-      
-      <!-- Filter Bar -->
-      <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-lg bg-[#0e0e12] border border-[#202028]">
-        <div class="flex items-center gap-4">
-          <span class="text-xs font-semibold text-[#a0a0ab] uppercase">Filtrar Aprobadas:</span>
-          <label class="flex items-center gap-2 text-xs text-white cursor-pointer">
-            <input type="checkbox" id="filter-wf" class="accent-white">
-            <span>Solo Walk-Forward Aprobado</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-white cursor-pointer">
-            <input type="checkbox" id="filter-mv" class="accent-white">
-            <span>Solo Multiverso Aprobado</span>
-          </label>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <span id="results-count-badge" class="tn-badge text-xs font-mono">0 Algoritmos Aprobados</span>
-          <button onclick="openNeuralModal()" class="btn-secondary text-xs">
-            <span>🌐</span> Abrir Neural Explorer 3D
-          </button>
-        </div>
-      </div>
-
-      <!-- Live Activity Ticker -->
-      <div class="p-3 bg-[#09090c] border border-[#1a1a20] rounded-lg">
-        <div class="flex items-center justify-between text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-1">
-          <span>Registro en Vivo del Motor Genético</span>
-          <span id="engine-live-indicator" class="text-white">EN ESPERA</span>
-        </div>
-        <div id="engine-logs-container" class="h-16 overflow-y-auto space-y-0.5">
-          <div class="text-[#71717a] text-xs font-mono">Presiona 'Iniciar Creación Continua' para comenzar a explorar...</div>
-        </div>
-      </div>
-
-      <!-- Candidate Cards Grid -->
-      <div id="candidates-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- Rendered via app.js -->
-      </div>
-
-    </div>
-
-  </main>
+  </div>
+  <!-- END LAYOUT -->
 
   <!-- ================================================================== -->
   <!-- MODAL: DETALLE DEL ALGORITMO CANDIDATO (ANÁLISIS COMPLETO) -->
   <!-- ================================================================== -->
   <div id="candidate-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-[#101014] border border-[#2a2a34] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
-      
-      <!-- Modal Header -->
       <div class="p-6 border-b border-[#22222a] flex items-center justify-between sticky top-0 bg-[#101014] z-10">
         <div>
           <h3 id="modal-title" class="text-lg font-bold text-white tracking-wide">Algo Name</h3>
@@ -576,11 +652,7 @@
         </div>
         <button id="btn-close-modal" class="text-[#a0a0ab] hover:text-white text-lg p-2">✕</button>
       </div>
-
-      <!-- Modal Body -->
       <div class="p-6 space-y-6">
-        
-        <!-- Metrics Row -->
         <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
           <div class="p-3 rounded bg-[#16161c] border border-[#24242e]">
             <div class="text-[10px] text-[#71717a] uppercase font-bold">Capital Inicial</div>
@@ -607,16 +679,10 @@
             <div id="modal-metric-pf" class="text-xs font-mono font-bold text-white mt-1">0.00</div>
           </div>
         </div>
-
-        <!-- Interactive Equity Curve Chart -->
         <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
           <h4 class="text-xs font-semibold text-[#a0a0ab] uppercase tracking-wider mb-2">Curva de Equidad y Balance en el Tiempo</h4>
-          <div class="h-64 w-full">
-            <canvas id="equity-chart-canvas"></canvas>
-          </div>
+          <div class="h-64 w-full"><canvas id="equity-chart-canvas"></canvas></div>
         </div>
-
-        <!-- Rules Breakdown -->
         <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
           <h4 class="text-xs font-semibold text-[#a0a0ab] uppercase tracking-wider mb-3">Lógica y Reglas de la Estrategia</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -633,7 +699,6 @@
               <ul id="modal-sell-rules" class="list-disc list-inside space-y-1 text-[#a0a0ab]"></ul>
             </div>
           </div>
-
           <div class="mt-4 pt-4 border-t border-[#1e1e26] grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-[#a0a0ab]">
             <div>
               <span class="text-white font-medium">Tipo de Orden & Salida:</span>
@@ -649,27 +714,20 @@
             </div>
           </div>
         </div>
-
-        <!-- Validation Trigger & Results -->
         <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a] space-y-3">
           <div class="flex items-center justify-between">
             <div>
               <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Validación de Robustez Anti-Overfitting</h4>
               <p class="text-[11px] text-[#71717a]">Someter al algoritmo a Walk-Forward temporal y cientos de universos sintéticos.</p>
             </div>
-            <button id="btn-run-validation" class="btn-primary text-xs py-1.5 px-3">
-              ⚡ Ejecutar Walk-Forward y Multiverso
-            </button>
+            <button id="btn-run-validation" class="btn-primary text-xs py-1.5 px-3">⚡ Ejecutar Walk-Forward y Multiverso</button>
           </div>
-
           <div id="validation-results-container" class="space-y-2 hidden pt-2">
             <div id="val-wf-status"></div>
             <div id="val-mv-status"></div>
             <div id="val-prop-status"></div>
           </div>
         </div>
-
-        <!-- Trades History Sample Table -->
         <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
           <h4 class="text-xs font-semibold text-[#a0a0ab] uppercase tracking-wider mb-2">Historial de Operaciones</h4>
           <div class="overflow-x-auto max-h-48">
@@ -690,25 +748,16 @@
             </table>
           </div>
         </div>
-
       </div>
-
-      <!-- Modal Footer & Code Export -->
       <div class="p-6 border-t border-[#22222a] flex items-center justify-between bg-[#0e0e12]">
         <div class="text-xs text-[#71717a]">Exportación de código listo para producción:</div>
         <div class="flex items-center gap-2">
-          <button id="btn-export-mql5" class="btn-secondary text-xs">
-            💾 Exportar MT5 (.mq5)
-          </button>
-          <button id="btn-export-python" class="btn-secondary text-xs">
-            🐍 Exportar Python (.py)
-          </button>
-          <button id="btn-export-json" class="btn-secondary text-xs">
-            📋 Exportar JSON
-          </button>
+          <button id="btn-save-strategy" class="btn-primary text-xs">💾 Guardar Estrategia</button>
+          <button id="btn-export-mql5" class="btn-secondary text-xs">💾 Exportar MT5 (.mq5)</button>
+          <button id="btn-export-python" class="btn-secondary text-xs">🐍 Exportar Python (.py)</button>
+          <button id="btn-export-json" class="btn-secondary text-xs">📋 Exportar JSON</button>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -733,12 +782,8 @@
         <button id="btn-close-neural" class="btn-primary text-xs py-1 px-3 font-semibold">Cerrar</button>
       </div>
     </div>
-
-    <!-- Canvas Container -->
     <div class="flex-1 relative mt-4 rounded-lg overflow-hidden border border-[#22222a]">
       <div id="neural-canvas-container" class="w-full h-full"></div>
-      
-      <!-- Live HUD -->
       <div class="neural-hud">
         <div class="font-bold text-white mb-1">HUD Motor Genético</div>
         <div class="space-y-0.5 text-[#a0a0ab]">

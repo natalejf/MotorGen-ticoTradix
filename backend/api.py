@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import PlainTextResponse, JSONResponse
+from pathlib import Path
 from pydantic import BaseModel
 
 from backend.data_manager import data_manager, SUPPORTED_SYMBOLS
@@ -79,6 +80,139 @@ def update_data(req: UpdateDataRequest):
 # =============================================================================
 # GENETIC ENGINE ENDPOINTS
 # =============================================================================
+
+# ---------------------------------------------------------------------
+# PORTFOLIO ENDPOINTS
+# ---------------------------------------------------------------------
+from backend.portfolio import StrategyRecord, Portfolio
+from pydantic import conint, confloat
+from typing import List
+
+class SaveStrategyRequest(BaseModel):
+    strategy_id: Optional[str] = None
+    candidate_data: Optional[Dict[str, Any]] = None
+
+class BatchSaveStrategiesRequest(BaseModel):
+    strategy_ids: Optional[List[str]] = None
+    save_all_candidates: bool = False
+
+class CreatePortfolioRequest(BaseModel):
+    name: str
+    strategy_ids: List[str]
+    weights: Optional[List[float]] = None
+    max_strategies: int = 10
+    risk_budget: float = 1.0
+
+@app.post("/api/strategy/save")
+def save_strategy(req: SaveStrategyRequest):
+    """Saves a strategy with its metrics to disk."""
+    cand = None
+    if req.candidate_data:
+        cand = req.candidate_data
+    elif req.strategy_id:
+        cand = next((c for c in genetic_engine.get_candidates() if c["strategy"]["id"] == req.strategy_id), None)
+    
+    if not cand:
+        raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
+    
+    rec = StrategyRecord(cand)
+    rec.save()
+    return {"status": "saved", "strategy_id": rec.id}
+
+@app.post("/api/strategy/batch-save")
+def batch_save_strategies(req: BatchSaveStrategiesRequest):
+    """Saves multiple strategies at once in batch."""
+    saved_ids = []
+    candidates = genetic_engine.get_candidates()
+    
+    if req.save_all_candidates:
+        targets = candidates
+    elif req.strategy_ids:
+        targets = [c for c in candidates if c["strategy"]["id"] in req.strategy_ids]
+    else:
+        targets = candidates
+
+    for cand in targets:
+        rec = StrategyRecord(cand)
+        rec.save()
+        saved_ids.append(rec.id)
+
+    return {"status": "saved_batch", "count": len(saved_ids), "saved_ids": saved_ids}
+
+@app.delete("/api/strategy/{strategy_id}")
+def delete_strategy(strategy_id: str):
+    """Deletes a saved strategy file."""
+    deleted = StrategyRecord.delete(strategy_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
+    return {"status": "deleted", "strategy_id": strategy_id}
+
+@app.post("/api/portfolio/create")
+def create_portfolio(req: CreatePortfolioRequest):
+    """Stops engine if running and combines selected strategies into a portfolio."""
+    # 1. Stop engine first as requested
+    if genetic_engine.is_running:
+        genetic_engine.stop_exploration()
+
+    # 2. Load strategies (check both saved and active candidate pool)
+    candidates_pool = {c["strategy"]["id"]: c for c in genetic_engine.get_candidates()}
+    selected = []
+    
+    ids_to_process = req.strategy_ids[: req.max_strategies]
+    for sid in ids_to_process:
+        try:
+            rec = StrategyRecord.load(sid)
+            selected.append(rec.data)
+        except FileNotFoundError:
+            # Check if it's currently in active candidates and auto-persist it
+            if sid in candidates_pool:
+                cand = candidates_pool[sid]
+                rec = StrategyRecord(cand)
+                rec.save()
+                selected.append(cand)
+            else:
+                continue
+
+    if not selected:
+        raise HTTPException(status_code=400, detail="No se encontraron estrategias válidas para combinar.")
+
+    # 3. Normalise weights if provided
+    weights = None
+    if req.weights and len(req.weights) == len(selected):
+        total = sum(req.weights)
+        if total > 0:
+            weights = [round(w / total, 4) for w in req.weights]
+
+    port = Portfolio(name=req.name or f"Portafolio {len(selected)} Estrategias", 
+                     strategies=selected, 
+                     weights=weights, 
+                     risk_budget=req.risk_budget)
+    port.save()
+    return {"status": "created", "portfolio": port.to_dict()}
+
+@app.get("/api/strategies/saved")
+def list_saved_strategies():
+    return StrategyRecord.list_all()
+
+@app.get("/api/portfolios")
+def list_portfolios():
+    return Portfolio.list_all()
+
+@app.get("/api/portfolio/{portfolio_id}")
+def get_portfolio(portfolio_id: str):
+    try:
+        port = Portfolio.load(portfolio_id)
+        return port.to_dict()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Portafolio no encontrado.")
+
+@app.delete("/api/portfolio/{portfolio_id}")
+def delete_portfolio(portfolio_id: str):
+    path = Path(__file__).resolve().parents[1] / "data" / "portfolios" / f"{portfolio_id}.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Portafolio no encontrado.")
+    path.unlink()
+    return {"status": "deleted", "portfolio_id": portfolio_id}
 
 @app.post("/api/start-exploration")
 def start_exploration(req: ExplorationConfigRequest):

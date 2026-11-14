@@ -659,16 +659,21 @@ function renderCandidates() {
           </div>
         </div>
 
-        <!-- Card Click Action Button -->
-        <button type="button" class="btn-card-action mt-3 pt-2 flex items-center justify-between text-xs text-[#a0a0ab] hover:text-white border-t border-[#1e1e24] w-full text-left">
-          <span class="text-[11px] font-medium">Ver análisis completo</span>
-          <span class="group-hover:translate-x-1 transition-transform">→</span>
-        </button>
+        <!-- Card Click Action Button & Quick Save -->
+        <div class="mt-3 pt-2 flex items-center justify-between border-t border-[#1e1e24]">
+          <button type="button" class="btn-card-action flex items-center gap-1.5 text-xs text-[#a0a0ab] hover:text-white">
+            <span class="text-[11px] font-medium">Ver análisis completo</span>
+            <span class="group-hover:translate-x-1 transition-transform">→</span>
+          </button>
+          <button type="button" onclick="event.stopPropagation(); saveSingleStrategy('${s.id}')" class="text-[11px] py-1 px-2.5 rounded bg-[#16161c] hover:bg-white hover:text-black border border-[#2a2a34] text-white transition-all" title="Guardar estrategia en Mis Algoritmos">
+            💾 Guardar
+          </button>
+        </div>
       </div>
     `;
   }).join('');
 
-  // Attach direct, rock-solid click listeners to all candidate cards and buttons
+  // Attach direct click listeners to all candidate cards
   document.querySelectorAll('.candidate-card').forEach(card => {
     const candId = card.getAttribute('data-id');
     card.addEventListener('click', (e) => {
@@ -727,7 +732,11 @@ async function openCandidateModal(candidateId) {
     const valBtn = document.getElementById('btn-run-validation');
     valBtn.onclick = () => runDeepValidation(cand.strategy.id);
 
-    // Setup Export buttons
+    // Setup Save & Export buttons
+    const saveBtn = document.getElementById('btn-save-strategy');
+    if (saveBtn) {
+      saveBtn.onclick = () => saveSingleStrategy(cand.strategy.id);
+    }
     document.getElementById('btn-export-mql5').onclick = () => window.open(`/api/candidate/${cand.strategy.id}/export/mq5`, '_blank');
     document.getElementById('btn-export-python').onclick = () => window.open(`/api/candidate/${cand.strategy.id}/export/python`, '_blank');
     document.getElementById('btn-export-json').onclick = () => window.open(`/api/candidate/${cand.strategy.id}/export/json`, '_blank');
@@ -993,3 +1002,554 @@ function openNeuralModal() {
 function closeNeuralModal() {
   document.getElementById('neural-modal').classList.add('hidden');
 }
+
+// ============================================================================
+// SIDEBAR NAVIGATION & SECTION TOGGLING (TradingNote Architecture)
+// ============================================================================
+
+function showSection(sectionId) {
+  // Update sidebar item active classes
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+    if (item.getAttribute('data-section') === sectionId) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  // Hide all sections
+  document.querySelectorAll('.app-section').forEach(sec => {
+    sec.classList.add('hidden');
+  });
+
+  // Show target section
+  const target = document.getElementById(`section-${sectionId}`);
+  if (target) {
+    target.classList.remove('hidden');
+  }
+
+  // Trigger relevant data loaders
+  if (sectionId === 'saved-strategies') {
+    loadSavedStrategies();
+  } else if (sectionId === 'portfolio-builder') {
+    renderPortfolioStrategyChecklist();
+  } else if (sectionId === 'saved-portfolios') {
+    loadSavedPortfolios();
+  } else if (sectionId === 'engine') {
+    if (state.activeTab === 'results') {
+      renderCandidates();
+    }
+  }
+}
+window.showSection = showSection;
+
+// ============================================================================
+// STRATEGY PERSISTENCE (INDIVIDUAL & BATCH)
+// ============================================================================
+
+async function saveSingleStrategy(strategyId) {
+  try {
+    const res = await fetch('/api/strategy/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ strategy_id: strategyId })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(`Error al guardar: ${err.detail || 'No se pudo guardar la estrategia.'}`);
+      return;
+    }
+    alert(`✓ Estrategia guardada exitosamente en Mis Algoritmos.`);
+  } catch (err) {
+    console.error('Error saving strategy:', err);
+    alert('Error de conexión al guardar la estrategia.');
+  }
+}
+window.saveSingleStrategy = saveSingleStrategy;
+
+async function deleteSavedStrategy(strategyId) {
+  if (!confirm('¿Estás seguro de eliminar esta estrategia guardada?')) return;
+  try {
+    const res = await fetch(`/api/strategy/${strategyId}`, { method: 'DELETE' });
+    if (res.ok) {
+      loadSavedStrategies();
+    } else {
+      alert('Error al eliminar la estrategia.');
+    }
+  } catch (err) {
+    console.error('Error deleting strategy:', err);
+  }
+}
+window.deleteSavedStrategy = deleteSavedStrategy;
+
+async function saveAllApprovedBatch() {
+  if (!state.candidates || state.candidates.length === 0) {
+    alert('No hay algoritmos aprobados en los resultados aún para guardar.');
+    return;
+  }
+  try {
+    const res = await fetch('/api/strategy/batch-save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ save_all_candidates: true })
+    });
+    const data = await res.json();
+    alert(`✓ Se guardaron ${data.count} estrategias aprobadas en Mis Algoritmos.`);
+  } catch (err) {
+    console.error('Error saving batch:', err);
+    alert('Error al guardar el lote de estrategias.');
+  }
+}
+window.saveAllApprovedBatch = saveAllApprovedBatch;
+
+async function sendBatchToPortfolio() {
+  if (!state.candidates || state.candidates.length === 0) {
+    alert('No hay estrategias aprobadas aún para enviar a portafolio.');
+    return;
+  }
+
+  // 1. Stop engine first if running
+  if (state.isRunning) {
+    await stopExploration();
+  }
+
+  // 2. Batch-save current candidates so they persist for the portfolio
+  try {
+    await fetch('/api/strategy/batch-save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ save_all_candidates: true })
+    });
+  } catch (e) {
+    console.warn('Batch save during portfolio transfer:', e);
+  }
+
+  // 3. Switch to portfolio builder section
+  showSection('portfolio-builder');
+}
+window.sendBatchToPortfolio = sendBatchToPortfolio;
+
+// ============================================================================
+// LOAD SAVED STRATEGIES VIEW
+// ============================================================================
+
+async function loadSavedStrategies() {
+  const container = document.getElementById('saved-strategies-grid');
+  const countBadge = document.getElementById('saved-strategies-count');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="col-span-full py-12 text-center text-[#71717a]">
+      <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Cargando estrategias guardadas...
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/strategies/saved');
+    const items = await res.json();
+    
+    if (countBadge) {
+      countBadge.textContent = `${items.length} estrategias`;
+    }
+
+    if (!items || items.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-12 text-center text-[#71717a]">
+          <div class="text-3xl mb-3">💾</div>
+          <div class="text-sm font-medium text-white mb-1">Aún no hay estrategias guardadas</div>
+          <div class="text-xs">Genera estrategias en el Motor Genético y guárdalas individualmente o en lote desde los Resultados.</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = items.map((cand, idx) => {
+      const s = cand.strategy || cand;
+      const m = cand.metrics || {};
+      const netProfitFormatted = m.total_return_usd !== undefined
+        ? `${m.total_return_usd >= 0 ? '+' : ''}$${m.total_return_usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+        : 'N/A';
+      const initialDepositFormatted = `$${(m.initial_capital || 10000).toLocaleString()}`;
+
+      return `
+        <div class="candidate-card group">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[180px]">${s.name || s.id}</span>
+            <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
+              ${m.tn_score ? 'TN ' + m.tn_score : 'GUARDADA'}
+            </span>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <span class="tn-badge text-[10px]">${s.symbol || 'N/A'}</span>
+            <span class="tn-badge text-[10px]">${s.timeframe || '1h'}</span>
+            <span class="tn-badge text-[10px]">${s.entry_order_type || 'MARKET'}</span>
+            <span class="tn-badge text-[10px] text-[#a0a0ab]">${(s.exit_mode || 'ATR_CLASSIC').replace('_', ' ')}</span>
+          </div>
+
+          <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-2">
+            <div>
+              <div class="text-[10px] text-[#71717a] uppercase font-bold">Capital Inicial</div>
+              <div class="text-xs font-mono text-[#a0a0ab]">${initialDepositFormatted}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-white uppercase font-bold">Net Profit</div>
+              <div class="text-sm font-mono font-bold text-white">${netProfitFormatted}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-[#1e1e26] text-center">
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase">Sharpe</div>
+              <div class="text-xs font-mono font-semibold text-white">${(m.sharpe_ratio || 0).toFixed(2)}</div>
+            </div>
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase">Win Rate</div>
+              <div class="text-xs font-mono font-semibold text-white">${(m.win_rate_pct || 0).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase">Drawdown</div>
+              <div class="text-xs font-mono font-semibold text-white">${(m.max_drawdown_pct || 0).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase">Trades</div>
+              <div class="text-xs font-mono font-semibold text-white">${m.total_trades || 0}</div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+            <button onclick="useStrategyInPortfolio('${s.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1" title="Añadir al Creador de Portafolio">
+              + Portafolio
+            </button>
+            <button onclick="deleteSavedStrategy('${s.id}')" class="btn-danger text-[11px] py-1 px-2" title="Eliminar de guardadas">
+              🗑
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Error loading saved strategies:', err);
+    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar estrategias guardadas.</div>`;
+  }
+}
+window.loadSavedStrategies = loadSavedStrategies;
+
+function useStrategyInPortfolio(strategyId) {
+  showSection('portfolio-builder');
+  setTimeout(() => {
+    const cb = document.querySelector(`.port-strategy-cb[value="${strategyId}"]`);
+    if (cb) {
+      cb.checked = true;
+      cb.closest('.portfolio-strategy-check')?.classList.add('checked');
+      updatePortfolioSelectedCounter();
+    }
+  }, 200);
+}
+window.useStrategyInPortfolio = useStrategyInPortfolio;
+
+// ============================================================================
+// PORTFOLIO BUILDER & CHECKLIST
+// ============================================================================
+
+async function renderPortfolioStrategyChecklist() {
+  const container = document.getElementById('portfolio-strategy-checklist');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
+      <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Cargando estrategias disponibles...
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/strategies/saved');
+    let items = await res.json();
+
+    if ((!items || items.length === 0) && state.candidates && state.candidates.length > 0) {
+      items = state.candidates;
+    }
+
+    if (!items || items.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
+          No hay estrategias guardadas ni candidatas activas aún.<br>
+          <button onclick="showSection('engine')" class="btn-primary text-xs mt-3">Ir al Motor Genético y Crear Estrategias →</button>
+        </div>
+      `;
+      updatePortfolioSelectedCounter();
+      return;
+    }
+
+    container.innerHTML = items.map((item, idx) => {
+      const s = item.strategy || item;
+      const m = item.metrics || {};
+      const sid = s.id || `strat_${idx}`;
+      const netProfit = m.total_return_usd !== undefined ? `${m.total_return_usd >= 0 ? '+' : ''}$${m.total_return_usd.toFixed(0)}` : '';
+
+      return `
+        <label class="portfolio-strategy-check checked" for="port-cb-${sid}">
+          <input type="checkbox" id="port-cb-${sid}" value="${sid}" checked class="port-strategy-cb w-4 h-4 accent-white mt-1 cursor-pointer">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-white truncate">${s.name || sid}</span>
+              <span class="text-[10px] font-mono font-bold text-white">${s.symbol || ''} ${s.timeframe || ''}</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-[#a0a0ab]">
+              <span>WR: <strong class="text-white">${(m.win_rate_pct || 0).toFixed(1)}%</strong> · Sh: <strong class="text-white">${(m.sharpe_ratio || 0).toFixed(2)}</strong></span>
+              <span class="font-mono text-white font-semibold">${netProfit}</span>
+            </div>
+          </div>
+        </label>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.port-strategy-cb').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const parent = e.target.closest('.portfolio-strategy-check');
+        if (e.target.checked) {
+          parent?.classList.add('checked');
+        } else {
+          parent?.classList.remove('checked');
+        }
+        updatePortfolioSelectedCounter();
+      });
+    });
+
+    updatePortfolioSelectedCounter();
+
+  } catch (err) {
+    console.error('Error rendering portfolio checklist:', err);
+    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar lista de estrategias.</div>`;
+  }
+}
+window.renderPortfolioStrategyChecklist = renderPortfolioStrategyChecklist;
+
+function updatePortfolioSelectedCounter() {
+  const checked = document.querySelectorAll('.port-strategy-cb:checked');
+  const counter = document.getElementById('portfolio-selected-count');
+  if (counter) {
+    counter.textContent = checked.length;
+  }
+}
+
+function selectAllPortfolioStrategies() {
+  document.querySelectorAll('.port-strategy-cb').forEach(cb => {
+    cb.checked = true;
+    cb.closest('.portfolio-strategy-check')?.classList.add('checked');
+  });
+  updatePortfolioSelectedCounter();
+}
+window.selectAllPortfolioStrategies = selectAllPortfolioStrategies;
+
+function deselectAllPortfolioStrategies() {
+  document.querySelectorAll('.port-strategy-cb').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.portfolio-strategy-check')?.classList.remove('checked');
+  });
+  updatePortfolioSelectedCounter();
+}
+window.deselectAllPortfolioStrategies = deselectAllPortfolioStrategies;
+
+async function createPortfolio() {
+  const nameInput = document.getElementById('portfolio-name-input');
+  const maxInput = document.getElementById('portfolio-max-strategies');
+  const riskInput = document.getElementById('portfolio-risk-budget');
+  const btn = document.getElementById('btn-create-portfolio');
+
+  const selectedCbs = Array.from(document.querySelectorAll('.port-strategy-cb:checked'));
+  if (selectedCbs.length < 2) {
+    alert('Selecciona al menos 2 estrategias para combinar en el portafolio.');
+    return;
+  }
+
+  const selectedIds = selectedCbs.map(cb => cb.value);
+  const maxStrategies = parseInt(maxInput?.value) || 10;
+  const riskBudget = parseFloat(riskInput?.value) || 1.0;
+  const portfolioName = nameInput?.value.trim() || `Portafolio Multi-Estrategia (${selectedIds.length} Algoritmos)`;
+
+  const payload = {
+    name: portfolioName,
+    strategy_ids: selectedIds,
+    max_strategies: maxStrategies,
+    risk_budget: riskBudget
+  };
+
+  const originalText = btn.innerHTML;
+  btn.innerHTML = `<span class="animate-spin inline-block w-3 h-3 border-2 border-black border-t-transparent rounded-full mr-2"></span> Creando y Optimizando...`;
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/portfolio/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert(`Error al crear portafolio: ${err.detail || 'Ocurrió un error.'}`);
+      return;
+    }
+
+    const data = await res.json();
+    const port = data.portfolio || {};
+    const met = port.metrics || {};
+
+    alert(`✓ Portafolio "${port.name}" creado con éxito!\n\n• Estrategias combinadas: ${met.strategies_count}\n• Descorrelación / Diversificación: ${met.diversification_score}%\n• Reducción de Drawdown estimada: -${met.estimated_dd_reduction_pct}%\n• Net Profit combinado estimado: $${(met.combined_net_profit_usd || 0).toLocaleString()}`);
+
+    showSection('saved-portfolios');
+
+  } catch (err) {
+    console.error('Error creating portfolio:', err);
+    alert('Error de conexión al crear portafolio.');
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+window.createPortfolio = createPortfolio;
+
+// ============================================================================
+// SAVED PORTFOLIOS VIEW
+// ============================================================================
+
+async function loadSavedPortfolios() {
+  const container = document.getElementById('saved-portfolios-grid');
+  const countBadge = document.getElementById('saved-portfolios-count');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="col-span-full py-12 text-center text-[#71717a]">
+      <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Cargando portafolios guardados...
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/portfolios');
+    const items = await res.json();
+
+    if (countBadge) {
+      countBadge.textContent = `${items.length} portafolios`;
+    }
+
+    if (!items || items.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-12 text-center text-[#71717a]">
+          <div class="text-3xl mb-3">📁</div>
+          <div class="text-sm font-medium text-white mb-1">Aún no hay portafolios guardados</div>
+          <div class="text-xs">Crea tu primer portafolio multi-estrategia en la pestaña "Creador de Portafolio".</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = items.map(port => {
+      const met = port.metrics || {};
+      const subStrats = port.strategies_summary || [];
+
+      return `
+        <div class="tn-card flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-white uppercase tracking-wider">${port.name}</span>
+              <span class="tn-badge tn-badge-white text-[10px]">
+                ${met.diversification_score ? met.diversification_score + '% Descorrelación' : 'PORTAFOLIO'}
+              </span>
+            </div>
+            <div class="text-[11px] text-[#71717a] mb-3">Creado: ${port.created_at || 'Reciente'} · ID: <span class="font-mono text-[#a0a0ab]">${port.id}</span></div>
+
+            <div class="grid grid-cols-3 gap-2 p-2.5 rounded bg-[#09090c] border border-[#22222a] text-center my-3">
+              <div>
+                <div class="text-[9px] text-[#71717a] uppercase font-bold">Net Profit</div>
+                <div class="text-xs font-mono font-bold text-white mt-0.5">
+                  +$${(met.combined_net_profit_usd || 0).toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div class="text-[9px] text-[#71717a] uppercase font-bold">Win Rate</div>
+                <div class="text-xs font-mono font-bold text-white mt-0.5">
+                  ${(met.weighted_win_rate_pct || 0).toFixed(1)}%
+                </div>
+              </div>
+              <div>
+                <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
+                <div class="text-xs font-mono font-bold text-white mt-0.5">
+                  -${met.estimated_dd_reduction_pct || 35}%
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="text-[10px] text-[#71717a] uppercase font-bold mb-1.5 flex items-center justify-between">
+                <span>Estrategias (${subStrats.length})</span>
+                <span>Pesos asignados</span>
+              </div>
+              <div class="space-y-1 max-h-32 overflow-y-auto">
+                ${subStrats.map(sub => `
+                  <div class="flex items-center justify-between p-1.5 rounded bg-[#131318] text-[11px]">
+                    <span class="text-white font-medium truncate max-w-[170px]">${sub.symbol || ''} · ${sub.timeframe || ''} (${sub.name || sub.id})</span>
+                    <span class="font-mono text-[#a0a0ab] font-bold">${Math.round((sub.weight || 0) * 100)}%</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-[#1e1e24] flex items-center justify-between gap-2">
+            <button onclick="exportPortfolioJson('${port.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1" title="Descargar archivo de configuración JSON para bot">
+              📥 Exportar Bot JSON
+            </button>
+            <button onclick="deleteSavedPortfolio('${port.id}')" class="btn-danger text-[11px] py-1 px-2" title="Eliminar portafolio">
+              🗑
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Error loading saved portfolios:', err);
+    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar portafolios.</div>`;
+  }
+}
+window.loadSavedPortfolios = loadSavedPortfolios;
+
+async function deleteSavedPortfolio(portfolioId) {
+  if (!confirm('¿Estás seguro de eliminar este portafolio?')) return;
+  try {
+    const res = await fetch(`/api/portfolio/${portfolioId}`, { method: 'DELETE' });
+    if (res.ok) {
+      loadSavedPortfolios();
+    } else {
+      alert('Error al eliminar portafolio.');
+    }
+  } catch (err) {
+    console.error('Error deleting portfolio:', err);
+  }
+}
+window.deleteSavedPortfolio = deleteSavedPortfolio;
+
+async function exportPortfolioJson(portfolioId) {
+  try {
+    const res = await fetch(`/api/portfolio/${portfolioId}`);
+    if (!res.ok) {
+      alert('Error al descargar portafolio.');
+      return;
+    }
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${portfolioId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Error exporting portfolio JSON:', err);
+  }
+}
+window.exportPortfolioJson = exportPortfolioJson;
