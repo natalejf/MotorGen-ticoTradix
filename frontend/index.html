@@ -20,46 +20,59 @@
   <!-- ================================================================== -->
   <div class="flex min-h-screen">
 
-    <!-- SIDEBAR NAVIGATION (estilo TradingNote) -->
+    <!-- SIDEBAR NAVIGATION (estilo TradingNote - Mejorada Estética & Divisor Marcado) -->
     <aside id="app-sidebar" class="sidebar-nav">
-      <!-- Logo -->
-      <div class="px-4 pt-5 pb-4 border-b border-[#1c1c22]">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-white text-black font-black flex items-center justify-center text-sm tracking-tighter">TN</div>
+      <!-- Logo Header -->
+      <div class="sidebar-header">
+        <div class="sidebar-logo-box">
+          <div class="sidebar-logo-icon">TN</div>
           <div>
-            <div class="text-xs font-bold text-white uppercase tracking-widest">TradingNote</div>
-            <div class="text-[10px] text-[#71717a]">Motor Genético v2.5</div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-white uppercase tracking-widest">TradingNote</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-white/10 text-white font-mono font-semibold">LAB</span>
+            </div>
+            <div class="text-[10px] text-[#8e8e9c] mt-0.5">Motor Genético & Portafolio</div>
           </div>
         </div>
       </div>
 
       <!-- Menu Items -->
-      <nav class="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+      <nav class="flex-1 py-4 space-y-1 overflow-y-auto">
         <!-- Laboratorio -->
         <div class="sidebar-section-label">Laboratorio</div>
         <button class="sidebar-item active" data-section="engine" onclick="showSection('engine')">
-          <span>⚡</span> Motor Genético
+          <span class="sidebar-item-icon">⚡</span>
+          <span class="flex-1">Motor Genético</span>
         </button>
 
         <!-- Mis Algoritmos -->
         <div class="sidebar-section-label mt-4">Mis Algoritmos</div>
         <button class="sidebar-item" data-section="saved-strategies" onclick="showSection('saved-strategies')">
-          <span>💾</span> Estrategias Guardadas
+          <span class="sidebar-item-icon">💾</span>
+          <span class="flex-1">Estrategias Guardadas</span>
+          <span id="badge-sidebar-strategies" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-[#a0a0ab] border border-white/5">0</span>
         </button>
 
         <!-- Portafolios -->
         <div class="sidebar-section-label mt-4">Portafolios</div>
         <button class="sidebar-item" data-section="portfolio-builder" onclick="showSection('portfolio-builder')">
-          <span>🧬</span> Creador de Portafolio
+          <span class="sidebar-item-icon">🧬</span>
+          <span class="flex-1">Creador de Portafolio</span>
         </button>
         <button class="sidebar-item" data-section="saved-portfolios" onclick="showSection('saved-portfolios')">
-          <span>📁</span> Portafolios Guardados
+          <span class="sidebar-item-icon">📁</span>
+          <span class="flex-1">Portafolios Guardados</span>
+          <span id="badge-sidebar-portfolios" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-[#a0a0ab] border border-white/5">0</span>
         </button>
       </nav>
 
-      <!-- Footer -->
-      <div class="px-4 py-3 border-t border-[#1c1c22] text-[10px] text-[#51515a]">
-        Réplica Motor Genético · v2.5
+      <!-- Footer with Engine Pulse -->
+      <div class="sidebar-footer">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+          <span class="text-[10px] text-[#a0a0b2] font-medium">Motor Listo</span>
+        </div>
+        <span class="text-[10px] font-mono text-[#666678]">v2.5</span>
       </div>
     </aside>
 

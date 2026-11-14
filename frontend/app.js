@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Check engine status
   await pollStatus();
+  refreshSidebarBadges();
 
   // Attach Button Listeners
   document.getElementById('btn-start-exploration').addEventListener('click', startExploration);
@@ -1151,6 +1152,10 @@ async function loadSavedStrategies() {
     if (countBadge) {
       countBadge.textContent = `${items.length} estrategias`;
     }
+    const sidebarBadge = document.getElementById('badge-sidebar-strategies');
+    if (sidebarBadge) {
+      sidebarBadge.textContent = items.length;
+    }
 
     if (!items || items.length === 0) {
       container.innerHTML = `
@@ -1433,6 +1438,10 @@ async function loadSavedPortfolios() {
     if (countBadge) {
       countBadge.textContent = `${items.length} portafolios`;
     }
+    const sidebarBadge = document.getElementById('badge-sidebar-portfolios');
+    if (sidebarBadge) {
+      sidebarBadge.textContent = items.length;
+    }
 
     if (!items || items.length === 0) {
       container.innerHTML = `
@@ -1552,4 +1561,24 @@ async function exportPortfolioJson(portfolioId) {
     console.error('Error exporting portfolio JSON:', err);
   }
 }
-window.exportPortfolioJson = exportPortfolioJson;
+async function refreshSidebarBadges() {
+  try {
+    const [resStrat, resPort] = await Promise.all([
+      fetch('/api/strategies/saved'),
+      fetch('/api/portfolios')
+    ]);
+    if (resStrat.ok) {
+      const strats = await resStrat.json();
+      const b1 = document.getElementById('badge-sidebar-strategies');
+      if (b1) b1.textContent = strats.length;
+    }
+    if (resPort.ok) {
+      const ports = await resPort.json();
+      const b2 = document.getElementById('badge-sidebar-portfolios');
+      if (b2) b2.textContent = ports.length;
+    }
+  } catch (e) {
+    // Silent badge update failure
+  }
+}
+window.refreshSidebarBadges = refreshSidebarBadges;
