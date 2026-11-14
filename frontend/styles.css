@@ -448,3 +448,23 @@ body {
   border-color: #ffffff;
   background: #1a1a20;
 }
+
+/* Pair & Batch filter buttons */
+.pair-filter-btn, .port-pair-filter {
+  background: #14141a;
+  color: #a0a0ab;
+  border: 1px solid #242430;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pair-filter-btn:hover, .port-pair-filter:hover {
+  background: #20202a;
+  color: #ffffff;
+  border-color: #3e3e50;
+}
+.pair-filter-btn.active, .port-pair-filter.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  font-weight: 700 !important;
+}

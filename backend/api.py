@@ -91,10 +91,12 @@ from typing import List
 class SaveStrategyRequest(BaseModel):
     strategy_id: Optional[str] = None
     candidate_data: Optional[Dict[str, Any]] = None
+    batch_name: Optional[str] = None
 
 class BatchSaveStrategiesRequest(BaseModel):
     strategy_ids: Optional[List[str]] = None
     save_all_candidates: bool = False
+    batch_name: Optional[str] = None
 
 class CreatePortfolioRequest(BaseModel):
     name: str
@@ -106,6 +108,7 @@ class CreatePortfolioRequest(BaseModel):
 @app.post("/api/strategy/save")
 def save_strategy(req: SaveStrategyRequest):
     """Saves a strategy with its metrics to disk."""
+    import time
     cand = None
     if req.candidate_data:
         cand = req.candidate_data
@@ -115,13 +118,20 @@ def save_strategy(req: SaveStrategyRequest):
     if not cand:
         raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
     
+    # Enrich with batch/timestamp info if not present
+    sym = cand.get("strategy", {}).get("symbol", "N/A")
+    tf = cand.get("strategy", {}).get("timeframe", "1h")
+    cand["batch_name"] = req.batch_name or cand.get("batch_name") or f"Lote {sym} {tf}"
+    cand["saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
     rec = StrategyRecord(cand)
     rec.save()
     return {"status": "saved", "strategy_id": rec.id}
 
 @app.post("/api/strategy/batch-save")
 def batch_save_strategies(req: BatchSaveStrategiesRequest):
-    """Saves multiple strategies at once in batch."""
+    """Saves multiple strategies at once in batch with batch label."""
+    import time
     saved_ids = []
     candidates = genetic_engine.get_candidates()
     
@@ -133,11 +143,17 @@ def batch_save_strategies(req: BatchSaveStrategiesRequest):
         targets = candidates
 
     for cand in targets:
+        sym = cand.get("strategy", {}).get("symbol", "N/A")
+        tf = cand.get("strategy", {}).get("timeframe", "1h")
+        batch_label = req.batch_name or f"Lote {sym} {tf} ({time.strftime('%d/%m %H:%M')})"
+        cand["batch_name"] = batch_label
+        cand["saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        
         rec = StrategyRecord(cand)
         rec.save()
         saved_ids.append(rec.id)
 
-    return {"status": "saved_batch", "count": len(saved_ids), "saved_ids": saved_ids}
+    return {"status": "saved_batch", "count": len(saved_ids), "saved_ids": saved_ids, "batch_name": req.batch_name}
 
 @app.delete("/api/strategy/{strategy_id}")
 def delete_strategy(strategy_id: str):
