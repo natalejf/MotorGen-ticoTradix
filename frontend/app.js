@@ -270,13 +270,21 @@ function render28IndicatorsGrid() {
 }
 
 function selectRandomIndicators() {
-  const keys = Object.keys(ALL_28_INDICATORS_CONFIG);
-  // Pick between 4 and 8 random indicators
-  const count = Math.floor(Math.random() * 5) + 4;
-  const shuffled = [...keys].sort(() => 0.5 - Math.random());
-  const selected = new Set(shuffled.slice(0, count));
+  // Mezcla por clasificación: elige 1 o 2 indicadores de cada familia para asegurar variedad
+  const families = {};
+  Object.entries(ALL_28_INDICATORS_CONFIG).forEach(([key, conf]) => {
+    if (!families[conf.family]) families[conf.family] = [];
+    families[conf.family].push(key);
+  });
 
-  keys.forEach(k => {
+  const selected = new Set();
+  Object.values(families).forEach(keys => {
+    const shuffled = [...keys].sort(() => 0.5 - Math.random());
+    const take = Math.min(shuffled.length, Math.random() < 0.5 ? 1 : 2);
+    shuffled.slice(0, take).forEach(k => selected.add(k));
+  });
+
+  Object.keys(ALL_28_INDICATORS_CONFIG).forEach(k => {
     state.enabledIndicators[k] = selected.has(k);
     const cb = document.getElementById(`ind-${k}`);
     if (cb) cb.checked = selected.has(k);
