@@ -230,7 +230,8 @@ class GeneticEngine:
         risk_per_trade_pct: Optional[float] = None,
         fixed_lot: Optional[float] = None,
         fixed_cash_risk: Optional[float] = None,
-        martingale_mult: Optional[float] = None
+        martingale_mult: Optional[float] = None,
+        direction: str = "BOTH"
     ) -> Strategy:
         # Multi-indicator synergy: choose distinct indicators to combine
         avail_inds = list(enabled_indicators) if enabled_indicators else ["EMA", "RSI", "MACD", "ATR"]
@@ -267,7 +268,7 @@ class GeneticEngine:
         strat = Strategy(
             symbol=symbol,
             timeframe=timeframe,
-            direction="BOTH",
+            direction=direction,
             entry_order_type=entry_type,
             buy_conditions=buy_conds,
             sell_conditions=sell_conds,
@@ -455,7 +456,9 @@ class GeneticEngine:
             min_sharpe = float(config.get("min_sharpe", 0.8))
             min_profit_factor = float(config.get("min_profit_factor", 1.1))
             min_dsr = float(config.get("min_dsr", 0.2))
-            max_candidates = int(config.get("max_candidates", 1000))
+            max_candidates = config.get("max_candidates", None)
+            if max_candidates is not None:
+                max_candidates = int(max_candidates) if int(max_candidates) > 0 else None
 
             # Multi-indicator parameters
             min_inds = max(1, int(config.get("min_indicators_per_strategy", 1)))
@@ -474,9 +477,14 @@ class GeneticEngine:
             prop_total_dd = float(config.get("prop_firm_total_dd_pct", 8.0))
             prop_target = float(config.get("prop_firm_target_pct", 8.0))
 
+            # Direction filter (LONG_ONLY, SHORT_ONLY, BOTH)
+            direction = config.get("direction", "BOTH")
+            if direction not in ("BOTH", "LONG_ONLY", "SHORT_ONLY"):
+                direction = "BOTH"
+
             self.log(f"Iniciando Fábrica de Algoritmos en modo {'INFINITO CONTINUO' if infinite_mode else 'PROGRAMADO'} sobre {symbol} ({timeframe})...")
-            self.log(f"Límite Top Aprobadas: {max_candidates} | Indicadores activos: {len(enabled_indicators)}/28 | Combinando: {min_inds} a {max_inds} indicadores")
-            self.log(f"Modo de Riesgo: {cfg_sizing} | Prop Firm Challenge Filter: {'ACTIVADO' if prop_firm_filter else 'DESACTIVADO'}")
+            self.log(f"Top Aprobadas: ∞ (sin límite) | Indicadores activos: {len(enabled_indicators)}/28 | Combinando: {min_inds} a {max_inds} indicadores")
+            self.log(f"Modo de Riesgo: {cfg_sizing} | Prop Firm Challenge Filter: {'ACTIVADO' if prop_firm_filter else 'DESACTIVADO'} | Dirección: {direction}")
 
             df = data_manager.load_data(symbol, timeframe)
             self.log(f"Datos históricos listos: {len(df)} velas ({df.index[0].date()} a {df.index[-1].date()}).")
@@ -492,7 +500,8 @@ class GeneticEngine:
                     risk_per_trade_pct=cfg_risk_pct,
                     fixed_lot=cfg_fixed_lot,
                     fixed_cash_risk=cfg_fixed_cash,
-                    martingale_mult=cfg_martingale_mult
+                    martingale_mult=cfg_martingale_mult,
+                    direction=direction
                 )
                 for _ in range(pop_size)
             ]
@@ -608,7 +617,7 @@ class GeneticEngine:
                             cand_score = m.get(objective, m.get("tn_score", 0.0))
 
                             with self.lock:
-                                if len(self.candidates_passed) < max_candidates:
+                                if max_candidates is None or len(self.candidates_passed) < max_candidates:
                                     self.accepted_count += 1
                                     self.candidates_passed.append(candidate_entry)
                                     self.candidates_passed.sort(
@@ -707,6 +716,13 @@ class GeneticEngine:
     def get_candidates(self) -> List[Dict[str, Any]]:
         with self.lock:
             return copy.deepcopy(self.candidates_passed)
+
+    def clear_candidates(self):
+        with self.lock:
+            self.candidates_passed.clear()
+            self.tested_count = 0
+            self.discarded_count = 0
+            self.best_candidate = None
 
     def get_neural_tree(self) -> Dict[str, Any]:
         with self.lock:

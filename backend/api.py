@@ -54,7 +54,7 @@ class ExplorationConfigRequest(BaseModel):
     min_sharpe: float = 0.8
     min_profit_factor: float = 1.1
     min_dsr: float = 0.2
-    max_candidates: int = 1000
+    max_candidates: Optional[int] = None
 
     # Risk management & Position sizing
     sizing_mode: str = "FIXED_RISK"  # "FIXED_RISK", "FIXED_LOT", "FIXED_CASH", "MARTINGALE", "ANTI_MARTINGALE"
@@ -72,6 +72,9 @@ class ExplorationConfigRequest(BaseModel):
     prop_firm_daily_loss_pct: float = 4.0
     prop_firm_total_dd_pct: float = 8.0
     prop_firm_target_pct: float = 8.0
+
+    # Direction filter (BOTH, LONG_ONLY, SHORT_ONLY)
+    direction: str = "BOTH"
 
 class UpdateDataRequest(BaseModel):
     symbol: Optional[str] = None
@@ -102,7 +105,7 @@ def update_data(req: UpdateDataRequest):
 # ---------------------------------------------------------------------
 # PORTFOLIO ENDPOINTS
 # ---------------------------------------------------------------------
-from backend.portfolio import StrategyRecord, Portfolio
+from backend.portfolio import StrategyRecord, Portfolio, STRATEGY_DIR, PORTFOLIO_DIR
 from backend.portfolio_engine import portfolio_engine
 from pydantic import conint, confloat
 from typing import List
@@ -149,7 +152,6 @@ class CreatePortfolioRequest(BaseModel):
 class BatchRetestRequest(BaseModel):
     folder: Optional[str] = "ALL"
     strategy_ids: Optional[List[str]] = None
-    limit: Optional[int] = 30
 
 @app.post("/api/strategy/save")
 def save_strategy(req: SaveStrategyRequest):
@@ -371,8 +373,7 @@ def run_batch_retest(req: BatchRetestRequest):
     else:
         targets = raw_strats
 
-    if req.limit and req.limit > 0:
-        targets = targets[:req.limit]
+
 
     results = []
     for s_data in targets:
@@ -429,6 +430,115 @@ def send_retested_to_portfolio(req: Dict[str, Any]):
         "count": len(selected),
         "strategy_ids": [s.get("strategy", s).get("id") for s in selected]
     }
+
+@app.post("/api/retest/clear")
+def clear_retest_results():
+    """Clears all cached retest results."""
+    if RETEST_CACHE_FILE.exists():
+        try:
+            RETEST_CACHE_FILE.unlink()
+        except Exception:
+            pass
+    # Also remove retest field from strategy files if present
+    for s in StrategyRecord.list_all():
+        try:
+            sid = s.get("strategy", s).get("id")
+            rec = StrategyRecord.load(sid)
+            if "retest" in rec.data:
+                del rec.data["retest"]
+                rec.save(folder=rec.data.get("folder", "General"))
+        except Exception:
+            pass
+    return {"status": "cleared"}
+
+@app.post("/api/engine/clear-results")
+def clear_engine_candidates():
+    """Clears all current approved candidates in the genetic engine."""
+    genetic_engine.clear_candidates()
+    return {"status": "cleared"}
+
+@app.post("/api/portfolio-engine/clear")
+def clear_portfolio_engine_results():
+    """Clears the live top portfolios exploration results."""
+    portfolio_engine.clear_top_portfolios()
+    return {"status": "cleared"}
+
+@app.post("/api/strategies/clear-all")
+def clear_all_strategies(req: Optional[Dict[str, Any]] = None):
+    """Deletes all saved strategies or a specific folder."""
+    import shutil
+    folder = (req or {}).get("folder", "ALL")
+    if folder and folder != "ALL":
+        StrategyRecord.delete_folder(folder)
+    else:
+        for p in STRATEGY_DIR.glob("**/*.json"):
+            try:
+                p.unlink()
+            except Exception:
+                pass
+        for d in STRATEGY_DIR.iterdir():
+            if d.is_dir():
+                try:
+                    shutil.rmtree(d)
+                except Exception:
+                    pass
+    return {"status": "cleared", "folder": folder}
+
+@app.post("/api/clear-all-phases")
+def clear_all_phases():
+    """Limpia resultados de TODAS las fases: motor genético, retest, motor de portafolios, estrategias guardadas y portafolios guardados."""
+    import shutil
+    genetic_engine.clear_candidates()
+    if RETEST_CACHE_FILE.exists():
+        try:
+            RETEST_CACHE_FILE.unlink()
+        except Exception:
+            pass
+    portfolio_engine.clear_top_portfolios()
+    for p in STRATEGY_DIR.glob("**/*.json"):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+    for d in STRATEGY_DIR.iterdir():
+        if d.is_dir():
+            try:
+                shutil.rmtree(d)
+            except Exception:
+                pass
+    for p in PORTFOLIO_DIR.glob("**/*.json"):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+    for d in PORTFOLIO_DIR.iterdir():
+        if d.is_dir():
+            try:
+                shutil.rmtree(d)
+            except Exception:
+                pass
+    return {"status": "cleared", "phases": ["engine", "retest", "portfolio_engine", "strategies", "portfolios"]}
+
+@app.post("/api/portfolios/clear-all")
+def clear_all_portfolios(req: Optional[Dict[str, Any]] = None):
+    """Deletes all saved portfolios or a specific folder."""
+    import shutil
+    folder = (req or {}).get("folder", "ALL")
+    if folder and folder != "ALL":
+        Portfolio.delete_folder(folder)
+    else:
+        for p in PORTFOLIO_DIR.glob("**/*.json"):
+            try:
+                p.unlink()
+            except Exception:
+                pass
+        for d in PORTFOLIO_DIR.iterdir():
+            if d.is_dir():
+                try:
+                    shutil.rmtree(d)
+                except Exception:
+                    pass
+    return {"status": "cleared", "folder": folder}
 
 @app.post("/api/start-exploration")
 def start_exploration(req: ExplorationConfigRequest):

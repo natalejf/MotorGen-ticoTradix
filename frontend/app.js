@@ -483,7 +483,7 @@ async function startExploration() {
     min_sharpe: parseFloat(document.getElementById('input-min-sharpe').value) || 0.8,
     min_profit_factor: parseFloat(document.getElementById('input-min-pf').value) || 1.1,
     min_dsr: parseFloat(document.getElementById('input-min-dsr').value) || 0.20,
-    max_candidates: parseInt(document.getElementById('input-max-candidates')?.value) || parseInt(document.getElementById('input-max-candidates-results')?.value) || 1000,
+    max_candidates: parseInt(document.getElementById('input-max-candidates')?.value) || parseInt(document.getElementById('input-max-candidates-results')?.value) || 0,
     min_indicators_per_strategy: parseInt(document.getElementById('input-min-indicators')?.value) || 1,
     max_indicators_per_strategy: parseInt(document.getElementById('input-max-indicators')?.value) || 3,
 
@@ -498,7 +498,10 @@ async function startExploration() {
     prop_firm_filter: document.getElementById('check-prop-firm-filter')?.checked || false,
     prop_firm_daily_loss_pct: parseFloat(document.getElementById('input-prop-daily-loss')?.value) || 4.0,
     prop_firm_total_dd_pct: parseFloat(document.getElementById('input-prop-total-dd')?.value) || 8.0,
-    prop_firm_target_pct: parseFloat(document.getElementById('input-prop-target')?.value) || 8.0
+    prop_firm_target_pct: parseFloat(document.getElementById('input-prop-target')?.value) || 8.0,
+
+    // Direction Filter (BOTH, LONG_ONLY, SHORT_ONLY)
+    direction: document.querySelector('input[name="direction"]:checked')?.value || 'BOTH'
   };
 
   try {
@@ -3113,7 +3116,6 @@ function updateRetestKpis() {
 async function runBatchRetest() {
   if (state.retestRunning) return;
   const folder = document.getElementById('select-retest-folder')?.value || 'ALL';
-  const limit = parseInt(document.getElementById('input-retest-limit')?.value || '20', 10);
 
   const btn = document.getElementById('btn-run-batch-retest');
   const progressBox = document.getElementById('retest-progress-box');
@@ -3135,7 +3137,7 @@ async function runBatchRetest() {
     const res = await fetch('/api/retest/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folder: folder, limit: limit })
+      body: JSON.stringify({ folder: folder })
     });
 
     if (progressBar) progressBar.style.width = '85%';
@@ -3309,3 +3311,137 @@ function sendAllApprovedRetestToPortfolio() {
   alert(`✓ ¡${approved.length} estrategias aprobadas transferidas con éxito a la Ruta de Portafolios!`);
 }
 window.sendAllApprovedRetestToPortfolio = sendAllApprovedRetestToPortfolio;
+
+// ============================================================================
+// LIMPIEZA / CLEAR DE RESULTADOS POR FASE
+// ============================================================================
+
+async function clearEngineCandidates() {
+  if (!confirm('¿Eliminar todos los algoritmos aprobados del motor genético actual?')) return;
+  try {
+    const res = await fetch('/api/engine/clear-results', { method: 'POST' });
+    if (res.ok) {
+      await fetchCandidates();
+      renderCounters({ tested_count: 0, discarded_count: 0, accepted_count: 0, candidates_count: 0, best_sharpe: 0, avg_win_rate: 0, current_generation: 0, log_messages: [] });
+      refreshSidebarBadges();
+      alert('✓ Resultados del motor genético limpiados.');
+    } else {
+      alert('Error al limpiar resultados del motor.');
+    }
+  } catch (e) {
+    console.error('Error clearing engine candidates:', e);
+    alert('Error de conexión al limpiar resultados del motor.');
+  }
+}
+window.clearEngineCandidates = clearEngineCandidates;
+
+async function clearRetestResults() {
+  if (!confirm('¿Eliminar todos los resultados de retest (Walk-Forward, Monte Carlo, Multiverso)?')) return;
+  try {
+    const res = await fetch('/api/retest/clear', { method: 'POST' });
+    if (res.ok) {
+      state.retestResults = [];
+      updateRetestKpis();
+      renderRetestCards();
+      refreshSidebarBadges();
+      alert('✓ Resultados de retest limpiados.');
+    } else {
+      alert('Error al limpiar resultados de retest.');
+    }
+  } catch (e) {
+    console.error('Error clearing retest results:', e);
+    alert('Error de conexión al limpiar resultados de retest.');
+  }
+}
+window.clearRetestResults = clearRetestResults;
+
+async function clearPortfolioEngineResults() {
+  if (!confirm('¿Eliminar todos los portafolios del ranking TOP del motor de portafolios?')) return;
+  try {
+    const res = await fetch('/api/portfolio-engine/clear', { method: 'POST' });
+    if (res.ok) {
+      await pollPortfolioEngine();
+      renderPortfolioEngineCards([]);
+      refreshSidebarBadges();
+      alert('✓ Ranking de portafolios limpiado.');
+    } else {
+      alert('Error al limpiar ranking de portafolios.');
+    }
+  } catch (e) {
+    console.error('Error clearing portfolio engine:', e);
+    alert('Error de conexión al limpiar portafolios.');
+  }
+}
+window.clearPortfolioEngineResults = clearPortfolioEngineResults;
+
+async function clearSavedStrategiesAction() {
+  if (!confirm('¿Eliminar TODAS las estrategias guardadas y carpetas?')) return;
+  try {
+    const res = await fetch('/api/strategies/clear-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: 'ALL' })
+    });
+    if (res.ok) {
+      loadSavedStrategies();
+      loadStrategyFolders();
+      refreshSidebarBadges();
+      alert('✓ Estrategias guardadas eliminadas.');
+    } else {
+      alert('Error al eliminar estrategias guardadas.');
+    }
+  } catch (e) {
+    console.error('Error clearing saved strategies:', e);
+    alert('Error de conexión al eliminar estrategias.');
+  }
+}
+window.clearSavedStrategiesAction = clearSavedStrategiesAction;
+
+async function clearSavedPortfoliosAction() {
+  if (!confirm('¿Eliminar TODOS los portafolios guardados y carpetas?')) return;
+  try {
+    const res = await fetch('/api/portfolios/clear-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: 'ALL' })
+    });
+    if (res.ok) {
+      loadSavedPortfolios();
+      loadPortfolioFolders();
+      refreshSidebarBadges();
+      alert('✓ Portafolios guardados eliminados.');
+    } else {
+      alert('Error al eliminar portafolios.');
+    }
+  } catch (e) {
+    console.error('Error clearing saved portfolios:', e);
+    alert('Error de conexión al eliminar portafolios.');
+  }
+}
+window.clearSavedPortfoliosAction = clearSavedPortfoliosAction;
+
+async function clearAllPhases() {
+  if (!confirm('¿Eliminar TODOS los resultados y carpetas de todas las fases (motor, retest, portafolios)?')) return;
+  try {
+    const res = await fetch('/api/clear-all-phases', { method: 'POST' });
+    if (res.ok) {
+      await fetchCandidates();
+      state.retestResults = [];
+      updateRetestKpis();
+      renderRetestCards();
+      renderPortfolioEngineCards([]);
+      loadSavedStrategies();
+      loadStrategyFolders();
+      loadSavedPortfolios();
+      loadPortfolioFolders();
+      refreshSidebarBadges();
+      alert('✓ Se limpiaron todos los resultados de todas las fases.');
+    } else {
+      alert('Error al limpiar todos los resultados.');
+    }
+  } catch (e) {
+    console.error('Error clearing all phases:', e);
+    alert('Error de conexión al limpiar todas las fases.');
+  }
+}
+window.clearAllPhases = clearAllPhases;

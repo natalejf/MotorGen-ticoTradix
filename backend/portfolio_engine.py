@@ -53,6 +53,15 @@ class PortfolioEngine:
         with self.lock:
             return list(self.top_portfolios)
 
+    def clear_top_portfolios(self):
+        with self.lock:
+            self.top_portfolios.clear()
+            self.seen_signatures.clear()
+            self.tested_count = 0
+            self.accepted_count = 0
+            self.discarded_count = 0
+            self.best_portfolio = None
+
     def start_exploration(self, config: Dict[str, Any]):
         if self.is_running:
             self.stop_exploration()
