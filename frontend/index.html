@@ -1114,40 +1114,45 @@
       </div>
 
       <div class="p-6 space-y-6">
-        <!-- KPIs Combinados -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- KPIs Combinados StrategyQuant Style -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
             <div class="text-[10px] text-[#71717a] uppercase font-bold">Net Profit Combinado</div>
-            <div id="port-modal-pnl" class="text-lg font-mono font-bold text-white mt-1">+$0.00</div>
-            <div class="text-[10px] text-[#a0a0ab]">Suma ponderada de estrategias</div>
+            <div id="port-modal-pnl" class="text-base font-mono font-bold text-white mt-1">+$0.00</div>
+            <div class="text-[10px] text-[#a0a0ab]">Suma ponderada</div>
           </div>
           <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
-            <div class="text-[10px] text-[#71717a] uppercase font-bold">Win Rate Global</div>
-            <div id="port-modal-wr" class="text-lg font-mono font-bold text-white mt-1">0.0%</div>
-            <div class="text-[10px] text-[#a0a0ab]">Promedio ponderado</div>
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Max Drawdown Portafolio</div>
+            <div id="port-modal-max-dd" class="text-base font-mono font-bold text-red-400 mt-1">0.0% ($0)</div>
+            <div id="port-modal-avg-ind-dd" class="text-[10px] text-[#a0a0ab]">vs 0.0% individual prom.</div>
           </div>
           <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
-            <div class="text-[10px] text-[#71717a] uppercase font-bold">Descorrelación / Diversif.</div>
-            <div id="port-modal-div" class="text-lg font-mono font-bold text-white mt-1">0%</div>
-            <div class="text-[10px] text-[#a0a0ab]">Grado de amortiguación multi-activo</div>
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Ret / Max DD (Ratio SQ)</div>
+            <div id="port-modal-ret-dd" class="text-base font-mono font-bold text-emerald-400 mt-1">0.0x</div>
+            <div class="text-[10px] text-[#a0a0ab]">Profit / Max DD ($)</div>
           </div>
           <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
-            <div class="text-[10px] text-[#71717a] uppercase font-bold">Reducción Est. Drawdown</div>
-            <div id="port-modal-dd-red" class="text-lg font-mono font-bold text-emerald-400 mt-1">-35%</div>
-            <div class="text-[10px] text-[#a0a0ab]">Frente a operar monopar</div>
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Reducción de Drawdown</div>
+            <div id="port-modal-dd-red" class="text-base font-mono font-bold text-emerald-400 mt-1">-0.0%</div>
+            <div class="text-[10px] text-[#a0a0ab]">Amortiguación conjunta</div>
+          </div>
+          <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Descorrelación SQ (0 a 1)</div>
+            <div id="port-modal-sq-corr" class="text-base font-mono font-bold text-white mt-1">0.20 · Excelente</div>
+            <div id="port-modal-wr" class="text-[10px] text-[#a0a0ab]">Win Rate: 0.0%</div>
           </div>
         </div>
 
-        <!-- Curva de Equidad Combinada -->
+        <!-- Curva de Equidad Combinada + Estrategias Individuales -->
         <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
-          <div class="flex items-center justify-between mb-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div>
-              <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Curva de Equidad Combinada del Portafolio</h4>
-              <p class="text-[11px] text-[#71717a]">Evolución patrimonial conjunta suavizada por la descorrelación de activos</p>
+              <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Curva del Portafolio vs Estrategias Individuales</h4>
+              <p class="text-[11px] text-[#71717a]">Línea Blanca = Cartera Combinada. Líneas de Color = Estrategias Individuales seleccionadas. Haz clic en la leyenda para aislar algoritmos.</p>
             </div>
-            <span class="tn-badge tn-badge-white text-[10px]">BALANCE COMBINADO</span>
+            <span class="tn-badge tn-badge-white text-[10px]">STRATEGYQUANT MULTI-CURVE</span>
           </div>
-          <div class="h-64 relative w-full">
+          <div class="h-72 relative w-full">
             <canvas id="portfolio-equity-canvas"></canvas>
           </div>
         </div>

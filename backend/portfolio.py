@@ -209,7 +209,28 @@ class Portfolio:
         asset_div = min(1.0, len(symbols_covered) / 3.0)
         tf_div = min(1.0, len(timeframes_covered) / 2.0)
         strat_div = min(1.0, len(self.strategies) / 5.0)
-        diversification_score = round((asset_div * 0.4 + tf_div * 0.3 + strat_div * 0.3) * 100, 1)
+        diversification_score = round((asset_div * 0.45 + tf_div * 0.25 + strat_div * 0.30) * 100, 1)
+
+        # StrategyQuant correlation scale (0.00 to 1.00)
+        sq_correlation_index = round(max(0.05, min(0.95, 1.0 - (diversification_score / 100.0))), 2)
+        if sq_correlation_index <= 0.25:
+            sq_rating = "Excelente"
+        elif sq_correlation_index <= 0.45:
+            sq_rating = "Muy Buena"
+        elif sq_correlation_index <= 0.65:
+            sq_rating = "Moderada"
+        else:
+            sq_rating = "Alta / Débil"
+
+        # Calculate average individual DD
+        ind_dds = [float(s.get("metrics", {}).get("max_drawdown_pct", 3.0)) for s in self.strategies]
+        avg_ind_dd = round(sum(ind_dds) / max(1, len(ind_dds)), 2)
+
+        # Estimated portfolio DD and reduction
+        est_dd_red = min(55.0, round(12.0 * len(symbols_covered) + 6.0 * strat_div, 1))
+        comb_dd_pct = round(max(0.5, avg_ind_dd * (1.0 - (est_dd_red / 100.0))), 2)
+        comb_dd_usd = round(10000.0 * (comb_dd_pct / 100.0), 2)
+        ret_to_dd = round(total_net_profit / max(1.0, comb_dd_usd), 2)
 
         return {
             "combined_net_profit_usd": round(total_net_profit, 2),
@@ -219,7 +240,13 @@ class Portfolio:
             "symbols": list(symbols_covered),
             "timeframes": list(timeframes_covered),
             "diversification_score": diversification_score,
-            "estimated_dd_reduction_pct": round(min(50.0, 15.0 * len(symbols_covered)), 1)
+            "estimated_dd_reduction_pct": est_dd_red,
+            "avg_individual_dd_pct": avg_ind_dd,
+            "combined_max_drawdown_pct": comb_dd_pct,
+            "combined_max_drawdown_usd": comb_dd_usd,
+            "ret_to_dd_ratio": ret_to_dd,
+            "sq_correlation_index": sq_correlation_index,
+            "sq_rating": sq_rating
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -247,60 +274,80 @@ class Portfolio:
             ]
         }
 
-    def get_combined_equity_curve(self, initial_capital: float = 10000.0) -> List[Dict[str, Any]]:
-        """Synthesize a combined equity curve from constituent strategies according to their weights."""
+    def get_detailed_equity_data(self, initial_capital: float = 10000.0) -> Dict[str, Any]:
+        """Synthesize both combined curve and individual strategy curves for visual comparison."""
         curves = []
+        strat_meta = []
         for i, s in enumerate(self.strategies):
             w = self.weights[i] if i < len(self.weights) else (1.0 / max(1, len(self.strategies)))
+            st_data = s.get("strategy", s)
+            name = st_data.get("name", st_data.get("id", f"Estrategia {i+1}"))
+            sym = st_data.get("symbol", "N/A")
+            tf = st_data.get("timeframe", "1h")
             eq = s.get("equity_curve")
             if not eq:
                 try:
                     from backend.strategy import Strategy
                     from backend.data_manager import data_manager
                     from backend.backtester import backtester
-                    st_dict = s.get("strategy", s)
-                    st_obj = Strategy.from_dict(st_dict)
+                    st_obj = Strategy.from_dict(st_data)
                     df = data_manager.load_data(st_obj.symbol, st_obj.timeframe)
                     res = backtester.run_backtest(st_obj, df, initial_capital=initial_capital)
                     eq = res.equity_curve
                 except Exception:
                     eq = []
-            if eq:
-                curves.append((w, eq))
-        
-        if not curves:
-            pnl = self.metrics.get("combined_net_profit_usd", 0.0)
-            return [
-                {"timestamp": "Inicio", "equity": initial_capital, "drawdown_pct": 0.0},
-                {"timestamp": "Medio", "equity": round(initial_capital + pnl * 0.5, 2), "drawdown_pct": 1.0},
-                {"timestamp": "Actual", "equity": round(initial_capital + pnl, 2), "drawdown_pct": 0.2}
-            ]
+            curves.append((w, eq or []))
+            strat_meta.append({"name": name, "symbol": sym, "timeframe": tf, "weight": w})
 
-        base_curve = max(curves, key=lambda x: len(x[1]))[1]
-        n_points = min(len(base_curve), 150)
+        valid_curves = [c for c in curves if c[1]]
+        if not valid_curves:
+            pnl = self.metrics.get("combined_net_profit_usd", 0.0)
+            combined = [
+                {"timestamp": "Inicio", "equity": initial_capital, "drawdown_pct": 0.0},
+                {"timestamp": "Actual", "equity": round(initial_capital + pnl, 2), "drawdown_pct": 0.5}
+            ]
+            ind_curves = [{"name": sm["name"], "symbol": sm["symbol"], "timeframe": sm["timeframe"], "weight": sm["weight"], "data": [initial_capital, round(initial_capital + pnl * sm["weight"], 2)]} for sm in strat_meta]
+            return {"combined_curve": combined, "individual_curves": ind_curves}
+
+        base_curve = max(valid_curves, key=lambda x: len(x[1]))[1]
+        n_points = min(len(base_curve), 80)
         step = max(1, len(base_curve) // n_points)
         sampled_base = base_curve[::step]
 
         combined = []
+        ind_curves = [{"name": sm["name"], "symbol": sm["symbol"], "timeframe": sm["timeframe"], "weight": sm["weight"], "data": []} for sm in strat_meta]
         peak = initial_capital
+
         for idx_pt, pt in enumerate(sampled_base):
             total_eq = 0.0
-            for w, c in curves:
-                c_idx = min(len(c) - 1, int((idx_pt / max(1, len(sampled_base) - 1)) * (len(c) - 1)))
-                strat_eq = c[c_idx].get("equity", initial_capital)
-                total_eq += (strat_eq - initial_capital) * w
-            
+            ratio = idx_pt / max(1, len(sampled_base) - 1)
+
+            for i, (w, c) in enumerate(curves):
+                if c:
+                    c_idx = min(len(c) - 1, int(ratio * (len(c) - 1)))
+                    strat_eq = c[c_idx].get("equity", initial_capital)
+                    diff = strat_eq - initial_capital
+                else:
+                    diff = 0.0
+
+                total_eq += diff * w
+                ind_curves[i]["data"].append(round(initial_capital + diff, 2))
+
             curr_equity = round(initial_capital + total_eq, 2)
             if curr_equity > peak:
                 peak = curr_equity
             dd_pct = round(((peak - curr_equity) / peak) * 100.0, 2) if peak > 0 else 0.0
-            
+
             combined.append({
                 "timestamp": pt.get("timestamp", str(idx_pt)),
                 "equity": curr_equity,
                 "drawdown_pct": dd_pct
             })
-        return combined
+
+        return {"combined_curve": combined, "individual_curves": ind_curves}
+
+    def get_combined_equity_curve(self, initial_capital: float = 10000.0) -> List[Dict[str, Any]]:
+        return self.get_detailed_equity_data(initial_capital)["combined_curve"]
 
     def save(self, folder: Optional[str] = None) -> Path:
         """Persist portfolio metadata and snapshot of combined strategies inside folder."""

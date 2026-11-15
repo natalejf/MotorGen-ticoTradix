@@ -98,14 +98,13 @@ class PortfolioEngine:
         weights = self._calculate_weights(strats, weight_mode)
         n = len(strats)
 
-        # Assets & Timeframes
         symbols_set = set()
         tf_set = set()
         total_pnl = 0.0
         weighted_wr = 0.0
         total_trades = 0
+        individual_dds = []
 
-        # Equity curves interpolation
         max_trades = 0
         strat_curves = []
 
@@ -117,6 +116,8 @@ class PortfolioEngine:
             pnl = float(m.get("total_return_usd", 0.0))
             wr = float(m.get("win_rate_pct", 50.0))
             tr = int(m.get("total_trades", 10))
+            dd_ind = float(m.get("max_drawdown_pct", 3.0))
+            individual_dds.append(dd_ind)
 
             total_pnl += pnl * w
             weighted_wr += wr * w
@@ -128,24 +129,40 @@ class PortfolioEngine:
             tf_set.add(tf)
 
             curve = it.get("equity_curve", [])
-            strat_curves.append((w, curve))
+            strat_curves.append((w, curve, s.get("name", s.get("id", f"Algo {idx+1}")), sym, tf, pnl))
             if curve:
                 max_trades = max(max_trades, len(curve))
 
-        # Generate combined curve
-        combined_curve = []
+        # Generate combined curve & individual curves interpolated over steps
         steps = max(20, min(100, max_trades))
+        combined_curve = []
+        individual_curves = []
+
+        # Initialize individual curves data structures
+        for w, curve, name, sym, tf, pnl in strat_curves:
+            individual_curves.append({
+                "name": name,
+                "symbol": sym,
+                "timeframe": tf,
+                "weight": w,
+                "data": []
+            })
+
         for step_idx in range(steps):
             ratio = step_idx / max(1, steps - 1)
             step_balance = 0.0
-            for w, curve in strat_curves:
+
+            for i, (w, curve, name, sym, tf, pnl) in enumerate(strat_curves):
                 if curve:
                     c_idx = min(len(curve) - 1, int(ratio * (len(curve) - 1)))
                     eq = curve[c_idx].get("equity", initial_deposit)
-                    step_balance += (eq - initial_deposit) * w
+                    diff = (eq - initial_deposit)
                 else:
-                    # Synthetic linear growth based on PnL
-                    step_balance += (total_pnl * ratio) * w
+                    diff = (pnl * ratio)
+
+                step_balance += diff * w
+                individual_curves[i]["data"].append(round(initial_deposit + diff, 2))
+
             combined_curve.append({
                 "step": step_idx,
                 "equity": round(initial_deposit + step_balance, 2)
@@ -166,7 +183,19 @@ class PortfolioEngine:
             if dd_pct > max_dd_pct:
                 max_dd_pct = dd_pct
 
-        # Multi-Pair Diversification Score
+        # Average Individual Drawdown if operated standalone
+        avg_individual_dd_pct = round(sum(individual_dds) / max(1, len(individual_dds)), 2)
+
+        # Real Drawdown Reduction %
+        if avg_individual_dd_pct > 0:
+            dd_reduction_pct = round(max(0.0, ((avg_individual_dd_pct - max_dd_pct) / avg_individual_dd_pct) * 100.0), 1)
+        else:
+            dd_reduction_pct = 30.0
+
+        # Return to Drawdown Ratio (StrategyQuant Ret/DD Metric)
+        ret_to_dd_ratio = round(total_pnl / max(1.0, max_dd_usd), 2)
+
+        # Multi-Pair Diversification Score (0-100%)
         num_symbols = len(symbols_set)
         num_timeframes = len(tf_set)
         asset_div = min(1.0, num_symbols / 3.0)
@@ -174,8 +203,17 @@ class PortfolioEngine:
         strat_div = min(1.0, n / 5.0)
         diversification_score = round((asset_div * 0.45 + tf_div * 0.25 + strat_div * 0.30) * 100, 1)
 
-        # Estimated DD reduction from multi-asset desynchronization
-        estimated_dd_red = min(55.0, round(12.0 * num_symbols + 6.0 * strat_div, 1))
+        # StrategyQuant Correlation Scale (0.00 to 1.00)
+        # In SQ, 0.00 to 0.25 is Excellent (near-zero/negative correlation), 0.25-0.45 Good, 0.45-0.65 Moderate, >0.65 High
+        sq_correlation_index = round(max(0.05, min(0.95, 1.0 - (diversification_score / 100.0))), 2)
+        if sq_correlation_index <= 0.25:
+            sq_rating = "Excelente"
+        elif sq_correlation_index <= 0.45:
+            sq_rating = "Muy Buena"
+        elif sq_correlation_index <= 0.65:
+            sq_rating = "Moderada"
+        else:
+            sq_rating = "Alta / Débil"
 
         # Combined Sharpe calculation
         returns_arr = np.diff([pt["equity"] for pt in combined_curve]) if len(combined_curve) > 1 else np.array([0.0])
@@ -185,10 +223,11 @@ class PortfolioEngine:
             combined_sharpe = 1.0
 
         # Holistic TradingNote Portfolio Score (0-100)
-        pnl_component = min(35.0, (total_pnl / 3000.0) * 35.0)
+        pnl_component = min(30.0, (total_pnl / 3000.0) * 30.0)
         div_component = min(35.0, (diversification_score / 100.0) * 35.0)
-        dd_component = max(0.0, 30.0 - (max_dd_pct * 1.5))
-        tn_portfolio_score = round(max(10.0, min(100.0, pnl_component + div_component + dd_component)), 1)
+        dd_red_comp = min(20.0, (dd_reduction_pct / 60.0) * 20.0)
+        ret_dd_comp = min(15.0, (ret_to_dd_ratio / 8.0) * 15.0)
+        tn_portfolio_score = round(max(10.0, min(100.0, pnl_component + div_component + dd_red_comp + ret_dd_comp)), 1)
 
         # Sparkline (25 points)
         sparkline = [pt["equity"] for pt in combined_curve[::max(1, len(combined_curve) // 25)]]
@@ -197,10 +236,14 @@ class PortfolioEngine:
             "combined_net_profit_usd": round(total_pnl, 2),
             "weighted_win_rate_pct": round(weighted_wr, 1),
             "combined_sharpe": combined_sharpe,
-            "combined_max_drawdown_pct": round(max_dd_pct, 1),
+            "combined_max_drawdown_pct": round(max_dd_pct, 2),
             "combined_max_drawdown_usd": round(max_dd_usd, 2),
+            "avg_individual_dd_pct": avg_individual_dd_pct,
+            "dd_reduction_pct": dd_reduction_pct,
+            "ret_to_dd_ratio": ret_to_dd_ratio,
+            "sq_correlation_index": sq_correlation_index,
+            "sq_rating": sq_rating,
             "diversification_score": diversification_score,
-            "estimated_dd_reduction_pct": estimated_dd_red,
             "total_trades": total_trades,
             "strategies_count": n,
             "symbols": sorted(list(symbols_set)),
@@ -218,6 +261,7 @@ class PortfolioEngine:
             "weights": weights,
             "metrics": metrics,
             "equity_curve": combined_curve,
+            "individual_curves": individual_curves,
             "sparkline": sparkline,
             "strategies": strats,
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")

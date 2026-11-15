@@ -291,9 +291,10 @@ def get_portfolio_detail(portfolio_id: str):
     """Returns full analytics, constituent strategies and combined equity curve for a portfolio."""
     try:
         port = Portfolio.load(portfolio_id)
-        combined_curve = port.get_combined_equity_curve()
+        detailed_eq = port.get_detailed_equity_data()
         data = port.to_dict()
-        data["combined_equity_curve"] = combined_curve
+        data["combined_equity_curve"] = detailed_eq["combined_curve"]
+        data["individual_curves"] = detailed_eq["individual_curves"]
         data["strategies"] = port.strategies
         return data
     except Exception as e:

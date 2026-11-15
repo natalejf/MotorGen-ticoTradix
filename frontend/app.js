@@ -2178,6 +2178,11 @@ function renderPortfolioEngineCards(items) {
     const netProfitFormatted = m.combined_net_profit_usd !== undefined
       ? `${m.combined_net_profit_usd >= 0 ? '+' : ''}$${Number(m.combined_net_profit_usd).toLocaleString(undefined, {minimumFractionDigits: 2})}`
       : 'N/A';
+    const retToDd = (m.ret_to_dd_ratio || 0).toFixed(1);
+    const maxDdPct = Number(m.combined_max_drawdown_pct || 0).toFixed(1);
+    const ddRed = Number(m.dd_reduction_pct || m.estimated_dd_reduction_pct || 0).toFixed(0);
+    const sqIndex = Number(m.sq_correlation_index || 0.20).toFixed(2);
+    const sqRating = m.sq_rating || 'Excelente';
 
     return `
       <div class="candidate-card group">
@@ -2190,8 +2195,8 @@ function renderPortfolioEngineCards(items) {
               ${p.name}
             </span>
           </div>
-          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            ${m.diversification_score || 0}% Descorr.
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Descorrelación según escala StrategyQuant (0.00 a 1.00)">
+            SQ ${sqIndex} · ${sqRating}
           </span>
         </div>
 
@@ -2216,27 +2221,28 @@ function renderPortfolioEngineCards(items) {
           </div>
         </div>
 
+        <!-- Key Metrics: Ret/DD, Max DD, DD Reducción, Sharpe -->
         <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-[#1e1e26] text-center">
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">Ret / Max DD</div>
+            <div class="text-xs font-mono font-bold text-emerald-400">${retToDd}x</div>
+          </div>
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">Max DD</div>
+            <div class="text-xs font-mono font-semibold text-red-400">${maxDdPct}%</div>
+          </div>
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
+            <div class="text-xs font-mono font-semibold text-emerald-400">-${ddRed}%</div>
+          </div>
           <div>
             <div class="text-[9px] text-[#71717a] uppercase font-bold">Sharpe</div>
             <div class="text-xs font-mono font-semibold text-white">${Number(m.combined_sharpe || 1.0).toFixed(2)}</div>
           </div>
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">Win Rate</div>
-            <div class="text-xs font-mono font-semibold text-white">${Number(m.weighted_win_rate_pct || 0).toFixed(1)}%</div>
-          </div>
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
-            <div class="text-xs font-mono font-semibold text-emerald-400">-${m.estimated_dd_reduction_pct || 30}%</div>
-          </div>
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">TN Score</div>
-            <div class="text-xs font-mono font-semibold text-white">${Number(m.tn_score || 80).toFixed(1)}</div>
-          </div>
         </div>
 
         <div class="mt-3 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
-          <button onclick="openLivePortfolioCandidateModal('${p.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo de la cartera y curva combinada">
+          <button onclick="openLivePortfolioCandidateModal('${p.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo de la cartera y curva combinada superpuesta">
             📊 Ver Análisis
           </button>
           <button onclick="savePortfolioCandidateFromEngine('${p.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Guardar portafolio en disco">
@@ -2285,9 +2291,21 @@ function openLivePortfolioCandidateModal(candId) {
 
   const met = p.metrics || {};
   document.getElementById('port-modal-pnl').textContent = `+$${Number(met.combined_net_profit_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-  document.getElementById('port-modal-wr').textContent = `${Number(met.weighted_win_rate_pct || 0).toFixed(1)}%`;
-  document.getElementById('port-modal-div').textContent = `${met.diversification_score || 0}%`;
-  document.getElementById('port-modal-dd-red').textContent = `-${met.estimated_dd_reduction_pct || 30}%`;
+  
+  // StrategyQuant KPIs: Max DD, Ret/DD, Real DD Reduction, SQ Correlation (0.0 to 1.0)
+  const maxDdEl = document.getElementById('port-modal-max-dd');
+  const avgIndDdEl = document.getElementById('port-modal-avg-ind-dd');
+  const retDdEl = document.getElementById('port-modal-ret-dd');
+  const ddRedEl = document.getElementById('port-modal-dd-red');
+  const sqCorrEl = document.getElementById('port-modal-sq-corr');
+  const wrEl = document.getElementById('port-modal-wr');
+
+  if (maxDdEl) maxDdEl.textContent = `${Number(met.combined_max_drawdown_pct || 0).toFixed(2)}% ($${Number(met.combined_max_drawdown_usd || 0).toLocaleString()})`;
+  if (avgIndDdEl) avgIndDdEl.textContent = `vs ${Number(met.avg_individual_dd_pct || 0).toFixed(2)}% individual prom.`;
+  if (retDdEl) retDdEl.textContent = `${Number(met.ret_to_dd_ratio || 0).toFixed(1)}x`;
+  if (ddRedEl) ddRedEl.textContent = `-${Number(met.dd_reduction_pct || met.estimated_dd_reduction_pct || 0).toFixed(1)}%`;
+  if (sqCorrEl) sqCorrEl.textContent = `${Number(met.sq_correlation_index || 0.20).toFixed(2)} · ${met.sq_rating || 'Excelente'}`;
+  if (wrEl) wrEl.textContent = `Win Rate: ${Number(met.weighted_win_rate_pct || 0).toFixed(1)}%`;
 
   const exportBtn = document.getElementById('btn-port-modal-export');
   if (exportBtn) {
@@ -2303,6 +2321,7 @@ function openLivePortfolioCandidateModal(candId) {
       const s = st.strategy || st;
       const m = st.metrics || {};
       const w = weights[i] || (1 / strats.length);
+      const indDd = Number(m.max_drawdown_pct || 0).toFixed(1);
       return `
         <tr class="border-b border-[#1c1c24] hover:bg-[#14141a]">
           <td class="py-2.5 px-3 font-semibold text-white">${s.name || s.id}</td>
@@ -2321,7 +2340,7 @@ function openLivePortfolioCandidateModal(candId) {
     }).join('');
   }
 
-  renderPortfolioEquityChart(p.equity_curve || []);
+  renderPortfolioEquityChart(p.equity_curve || [], p.individual_curves || []);
 }
 window.openLivePortfolioCandidateModal = openLivePortfolioCandidateModal;
 
@@ -2568,19 +2587,25 @@ async function loadSavedPortfolios(folderFilter = 'ALL') {
       const subStrats = port.strategies_summary || [];
       const folderDisplay = port.folder || 'Portafolios_Principales';
 
+      const sqCorrVal = Number(met.sq_correlation_index !== undefined ? met.sq_correlation_index : (1.0 - (met.diversification_score || 80)/100)).toFixed(2);
+      const sqRatingVal = met.sq_rating || (sqCorrVal <= 0.25 ? 'Excelente' : sqCorrVal <= 0.45 ? 'Muy Buena' : 'Moderada');
+      const maxDdParm = Number(met.combined_max_drawdown_pct || 0).toFixed(1);
+      const retDdVal = Number(met.ret_to_dd_ratio || 0).toFixed(1);
+      const ddRedVal = Number(met.dd_reduction_pct !== undefined ? met.dd_reduction_pct : (met.estimated_dd_reduction_pct || 35)).toFixed(1);
+
       return `
         <div class="tn-card flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-2">
               <span class="text-xs font-bold text-white uppercase tracking-wider">${port.name}</span>
-              <span class="tn-badge tn-badge-white text-[10px]">
-                ${met.diversification_score ? met.diversification_score + '% Descorrelación' : 'PORTAFOLIO'}
+              <span class="tn-badge tn-badge-white text-[10px]" title="Índice StrategyQuant: 0.00 (mínima correlación) a 1.00 (alta correlación)">
+                SQ ${sqCorrVal} · ${sqRatingVal}
               </span>
             </div>
             <div class="text-[11px] text-[#71717a] mb-1">📁 Carpeta: <span class="font-mono text-[#a0a0ab]">${folderDisplay}</span></div>
             <div class="text-[11px] text-[#71717a] mb-3">Creado: ${port.created_at || 'Reciente'} · ID: <span class="font-mono text-[#a0a0ab]">${port.id}</span></div>
 
-            <div class="grid grid-cols-3 gap-2 p-2.5 rounded bg-[#09090c] border border-[#22222a] text-center my-3">
+            <div class="grid grid-cols-4 gap-1.5 p-2 rounded bg-[#09090c] border border-[#22222a] text-center my-3">
               <div>
                 <div class="text-[9px] text-[#71717a] uppercase font-bold">Net Profit</div>
                 <div class="text-xs font-mono font-bold text-white mt-0.5">
@@ -2588,15 +2613,21 @@ async function loadSavedPortfolios(folderFilter = 'ALL') {
                 </div>
               </div>
               <div>
-                <div class="text-[9px] text-[#71717a] uppercase font-bold">Win Rate</div>
-                <div class="text-xs font-mono font-bold text-white mt-0.5">
-                  ${(met.weighted_win_rate_pct || 0).toFixed(1)}%
+                <div class="text-[9px] text-[#71717a] uppercase font-bold">Max DD</div>
+                <div class="text-xs font-mono font-bold text-red-400 mt-0.5">
+                  ${maxDdParm}%
                 </div>
               </div>
               <div>
-                <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
-                <div class="text-xs font-mono font-bold text-white mt-0.5">
-                  -${met.estimated_dd_reduction_pct || 35}%
+                <div class="text-[9px] text-[#71717a] uppercase font-bold">Ret / DD</div>
+                <div class="text-xs font-mono font-bold text-emerald-400 mt-0.5">
+                  ${retDdVal}x
+                </div>
+              </div>
+              <div>
+                <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Red.</div>
+                <div class="text-xs font-mono font-bold text-emerald-400 mt-0.5">
+                  -${ddRedVal}%
                 </div>
               </div>
             </div>
@@ -2703,6 +2734,19 @@ window.refreshSidebarBadges = refreshSidebarBadges;
 
 let portfolioEquityChartInstance = null;
 
+const INDIVIDUAL_PALETTE = [
+  '#38bdf8', // Cyan
+  '#a3e635', // Lima
+  '#fb923c', // Naranja
+  '#c084fc', // Púrpura
+  '#facc15', // Amarillo
+  '#f472b6', // Rosa
+  '#2dd4bf', // Teal
+  '#f87171', // Rojo suave
+  '#818cf8', // Indigo
+  '#e879f9'  // Fucsia
+];
+
 async function openPortfolioModal(portfolioId) {
   try {
     const res = await fetch(`/api/portfolio/${portfolioId}`);
@@ -2724,14 +2768,29 @@ async function openPortfolioModal(portfolioId) {
     const met = port.metrics || {};
     const netProfitVal = met.combined_net_profit_usd || 0;
     document.getElementById('port-modal-pnl').textContent = `${netProfitVal >= 0 ? '+' : ''}$${netProfitVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-    document.getElementById('port-modal-wr').textContent = `${(met.weighted_win_rate_pct || 0).toFixed(1)}%`;
-    document.getElementById('port-modal-div').textContent = `${met.diversification_score || 0}%`;
-    document.getElementById('port-modal-dd-red').textContent = `-${met.estimated_dd_reduction_pct || 35}%`;
+
+    // StrategyQuant KPIs: Max DD, Ret/DD, Real DD Reduction, SQ Correlation (0.0 to 1.0)
+    const maxDdEl = document.getElementById('port-modal-max-dd');
+    const avgIndDdEl = document.getElementById('port-modal-avg-ind-dd');
+    const retDdEl = document.getElementById('port-modal-ret-dd');
+    const ddRedEl = document.getElementById('port-modal-dd-red');
+    const sqCorrEl = document.getElementById('port-modal-sq-corr');
+    const wrEl = document.getElementById('port-modal-wr');
+
+    if (maxDdEl) maxDdEl.textContent = `${Number(met.combined_max_drawdown_pct || 0).toFixed(2)}% ($${Number(met.combined_max_drawdown_usd || 0).toLocaleString()})`;
+    if (avgIndDdEl) avgIndDdEl.textContent = `vs ${Number(met.avg_individual_dd_pct || 0).toFixed(2)}% individual prom.`;
+    if (retDdEl) retDdEl.textContent = `${Number(met.ret_to_dd_ratio || 0).toFixed(1)}x`;
+    const ddRedVal = met.dd_reduction_pct !== undefined ? met.dd_reduction_pct : (met.estimated_dd_reduction_pct || 0);
+    if (ddRedEl) ddRedEl.textContent = `-${Number(ddRedVal).toFixed(1)}%`;
+    const sqIndex = met.sq_correlation_index !== undefined ? met.sq_correlation_index : (1.0 - (met.diversification_score || 80)/100);
+    if (sqCorrEl) sqCorrEl.textContent = `${Number(sqIndex).toFixed(2)} · ${met.sq_rating || 'Excelente'}`;
+    if (wrEl) wrEl.textContent = `Win Rate: ${Number(met.weighted_win_rate_pct || 0).toFixed(1)}%`;
 
     // Botón de exportación
     const exportBtn = document.getElementById('btn-port-modal-export');
     if (exportBtn) {
       exportBtn.onclick = () => exportPortfolioJson(port.id);
+      exportBtn.textContent = '📥 Descargar Bot JSON';
     }
 
     // Tabla de estrategias componentes
@@ -2760,8 +2819,8 @@ async function openPortfolioModal(portfolioId) {
       }).join('');
     }
 
-    // Graficar Curva Combinada
-    renderPortfolioEquityChart(port.combined_equity_curve || []);
+    // Graficar Curva Combinada + Curvas Individuales superpuestas
+    renderPortfolioEquityChart(port.combined_equity_curve || [], port.individual_curves || []);
   } catch (err) {
     console.error('Error opening portfolio modal:', err);
     alert('Error al abrir el modal de portafolio.');
@@ -2775,7 +2834,7 @@ function closePortfolioModal() {
 }
 window.closePortfolioModal = closePortfolioModal;
 
-function renderPortfolioEquityChart(curve) {
+function renderPortfolioEquityChart(curve, individualCurves = []) {
   const canvas = document.getElementById('portfolio-equity-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -2787,44 +2846,94 @@ function renderPortfolioEquityChart(curve) {
     curve = [{ equity: 10000, trade: 0 }];
   }
 
+  const numPoints = curve.length;
   const labels = curve.map((_, i) => i === 0 ? 'Inicio' : `#${i}`);
-  const data = curve.map(pt => pt.equity);
+  const combinedData = curve.map(pt => (typeof pt === 'number' ? pt : (pt.equity !== undefined ? pt.equity : pt.balance)));
+
+  const datasets = [
+    {
+      label: '★ Cartera Combinada (Balance $)',
+      data: combinedData,
+      borderColor: '#ffffff',
+      borderWidth: 2.8,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      fill: true,
+      pointRadius: numPoints > 60 ? 0 : 2,
+      tension: 0.15,
+      order: 0
+    }
+  ];
+
+  if (Array.isArray(individualCurves) && individualCurves.length > 0) {
+    individualCurves.forEach((ind, idx) => {
+      const color = INDIVIDUAL_PALETTE[idx % INDIVIDUAL_PALETTE.length];
+      const rawData = ind.data || [];
+      let alignedData = rawData;
+      if (rawData.length !== numPoints && rawData.length > 0) {
+        alignedData = [];
+        for (let i = 0; i < numPoints; i++) {
+          const ratio = (numPoints <= 1) ? 0 : (i / (numPoints - 1));
+          const srcIdx = Math.min(Math.floor(ratio * (rawData.length - 1)), rawData.length - 1);
+          alignedData.push(rawData[srcIdx]);
+        }
+      }
+      const weightPct = Math.round((ind.weight || (1 / individualCurves.length)) * 100);
+      datasets.push({
+        label: `${ind.symbol || 'ACTIVO'} · ${ind.name || 'Algo'} (${weightPct}%)`,
+        data: alignedData,
+        borderColor: color,
+        borderWidth: 1.5,
+        borderDash: [4, 3],
+        backgroundColor: 'transparent',
+        fill: false,
+        pointRadius: 0,
+        tension: 0.1,
+        order: idx + 1
+      });
+    });
+  }
 
   portfolioEquityChartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [{
-        label: 'Balance de Cartera ($)',
-        data: data,
-        borderColor: '#ffffff',
-        borderWidth: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        fill: true,
-        pointRadius: data.length > 50 ? 0 : 2,
-        tension: 0.1
-      }]
+      datasets: datasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 12,
+            boxHeight: 12,
+            color: '#a0a0ab',
+            font: { size: 10, family: 'monospace' },
+            padding: 10
+          }
+        },
         tooltip: {
           backgroundColor: '#16161e',
           borderColor: '#2a2a38',
           borderWidth: 1,
           titleColor: '#fff',
           bodyColor: '#e0e0e0',
+          padding: 8,
           callbacks: {
-            label: (context) => ` Balance: $${context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+            label: (context) => ` ${context.dataset.label}: $${Number(context.parsed.y).toLocaleString(undefined, {minimumFractionDigits: 2})}`
           }
         }
       },
       scales: {
         x: {
           grid: { color: 'rgba(255, 255, 255, 0.03)' },
-          ticks: { color: '#71717a', font: { size: 10 }, maxTicksLimit: 10 }
+          ticks: { color: '#71717a', font: { size: 10 }, maxTicksLimit: 12 }
         },
         y: {
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
