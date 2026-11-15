@@ -231,7 +231,8 @@ class GeneticEngine:
         fixed_lot: Optional[float] = None,
         fixed_cash_risk: Optional[float] = None,
         martingale_mult: Optional[float] = None,
-        direction: str = "BOTH"
+        direction: str = "BOTH",
+        prop_firm_filter: bool = False
     ) -> Strategy:
         # Multi-indicator synergy: choose distinct indicators to combine
         avail_inds = list(enabled_indicators) if enabled_indicators else ["EMA", "RSI", "MACD", "ATR"]
@@ -269,6 +270,7 @@ class GeneticEngine:
             symbol=symbol,
             timeframe=timeframe,
             direction=direction,
+            prop_firm_filter=prop_firm_filter,
             entry_order_type=entry_type,
             buy_conditions=buy_conds,
             sell_conditions=sell_conds,
@@ -501,7 +503,8 @@ class GeneticEngine:
                     fixed_lot=cfg_fixed_lot,
                     fixed_cash_risk=cfg_fixed_cash,
                     martingale_mult=cfg_martingale_mult,
-                    direction=direction
+                    direction=direction,
+                    prop_firm_filter=prop_firm_filter
                 )
                 for _ in range(pop_size)
             ]

@@ -89,6 +89,7 @@ class Strategy:
         symbol: str = "EURUSD",
         timeframe: str = "1h",
         direction: str = "BOTH", # "BOTH", "LONG_ONLY", "SHORT_ONLY"
+        prop_firm_filter: bool = False, # True si el motor corrió con filtro Prop Firm activo
         entry_order_type: str = "MARKET", # "MARKET", "LIMIT", "STOP"
         buy_conditions: Optional[List[Condition]] = None,
         sell_conditions: Optional[List[Condition]] = None,
@@ -124,6 +125,7 @@ class Strategy:
         self.symbol = symbol
         self.timeframe = timeframe
         self.direction = direction
+        self.prop_firm_filter = bool(prop_firm_filter)
         self.entry_order_type = entry_order_type
         self.buy_conditions = buy_conditions or []
         self.sell_conditions = sell_conditions or []
@@ -164,6 +166,7 @@ class Strategy:
             "symbol": self.symbol,
             "timeframe": self.timeframe,
             "direction": self.direction,
+            "prop_firm_filter": self.prop_firm_filter,
             "entry_order_type": self.entry_order_type,
             "buy_conditions": [c.to_dict() for c in self.buy_conditions],
             "sell_conditions": [c.to_dict() for c in self.sell_conditions],
@@ -203,6 +206,7 @@ class Strategy:
             symbol=d.get("symbol", "EURUSD"),
             timeframe=d.get("timeframe", "1h"),
             direction=d.get("direction", "BOTH"),
+            prop_firm_filter=d.get("prop_firm_filter", False),
             entry_order_type=d.get("entry_order_type", "MARKET"),
             buy_conditions=[Condition.from_dict(c) for c in d.get("buy_conditions", [])],
             sell_conditions=[Condition.from_dict(c) for c in d.get("sell_conditions", [])],
@@ -262,6 +266,12 @@ class Strategy:
         buy_rules = [c.to_human_string("es") for c in self.buy_conditions]
         sell_rules = [c.to_human_string("es") for c in self.sell_conditions]
 
+        # Dirección: ocultar reglas del lado que nunca opera
+        if self.direction == "LONG_ONLY":
+            sell_rules = []
+        elif self.direction == "SHORT_ONLY":
+            buy_rules = []
+
         exit_desc_map = {
             "ATR_CLASSIC": f"Stop Loss a {self.sl_atr}×ATR(14) y Take Profit a {self.tp_atr}×ATR(14).",
             "TRAILING_ATR": f"Trailing Stop dinámico a {self.trail_atr}×ATR(14) siguiendo el precio en ganancias.",
@@ -281,16 +291,18 @@ class Strategy:
         }
         session_desc = session_map.get(self.session_filter, self.session_filter)
 
+        pf_tag = " (Filtro Prop Firm)" if self.prop_firm_filter else ""
+
         return {
             "direction": self.direction,
-            "buy_rules": buy_rules if buy_rules else ["Sin reglas de compra"],
-            "sell_rules": sell_rules if sell_rules else ["Sin reglas de venta"],
+            "buy_rules": buy_rules if buy_rules else ([] if self.direction == "SHORT_ONLY" else ["Sin reglas de compra"]),
+            "sell_rules": sell_rules if sell_rules else ([] if self.direction == "LONG_ONLY" else ["Sin reglas de venta"]),
             "exit_rules": exit_desc,
             "session": session_desc,
             "risk_rules": [
                 f"Riesgo por operación: {self.risk_per_trade_pct}% del balance (Modelo: {self.sizing_mode})",
-                f"Pérdida máxima diaria permitida: {self.max_daily_loss_pct}% (Filtro Prop Firm)",
-                f"Drawdown máximo total permitido: {self.max_account_loss_pct}%",
+                f"Pérdida máxima diaria permitida: {self.max_daily_loss_pct}%{pf_tag}",
+                f"Drawdown máximo total permitido: {self.max_account_loss_pct}%{pf_tag}",
                 f"Máximo de operaciones diarias: {self.max_daily_trades}",
                 "Cerrar antes del fin de semana: Sí" if self.close_before_weekend else "Mantener en fin de semana: Sí"
             ]

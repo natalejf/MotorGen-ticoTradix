@@ -822,7 +822,9 @@ async function openCandidateModal(candidateId) {
 
     // Populate titles
     document.getElementById('modal-title').textContent = cand.strategy.name;
-    document.getElementById('modal-subtitle').textContent = `${cand.strategy.symbol} · ${cand.strategy.timeframe} · Orden ${cand.strategy.entry_order_type || 'MARKET'} · Modo ${cand.strategy.exit_mode} · TN Score ${cand.metrics.tn_score}`;
+    const dir = cand.strategy.direction || 'BOTH';
+    const dirLbl = dir === 'LONG_ONLY' ? ' · Solo Compras' : dir === 'SHORT_ONLY' ? ' · Solo Ventas' : '';
+    document.getElementById('modal-subtitle').textContent = `${cand.strategy.symbol} · ${cand.strategy.timeframe}${dirLbl} · Orden ${cand.strategy.entry_order_type || 'MARKET'} · Modo ${cand.strategy.exit_mode} · TN Score ${cand.metrics.tn_score}`;
 
     // Populate Key Figures
     const m = cand.metrics;
@@ -833,8 +835,18 @@ async function openCandidateModal(candidateId) {
     document.getElementById('modal-metric-winrate').textContent = `${m.win_rate_pct.toFixed(1)}% (${m.total_trades} trades)`;
     document.getElementById('modal-metric-pf').textContent = m.profit_factor.toFixed(2);
 
-    // Populate Rules
+    // Populate Rules (ocultar columna de la dirección que nunca opera)
     const rulesDesc = cand.rules_desc;
+    const buyCol = document.getElementById('modal-buy-rules-col');
+    const sellCol = document.getElementById('modal-sell-rules-col');
+    if (buyCol && sellCol) {
+      const hideBuy = dir === 'SHORT_ONLY';
+      const hideSell = dir === 'LONG_ONLY';
+      buyCol.classList.toggle('hidden', hideBuy);
+      sellCol.classList.toggle('hidden', hideSell);
+      buyCol.classList.toggle('md:col-span-2', hideBuy);
+      sellCol.classList.toggle('md:col-span-2', hideSell);
+    }
     document.getElementById('modal-buy-rules').innerHTML = rulesDesc.buy_rules.map(r => `<li>${r}</li>`).join('');
     document.getElementById('modal-sell-rules').innerHTML = rulesDesc.sell_rules.map(r => `<li>${r}</li>`).join('');
     document.getElementById('modal-exit-rules').textContent = `${cand.strategy.entry_order_type || 'MARKET'} | ${rulesDesc.exit_rules}`;
