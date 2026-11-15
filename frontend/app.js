@@ -65,6 +65,21 @@ const state = {
   filterWfOnly: false,
   filterMultiverseOnly: false,
 
+  // Saved Strategies State
+  savedStrategies: [],
+  savedPairFilter: 'ALL',
+  savedBatchFilter: 'ALL',
+  savedStrategiesViewMode: 'grid',
+  strategyFolders: [],
+
+  // Portfolio Builder & Saved Portfolios State
+  availableForPortfolio: [],
+  portfolioSelectedIds: new Set(),
+  portfolioPairFilter: 'ALL',
+  portfolioBatchFilter: 'ALL',
+  portfolioFolders: [],
+  savedPortfoliosViewMode: 'grid',
+
   // 3D Neural Explorer
   neuralScene: null,
   neuralCamera: null,
@@ -1639,6 +1654,10 @@ async function renderPortfolioStrategyChecklist() {
   const container = document.getElementById('portfolio-strategy-checklist');
   if (!container) return;
 
+  if (!state.portfolioSelectedIds) {
+    state.portfolioSelectedIds = new Set();
+  }
+
   container.innerHTML = `
     <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
       <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Cargando estrategias entre pares y lotes...
@@ -1648,6 +1667,7 @@ async function renderPortfolioStrategyChecklist() {
   try {
     const res = await fetch('/api/strategies/saved');
     let items = await res.json();
+    if (!Array.isArray(items)) items = [];
 
     // Include any active candidates in engine if they aren't saved yet
     if (state.candidates && state.candidates.length > 0) {
@@ -1661,7 +1681,7 @@ async function renderPortfolioStrategyChecklist() {
 
     state.availableForPortfolio = items;
 
-    if (!items || items.length === 0) {
+    if (items.length === 0) {
       container.innerHTML = `
         <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
           No hay estrategias guardadas ni candidatas activas aún.<br>
@@ -1672,10 +1692,11 @@ async function renderPortfolioStrategyChecklist() {
       return;
     }
 
-    // Default select all if nothing is selected yet
+    // Default select first 10 if nothing is selected yet
     if (state.portfolioSelectedIds.size === 0) {
       items.slice(0, 10).forEach(it => {
-        state.portfolioSelectedIds.add((it.strategy || it).id);
+        const sid = (it.strategy || it).id;
+        if (sid) state.portfolioSelectedIds.add(sid);
       });
     }
 
@@ -1684,22 +1705,23 @@ async function renderPortfolioStrategyChecklist() {
 
   } catch (err) {
     console.error('Error rendering portfolio checklist:', err);
-    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar lista de estrategias.</div>`;
+    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar lista de estrategias: ${err.message || err}</div>`;
   }
 }
 window.renderPortfolioStrategyChecklist = renderPortfolioStrategyChecklist;
 
 function selectCurrentBatchOnly() {
-  let targetItems = state.availableForPortfolio;
-  if (state.portfolioBatchFilter !== 'ALL') {
+  let targetItems = state.availableForPortfolio || [];
+  if (state.portfolioBatchFilter && state.portfolioBatchFilter !== 'ALL') {
     targetItems = targetItems.filter(it => (it.folder === state.portfolioBatchFilter) || (it.batch_name === state.portfolioBatchFilter));
   }
-  if (state.portfolioPairFilter !== 'ALL') {
+  if (state.portfolioPairFilter && state.portfolioPairFilter !== 'ALL') {
     targetItems = targetItems.filter(it => (it.strategy || it).symbol === state.portfolioPairFilter);
   }
 
   targetItems.forEach(it => {
-    state.portfolioSelectedIds.add((it.strategy || it).id);
+    const sid = (it.strategy || it).id;
+    if (sid) state.portfolioSelectedIds.add(sid);
   });
 
   renderFilteredPortfolioChecklist();
@@ -1711,8 +1733,9 @@ function renderPortfolioFilterControls() {
   const batchSelect = document.getElementById('portfolio-batch-select');
   if (!pairContainer || !batchSelect) return;
 
-  const symbols = Array.from(new Set(state.availableForPortfolio.map(s => (s.strategy || s).symbol).filter(Boolean)));
-  const batches = Array.from(new Set(state.availableForPortfolio.map(s => s.folder || s.batch_name).filter(Boolean)));
+  const items = state.availableForPortfolio || [];
+  const symbols = Array.from(new Set(items.map(s => (s.strategy || s).symbol).filter(Boolean)));
+  const batches = Array.from(new Set(items.map(s => s.folder || s.batch_name).filter(Boolean)));
 
   pairContainer.innerHTML = `
     <span class="text-[10px] text-[#71717a] uppercase font-bold mr-1">Filtrar Par:</span>
@@ -1723,7 +1746,7 @@ function renderPortfolioFilterControls() {
   `;
 
   batchSelect.innerHTML = `
-    <option value="ALL">Todas las Carpetas / Lotes (${state.availableForPortfolio.length})</option>
+    <option value="ALL">Todas las Carpetas / Lotes (${items.length})</option>
     ${batches.map(b => `<option value="${b}" ${state.portfolioBatchFilter === b ? 'selected' : ''}>${b}</option>`).join('')}
   `;
 }
@@ -1747,12 +1770,16 @@ function renderFilteredPortfolioChecklist() {
   const container = document.getElementById('portfolio-strategy-checklist');
   if (!container) return;
 
-  let items = state.availableForPortfolio;
-  if (state.portfolioPairFilter !== 'ALL') {
+  if (!state.portfolioSelectedIds) {
+    state.portfolioSelectedIds = new Set();
+  }
+
+  let items = state.availableForPortfolio || [];
+  if (state.portfolioPairFilter && state.portfolioPairFilter !== 'ALL') {
     items = items.filter(it => (it.strategy || it).symbol === state.portfolioPairFilter);
   }
-  if (state.portfolioBatchFilter !== 'ALL') {
-    items = items.filter(it => it.batch_name === state.portfolioBatchFilter);
+  if (state.portfolioBatchFilter && state.portfolioBatchFilter !== 'ALL') {
+    items = items.filter(it => (it.folder === state.portfolioBatchFilter) || (it.batch_name === state.portfolioBatchFilter));
   }
 
   if (items.length === 0) {
@@ -1766,11 +1793,12 @@ function renderFilteredPortfolioChecklist() {
   }
 
   container.innerHTML = items.map((item, idx) => {
-    const s = item.strategy || item;
+    const s = item.strategy || item || {};
     const m = item.metrics || {};
     const sid = s.id || `strat_${idx}`;
     const isChecked = state.portfolioSelectedIds.has(sid);
-    const netProfit = m.total_return_usd !== undefined ? `${m.total_return_usd >= 0 ? '+' : ''}$${m.total_return_usd.toFixed(0)}` : '';
+    const netProfit = m.total_return_usd !== undefined ? `${m.total_return_usd >= 0 ? '+' : ''}$${Number(m.total_return_usd).toFixed(0)}` : '';
+    const folderDisplay = item.folder || item.batch_name || '';
 
     return `
       <label class="portfolio-strategy-check ${isChecked ? 'checked' : ''}" for="port-cb-${sid}">
@@ -1778,13 +1806,13 @@ function renderFilteredPortfolioChecklist() {
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs font-semibold text-white truncate max-w-[170px]">${s.name || sid}</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-black">${s.symbol}</span>
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-black">${s.symbol || 'N/A'}</span>
           </div>
           <div class="flex items-center justify-between text-[11px] text-[#a0a0ab]">
-            <span>${s.timeframe} · WR: <strong class="text-white">${(m.win_rate_pct || 0).toFixed(0)}%</strong> · Sh: <strong class="text-white">${(m.sharpe_ratio || 0).toFixed(1)}</strong></span>
+            <span>${s.timeframe || '1h'} · WR: <strong class="text-white">${Number(m.win_rate_pct || 0).toFixed(0)}%</strong> · Sh: <strong class="text-white">${Number(m.sharpe_ratio || 0).toFixed(1)}</strong></span>
             <span class="font-mono text-white font-semibold">${netProfit}</span>
           </div>
-          ${item.batch_name ? `<div class="text-[9px] font-mono text-[#717182] mt-1 truncate">🏷️ ${item.batch_name}</div>` : ''}
+          ${folderDisplay ? `<div class="text-[9px] font-mono text-[#717182] mt-1 truncate">📁 ${folderDisplay}</div>` : ''}
         </div>
       </label>
     `;
@@ -1890,16 +1918,17 @@ function selectTopOnePerPair() {
 window.selectTopOnePerPair = selectTopOnePerPair;
 
 function selectAllVisiblePortfolioStrategies() {
-  let items = state.availableForPortfolio;
-  if (state.portfolioPairFilter !== 'ALL') {
+  let items = state.availableForPortfolio || [];
+  if (state.portfolioPairFilter && state.portfolioPairFilter !== 'ALL') {
     items = items.filter(it => (it.strategy || it).symbol === state.portfolioPairFilter);
   }
-  if (state.portfolioBatchFilter !== 'ALL') {
-    items = items.filter(it => it.batch_name === state.portfolioBatchFilter);
+  if (state.portfolioBatchFilter && state.portfolioBatchFilter !== 'ALL') {
+    items = items.filter(it => (it.folder === state.portfolioBatchFilter) || (it.batch_name === state.portfolioBatchFilter));
   }
 
   items.forEach(it => {
-    state.portfolioSelectedIds.add((it.strategy || it).id);
+    const sid = (it.strategy || it).id;
+    if (sid) state.portfolioSelectedIds.add(sid);
   });
   renderFilteredPortfolioChecklist();
 }
