@@ -478,6 +478,11 @@ class Backtester:
                             # Sizing
                             if strategy.sizing_mode == "FIXED_LOT":
                                 lot_size = strategy.fixed_lot
+                            elif strategy.sizing_mode == "FIXED_CASH":
+                                cash_risk = getattr(strategy, "fixed_cash_risk", 100.0)
+                                price_risk = max(sl_dist, pip_size * 5)
+                                lot_size = cash_risk / (price_risk * point_val)
+                                lot_size = max(0.01, min(round(lot_size, 2), 50.0))
                             else:
                                 # Risk % per trade
                                 risk_usd = balance * (strategy.risk_per_trade_pct / 100.0)

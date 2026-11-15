@@ -55,7 +55,10 @@ class Condition:
         )
 
     def to_human_string(self, lang: str = "es") -> str:
-        p_str = ", ".join(f"{k}={v}" for k, v in self.params.items())
+        if isinstance(self.params, dict):
+            p_str = ", ".join(f"{k}={v}" for k, v in self.params.items())
+        else:
+            p_str = str(self.params)
         ind_str = f"{self.indicator}({p_str})"
         
         op_map = {
@@ -104,9 +107,10 @@ class Strategy:
         partial_tp2_atr: float = 4.0,
         partial_pct: float = 50.0,
         # Risk management & sizing
-        sizing_mode: str = "FIXED_RISK", # "FIXED_RISK", "FIXED_LOT", "MARTINGALE", "ANTI_MARTINGALE", "DCA"
+        sizing_mode: str = "FIXED_RISK", # "FIXED_RISK", "FIXED_LOT", "FIXED_CASH", "MARTINGALE", "ANTI_MARTINGALE", "DCA"
         risk_per_trade_pct: float = 1.0,
         fixed_lot: float = 0.1,
+        fixed_cash_risk: float = 100.0,
         max_daily_loss_pct: float = 3.0,
         max_account_loss_pct: float = 8.0,
         max_daily_trades: int = 4,
@@ -141,6 +145,7 @@ class Strategy:
         self.sizing_mode = sizing_mode
         self.risk_per_trade_pct = round(risk_per_trade_pct, 2)
         self.fixed_lot = round(fixed_lot, 2)
+        self.fixed_cash_risk = round(fixed_cash_risk, 2)
         self.max_daily_loss_pct = round(max_daily_loss_pct, 2)
         self.max_account_loss_pct = round(max_account_loss_pct, 2)
         self.max_daily_trades = int(max_daily_trades)
@@ -178,6 +183,7 @@ class Strategy:
             "sizing_mode": self.sizing_mode,
             "risk_per_trade_pct": self.risk_per_trade_pct,
             "fixed_lot": self.fixed_lot,
+            "fixed_cash_risk": self.fixed_cash_risk,
             "max_daily_loss_pct": self.max_daily_loss_pct,
             "max_account_loss_pct": self.max_account_loss_pct,
             "max_daily_trades": self.max_daily_trades,
@@ -216,6 +222,7 @@ class Strategy:
             sizing_mode=d.get("sizing_mode", "FIXED_RISK"),
             risk_per_trade_pct=d.get("risk_per_trade_pct", 1.0),
             fixed_lot=d.get("fixed_lot", 0.1),
+            fixed_cash_risk=d.get("fixed_cash_risk", 100.0),
             max_daily_loss_pct=d.get("max_daily_loss_pct", 3.0),
             max_account_loss_pct=d.get("max_account_loss_pct", 8.0),
             max_daily_trades=d.get("max_daily_trades", 4),

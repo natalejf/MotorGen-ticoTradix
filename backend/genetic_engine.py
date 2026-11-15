@@ -223,11 +223,28 @@ class GeneticEngine:
         enabled_indicators: List[str],
         enabled_entry_types: List[str],
         enabled_exit_modes: List[str],
-        generation: int = 0
+        generation: int = 0,
+        min_indicators: int = 1,
+        max_indicators: int = 3,
+        sizing_mode: Optional[str] = None,
+        risk_per_trade_pct: Optional[float] = None,
+        fixed_lot: Optional[float] = None,
+        fixed_cash_risk: Optional[float] = None,
+        martingale_mult: Optional[float] = None
     ) -> Strategy:
-        num_conds = random.choice([1, 2, 2, 3])
-        buy_conds = [self.create_random_condition(enabled_indicators, is_buy=True) for _ in range(num_conds)]
-        sell_conds = [self.create_random_condition(enabled_indicators, is_buy=False) for _ in range(num_conds)]
+        # Multi-indicator synergy: choose distinct indicators to combine
+        avail_inds = list(enabled_indicators) if enabled_indicators else ["EMA", "RSI", "MACD", "ATR"]
+        num_conds = random.randint(min_indicators, max(min_indicators, min(4, max_indicators)))
+        
+        if len(avail_inds) >= num_conds:
+            chosen_buy = random.sample(avail_inds, num_conds)
+            chosen_sell = random.sample(avail_inds, num_conds)
+        else:
+            chosen_buy = [random.choice(avail_inds) for _ in range(num_conds)]
+            chosen_sell = [random.choice(avail_inds) for _ in range(num_conds)]
+
+        buy_conds = [self.create_random_condition([ind], is_buy=True) for ind in chosen_buy]
+        sell_conds = [self.create_random_condition([ind], is_buy=False) for ind in chosen_sell]
 
         entry_type = random.choice(enabled_entry_types) if enabled_entry_types else "MARKET"
         exit_mode = random.choice(enabled_exit_modes) if enabled_exit_modes else "ATR_CLASSIC"
@@ -240,8 +257,11 @@ class GeneticEngine:
         max_bars = random.choice([12, 24, 36, 48])
 
         session = random.choice(SESSION_FILTERS)
-        sizing = random.choice(SIZING_MODES)
-        risk_pct = random.choice([0.5, 1.0, 1.5, 2.0])
+        sizing = sizing_mode if sizing_mode else random.choice(SIZING_MODES)
+        risk_pct = risk_per_trade_pct if risk_per_trade_pct is not None else random.choice([0.5, 1.0, 1.5, 2.0])
+        f_lot = fixed_lot if fixed_lot is not None else 0.1
+        f_cash = fixed_cash_risk if fixed_cash_risk is not None else 100.0
+        m_mult = martingale_mult if martingale_mult is not None else 1.5
         max_daily_loss = random.choice([2.5, 3.0, 4.0])
 
         strat = Strategy(
@@ -261,6 +281,9 @@ class GeneticEngine:
             max_bars=max_bars,
             sizing_mode=sizing,
             risk_per_trade_pct=risk_pct,
+            fixed_lot=f_lot,
+            fixed_cash_risk=f_cash,
+            martingale_mult=m_mult,
             max_daily_loss_pct=max_daily_loss,
             generation=generation
         )
@@ -272,8 +295,21 @@ class GeneticEngine:
         child.generation = generation
         child.parent_ids = [parent_a.id, parent_b.id]
 
-        if random.random() < 0.5:
+        # Multi-indicator crossover: combine indicators from parent A and parent B
+        if parent_a.buy_conditions and parent_b.buy_conditions and random.random() < 0.6:
+            half_a = parent_a.buy_conditions[:max(1, len(parent_a.buy_conditions)//2)]
+            half_b = parent_b.buy_conditions[:max(1, len(parent_b.buy_conditions)//2)]
+            child.buy_conditions = copy.deepcopy(half_a + half_b)[:4]
+        elif random.random() < 0.5:
+            child.buy_conditions = copy.deepcopy(parent_b.buy_conditions)
+
+        if parent_a.sell_conditions and parent_b.sell_conditions and random.random() < 0.6:
+            half_a = parent_a.sell_conditions[:max(1, len(parent_a.sell_conditions)//2)]
+            half_b = parent_b.sell_conditions[:max(1, len(parent_b.sell_conditions)//2)]
+            child.sell_conditions = copy.deepcopy(half_a + half_b)[:4]
+        elif random.random() < 0.5:
             child.sell_conditions = copy.deepcopy(parent_b.sell_conditions)
+
         if random.random() < 0.5:
             child.entry_order_type = parent_b.entry_order_type
         if random.random() < 0.5:
@@ -421,8 +457,26 @@ class GeneticEngine:
             min_dsr = float(config.get("min_dsr", 0.2))
             max_candidates = int(config.get("max_candidates", 1000))
 
+            # Multi-indicator parameters
+            min_inds = max(1, int(config.get("min_indicators_per_strategy", 1)))
+            max_inds = max(min_inds, min(4, int(config.get("max_indicators_per_strategy", 3))))
+
+            # Risk & Position Sizing Mode
+            cfg_sizing = config.get("sizing_mode", "FIXED_RISK")
+            cfg_risk_pct = float(config.get("risk_per_trade_pct", 1.0))
+            cfg_fixed_lot = float(config.get("fixed_lot", 0.01))
+            cfg_fixed_cash = float(config.get("fixed_cash_risk", 100.0))
+            cfg_martingale_mult = float(config.get("martingale_mult", 1.5))
+
+            # Prop Firm Challenge Filter
+            prop_firm_filter = bool(config.get("prop_firm_filter", False))
+            prop_daily_loss = float(config.get("prop_firm_daily_loss_pct", 4.0))
+            prop_total_dd = float(config.get("prop_firm_total_dd_pct", 8.0))
+            prop_target = float(config.get("prop_firm_target_pct", 8.0))
+
             self.log(f"Iniciando Fábrica de Algoritmos en modo {'INFINITO CONTINUO' if infinite_mode else 'PROGRAMADO'} sobre {symbol} ({timeframe})...")
-            self.log(f"Límite Top Aprobadas: {max_candidates} | Indicadores activos: {len(enabled_indicators)}/28 | Deduplicación activada")
+            self.log(f"Límite Top Aprobadas: {max_candidates} | Indicadores activos: {len(enabled_indicators)}/28 | Combinando: {min_inds} a {max_inds} indicadores")
+            self.log(f"Modo de Riesgo: {cfg_sizing} | Prop Firm Challenge Filter: {'ACTIVADO' if prop_firm_filter else 'DESACTIVADO'}")
 
             df = data_manager.load_data(symbol, timeframe)
             self.log(f"Datos históricos listos: {len(df)} velas ({df.index[0].date()} a {df.index[-1].date()}).")
@@ -430,7 +484,15 @@ class GeneticEngine:
             # Initial population
             population: List[Strategy] = [
                 self.create_random_strategy(
-                    symbol, timeframe, enabled_indicators, enabled_entry_types, enabled_exit_modes, generation=0
+                    symbol, timeframe, enabled_indicators, enabled_entry_types, enabled_exit_modes,
+                    generation=0,
+                    min_indicators=min_inds,
+                    max_indicators=max_inds,
+                    sizing_mode=cfg_sizing,
+                    risk_per_trade_pct=cfg_risk_pct,
+                    fixed_lot=cfg_fixed_lot,
+                    fixed_cash_risk=cfg_fixed_cash,
+                    martingale_mult=cfg_martingale_mult
                 )
                 for _ in range(pop_size)
             ]
@@ -470,6 +532,12 @@ class GeneticEngine:
                     self.tested_count += 1
 
                     # Check Classification Criteria
+                    passes_prop_firm = True
+                    if prop_firm_filter:
+                        max_dl = m.get("max_daily_loss_pct", 0.0)
+                        max_dd = m.get("max_drawdown_pct", 0.0)
+                        passes_prop_firm = (max_dl <= prop_daily_loss) and (max_dd <= prop_total_dd)
+
                     passes_classification = (
                         m["win_rate_pct"] >= min_win_rate and
                         m["total_trades"] >= min_trades and
@@ -477,7 +545,8 @@ class GeneticEngine:
                         m["total_return_usd"] >= min_net_profit_usd and
                         m["sharpe_ratio"] >= min_sharpe and
                         m["profit_factor"] >= min_profit_factor and
-                        m["dsr"] >= min_dsr
+                        m["dsr"] >= min_dsr and
+                        passes_prop_firm
                     )
 
                     # 3D Node data for Neural Explorer

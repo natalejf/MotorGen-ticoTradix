@@ -125,15 +125,66 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Filter listeners
-  document.getElementById('filter-wf').addEventListener('change', (e) => {
+  document.getElementById('filter-wf')?.addEventListener('change', (e) => {
     state.filterWfOnly = e.target.checked;
     renderCandidates();
   });
-  document.getElementById('filter-mv').addEventListener('change', (e) => {
+  document.getElementById('filter-mv')?.addEventListener('change', (e) => {
     state.filterMultiverseOnly = e.target.checked;
     renderCandidates();
   });
+
+  // Sync Max Candidates (Top Pool limit) between Config and Results tabs
+  const maxCandConfig = document.getElementById('input-max-candidates');
+  const maxCandResults = document.getElementById('input-max-candidates-results');
+  if (maxCandConfig && maxCandResults) {
+    maxCandConfig.addEventListener('input', () => { maxCandResults.value = maxCandConfig.value; });
+    maxCandResults.addEventListener('input', () => { maxCandConfig.value = maxCandResults.value; });
+  }
+
+  // Position sizing & Prop Firm UI init
+  updateSizingModeUI();
+  togglePropFirmInputs();
 });
+
+// Position sizing mode dynamic display
+function updateSizingModeUI() {
+  const mode = document.getElementById('select-sizing-mode')?.value || 'FIXED_RISK';
+  const riskField = document.getElementById('sizing-field-risk-pct');
+  const lotField = document.getElementById('sizing-field-fixed-lot');
+  const cashField = document.getElementById('sizing-field-fixed-cash');
+  const martField = document.getElementById('sizing-field-martingale');
+
+  if (riskField) riskField.classList.add('hidden');
+  if (lotField) lotField.classList.add('hidden');
+  if (cashField) cashField.classList.add('hidden');
+  if (martField) martField.classList.add('hidden');
+
+  if (mode === 'FIXED_RISK') {
+    if (riskField) riskField.classList.remove('hidden');
+  } else if (mode === 'FIXED_LOT') {
+    if (lotField) lotField.classList.remove('hidden');
+  } else if (mode === 'FIXED_CASH') {
+    if (cashField) cashField.classList.remove('hidden');
+  } else if (mode === 'MARTINGALE' || mode === 'ANTI_MARTINGALE') {
+    if (riskField) riskField.classList.remove('hidden');
+    if (martField) martField.classList.remove('hidden');
+  }
+}
+window.updateSizingModeUI = updateSizingModeUI;
+
+function togglePropFirmInputs() {
+  const checked = document.getElementById('check-prop-firm-filter')?.checked || false;
+  const container = document.getElementById('prop-firm-inputs-container');
+  if (container) {
+    if (checked) {
+      container.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+      container.classList.add('opacity-50', 'pointer-events-none');
+    }
+  }
+}
+window.togglePropFirmInputs = togglePropFirmInputs;
 
 // ============================================================================
 // RENDER 28 INDICATORS GRID WITH GENERIC DEFAULTS
@@ -414,7 +465,22 @@ async function startExploration() {
     min_sharpe: parseFloat(document.getElementById('input-min-sharpe').value) || 0.8,
     min_profit_factor: parseFloat(document.getElementById('input-min-pf').value) || 1.1,
     min_dsr: parseFloat(document.getElementById('input-min-dsr').value) || 0.20,
-    max_candidates: parseInt(document.getElementById('input-max-candidates')?.value) || 1000
+    max_candidates: parseInt(document.getElementById('input-max-candidates')?.value) || parseInt(document.getElementById('input-max-candidates-results')?.value) || 1000,
+    min_indicators_per_strategy: parseInt(document.getElementById('input-min-indicators')?.value) || 1,
+    max_indicators_per_strategy: parseInt(document.getElementById('input-max-indicators')?.value) || 3,
+
+    // Risk & Sizing Mode
+    sizing_mode: document.getElementById('select-sizing-mode')?.value || 'FIXED_RISK',
+    risk_per_trade_pct: parseFloat(document.getElementById('input-risk-pct')?.value) || 1.0,
+    fixed_lot: parseFloat(document.getElementById('input-fixed-lot')?.value) || 0.01,
+    fixed_cash_risk: parseFloat(document.getElementById('input-fixed-cash')?.value) || 100.0,
+    martingale_mult: parseFloat(document.getElementById('input-martingale-mult')?.value) || 1.5,
+
+    // Prop Firm Challenge
+    prop_firm_filter: document.getElementById('check-prop-firm-filter')?.checked || false,
+    prop_firm_daily_loss_pct: parseFloat(document.getElementById('input-prop-daily-loss')?.value) || 4.0,
+    prop_firm_total_dd_pct: parseFloat(document.getElementById('input-prop-total-dd')?.value) || 8.0,
+    prop_firm_target_pct: parseFloat(document.getElementById('input-prop-target')?.value) || 8.0
   };
 
   try {
@@ -1544,6 +1610,9 @@ function renderSavedStrategiesGrid() {
         </div>
 
         <div class="mt-3 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+          <button onclick="openCandidateModal('${s.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo, backtest y reglas">
+            📊 Ver Análisis
+          </button>
           <button onclick="useStrategyInPortfolio('${s.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1" title="Añadir al Creador de Portafolio">
             + Portafolio
           </button>
@@ -2140,8 +2209,11 @@ async function loadSavedPortfolios() {
           </div>
 
           <div class="mt-4 pt-3 border-t border-[#1e1e24] flex items-center justify-between gap-2">
-            <button onclick="exportPortfolioJson('${port.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1" title="Descargar archivo de configuración JSON para bot">
-              📥 Exportar Bot JSON
+            <button onclick="openPortfolioModal('${port.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo de la cartera y curva combinada">
+              📊 Ver Análisis
+            </button>
+            <button onclick="exportPortfolioJson('${port.id}')" class="btn-secondary text-[11px] py-1 px-2" title="Descargar archivo de configuración JSON para bot">
+              📥 Bot JSON
             </button>
             <button onclick="deleteSavedPortfolio('${port.id}')" class="btn-danger text-[11px] py-1 px-2" title="Eliminar portafolio">
               🗑
@@ -2215,3 +2287,146 @@ async function refreshSidebarBadges() {
   }
 }
 window.refreshSidebarBadges = refreshSidebarBadges;
+
+// ============================================================================
+// PORTFOLIO DETAIL MODAL & COMBINED EQUITY CURVE
+// ============================================================================
+
+let portfolioEquityChartInstance = null;
+
+async function openPortfolioModal(portfolioId) {
+  try {
+    const res = await fetch(`/api/portfolio/${portfolioId}`);
+    if (!res.ok) {
+      alert('No se pudo cargar el análisis del portafolio.');
+      return;
+    }
+    const port = await res.json();
+    const modal = document.getElementById('portfolio-detail-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    // Títulos y metadatos
+    document.getElementById('port-modal-title').textContent = port.name || 'Portafolio Multi-Estrategia';
+    const folderDisplay = port.folder || 'Portafolios_Principales';
+    document.getElementById('port-modal-subtitle').textContent = `📁 ${folderDisplay} · ID: ${port.id} · Creado: ${port.created_at || 'Reciente'}`;
+
+    // Métricas clave
+    const met = port.metrics || {};
+    const netProfitVal = met.combined_net_profit_usd || 0;
+    document.getElementById('port-modal-pnl').textContent = `${netProfitVal >= 0 ? '+' : ''}$${netProfitVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    document.getElementById('port-modal-wr').textContent = `${(met.weighted_win_rate_pct || 0).toFixed(1)}%`;
+    document.getElementById('port-modal-div').textContent = `${met.diversification_score || 0}%`;
+    document.getElementById('port-modal-dd-red').textContent = `-${met.estimated_dd_reduction_pct || 35}%`;
+
+    // Botón de exportación
+    const exportBtn = document.getElementById('btn-port-modal-export');
+    if (exportBtn) {
+      exportBtn.onclick = () => exportPortfolioJson(port.id);
+    }
+
+    // Tabla de estrategias componentes
+    const tbody = document.getElementById('port-modal-strategies-body');
+    const strats = port.strategies || [];
+    if (tbody) {
+      tbody.innerHTML = strats.map(st => {
+        const s = st.strategy || st;
+        const m = st.metrics || {};
+        const pnl = m.total_return_usd || 0;
+        return `
+          <tr class="border-b border-[#1c1c24] hover:bg-[#14141a]">
+            <td class="py-2.5 px-3 font-semibold text-white">${s.name || s.id}</td>
+            <td class="py-2.5 px-3"><span class="tn-badge tn-badge-white text-[10px]">${s.symbol || '-'}</span></td>
+            <td class="py-2.5 px-3 font-mono">${s.timeframe || '1h'}</td>
+            <td class="py-2.5 px-3 font-mono font-bold text-white">${Math.round((st.weight || 0) * 100)}%</td>
+            <td class="py-2.5 px-3 font-mono text-[#a0a0ab]">${(m.win_rate_pct || 0).toFixed(1)}%</td>
+            <td class="py-2.5 px-3 font-mono text-white font-semibold">${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="py-2.5 px-3 text-right">
+              <button onclick="closePortfolioModal(); openCandidateModal('${s.id}')" class="btn-secondary text-[10px] py-0.5 px-2.5" title="Ver análisis y backtest individual">
+                Ver Estrategia
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Graficar Curva Combinada
+    renderPortfolioEquityChart(port.combined_equity_curve || []);
+  } catch (err) {
+    console.error('Error opening portfolio modal:', err);
+    alert('Error al abrir el modal de portafolio.');
+  }
+}
+window.openPortfolioModal = openPortfolioModal;
+
+function closePortfolioModal() {
+  const modal = document.getElementById('portfolio-detail-modal');
+  if (modal) modal.classList.add('hidden');
+}
+window.closePortfolioModal = closePortfolioModal;
+
+function renderPortfolioEquityChart(curve) {
+  const canvas = document.getElementById('portfolio-equity-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (portfolioEquityChartInstance) {
+    portfolioEquityChartInstance.destroy();
+  }
+
+  if (!curve || curve.length === 0) {
+    curve = [{ equity: 10000, trade: 0 }];
+  }
+
+  const labels = curve.map((_, i) => i === 0 ? 'Inicio' : `#${i}`);
+  const data = curve.map(pt => pt.equity);
+
+  portfolioEquityChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Balance de Cartera ($)',
+        data: data,
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+        fill: true,
+        pointRadius: data.length > 50 ? 0 : 2,
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#16161e',
+          borderColor: '#2a2a38',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#e0e0e0',
+          callbacks: {
+            label: (context) => ` Balance: $${context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#71717a', font: { size: 10 }, maxTicksLimit: 10 }
+        },
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: {
+            color: '#a0a0ab',
+            font: { size: 10 },
+            callback: (val) => '$' + Number(val).toLocaleString()
+          }
+        }
+      }
+    }
+  });
+}
+window.renderPortfolioEquityChart = renderPortfolioEquityChart;

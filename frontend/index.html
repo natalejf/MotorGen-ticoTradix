@@ -222,15 +222,20 @@
                 </div>
                 <span class="tn-badge tn-badge-white">GENERACIÓN SIN LÍMITE</span>
               </div>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
                   <label class="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" id="check-infinite-mode" checked class="w-4 h-4 accent-white">
                     <div>
                       <span class="text-xs font-bold text-white block">Modo Infinito Activo</span>
-                      <span class="text-[11px] text-[#a0a0ab]">Crea estrategias infinitamente hasta pulsar "Detener"</span>
+                      <span class="text-[11px] text-[#a0a0ab]">Crea algoritmos en bucle continuo</span>
                     </div>
                   </label>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Límite Aprobadas (Top Pool)</label>
+                  <input type="number" id="input-max-candidates" class="tn-input num-tabular font-bold text-white" value="1000" min="10" max="10000" step="100">
+                  <span class="text-[10px] text-[#71717a]">Cupo en resultados (mejores reemplazan a peores)</span>
                 </div>
                 <div>
                   <label class="block text-xs text-[#a0a0ab] mb-1">Población por Generación</label>
@@ -238,9 +243,30 @@
                   <span class="text-[10px] text-[#71717a]">Estrategias evaluadas en paralelo por ciclo</span>
                 </div>
                 <div>
-                  <label class="block text-xs text-[#a0a0ab] mb-1">Objetivo de Optimización (Fitness)</label>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Objetivo de Optimización</label>
                   <select id="opt-objective" class="tn-select"></select>
                   <span class="text-[10px] text-[#71717a]">Criterio matemático de supervivencia</span>
+                </div>
+              </div>
+
+              <!-- Sinergia Multi-Indicador -->
+              <div class="mt-4 pt-4 border-t border-[#22222a] grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-3 bg-[#0d0d12] border border-[#20202a] rounded-lg flex items-center justify-between">
+                  <div>
+                    <span class="text-xs font-semibold text-white block">Sinergia Multi-Indicador</span>
+                    <span class="text-[11px] text-[#a0a0ab]">Combina múltiples indicadores distintos por estrategia</span>
+                  </div>
+                  <span class="tn-badge tn-badge-white text-[10px]">COMBINATORIA</span>
+                </div>
+                <div class="flex items-center gap-4 p-3 bg-[#0d0d12] border border-[#20202a] rounded-lg">
+                  <div class="flex-1">
+                    <label class="block text-[11px] text-[#a0a0ab] mb-1">Mín. Indicadores</label>
+                    <input type="number" id="input-min-indicators" class="tn-input num-tabular text-xs" value="1" min="1" max="4">
+                  </div>
+                  <div class="flex-1">
+                    <label class="block text-[11px] text-[#a0a0ab] mb-1">Máx. Indicadores Combinados</label>
+                    <input type="number" id="input-max-indicators" class="tn-input num-tabular text-xs font-bold text-white" value="3" min="1" max="4">
+                  </div>
                 </div>
               </div>
             </div>
@@ -415,10 +441,9 @@
                   <input type="number" id="input-min-dsr" class="tn-input num-tabular" value="0.20" step="0.05">
                   <span class="text-[10px] text-[#71717a]">Penalización matemática por azar</span>
                 </div>
-                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
-                  <label class="block text-xs font-semibold text-white mb-1">Límite Aprobadas (Top Pool)</label>
-                  <input type="number" id="input-max-candidates" class="tn-input num-tabular" value="1000" step="100" min="10" max="10000">
-                  <span class="text-[10px] text-[#71717a]">Cupo máx. Los mejores reemplazan a los peores</span>
+                <div class="p-4 rounded-lg bg-[#14141a] border border-[#2a2a34] flex flex-col justify-center">
+                  <div class="text-[10px] text-[#71717a] uppercase font-bold">Filtro de Admisión</div>
+                  <div class="text-xs text-[#a0a0ab] mt-1">Solo los algoritmos que superen todos estos umbrales entrarán al Top Pool de resultados.</div>
                 </div>
               </div>
             </div>
@@ -429,37 +454,96 @@
 
           <!-- TAB 5: RIESGO Y HORARIOS -->
           <div id="panel-risk" class="tab-panel hidden space-y-6">
+            <!-- Position Sizing Card -->
             <div class="tn-card">
-              <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab] mb-4">Gestión de Riesgo y Cuentas de Fondeo (Prop Firms)</h2>
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="flex items-center justify-between mb-4">
                 <div>
-                  <label class="block text-xs text-[#a0a0ab] mb-1">Riesgo por Operación</label>
-                  <input type="number" class="tn-input num-tabular" value="1.0" step="0.25">
-                  <span class="text-[10px] text-[#71717a]">% del balance de la cuenta</span>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Dimensionamiento de Posición y Modo de Riesgo</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Define cómo se calculará el tamaño de cada operación (lotes, porcentaje o valor en USD).</p>
                 </div>
+                <span class="tn-badge tn-badge-white">POSITION SIZING</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label class="block text-xs text-[#a0a0ab] mb-1">Pérdida Máxima Diaria</label>
-                  <input type="number" class="tn-input num-tabular" value="3.0" step="0.5">
-                  <span class="text-[10px] text-[#71717a]">Detiene el algo por el resto del día</span>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Modo de Riesgo / Sizing</label>
+                  <select id="select-sizing-mode" class="tn-select" onchange="updateSizingModeUI()">
+                    <option value="FIXED_RISK" selected>Riesgo Porcentual (% del Balance)</option>
+                    <option value="FIXED_LOT">Lote Fijo Constante (ej. 0.01 / 0.1 lote)</option>
+                    <option value="FIXED_CASH">Riesgo Fijo en Moneda USD ($ por trade)</option>
+                    <option value="MARTINGALE">Martingala (Multiplicador tras pérdidas)</option>
+                    <option value="ANTI_MARTINGALE">Anti-Martingala (Escalado en ganancias)</option>
+                  </select>
                 </div>
-                <div>
-                  <label class="block text-xs text-[#a0a0ab] mb-1">Drawdown Total Máximo</label>
-                  <input type="number" class="tn-input num-tabular" value="8.0" step="1.0">
-                  <span class="text-[10px] text-[#71717a]">Límite de detención de emergencia</span>
+                <div id="sizing-field-risk-pct">
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Riesgo por Trade (% Balance)</label>
+                  <input type="number" id="input-risk-pct" class="tn-input num-tabular" value="1.0" step="0.25" min="0.1" max="10">
+                  <span class="text-[10px] text-[#71717a]">Calcula lotaje dinámico con base al Stop Loss</span>
+                </div>
+                <div id="sizing-field-fixed-lot" class="hidden">
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Tamaño de Lote Fijo</label>
+                  <input type="number" id="input-fixed-lot" class="tn-input num-tabular" value="0.01" step="0.01" min="0.01" max="50">
+                  <span class="text-[10px] text-[#71717a]">Opera siempre exactamente este lotaje</span>
+                </div>
+                <div id="sizing-field-fixed-cash" class="hidden">
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Riesgo Fijo en USD ($)</label>
+                  <input type="number" id="input-fixed-cash" class="tn-input num-tabular" value="100.0" step="10" min="5">
+                  <span class="text-[10px] text-[#71717a]">Pérdida máxima tolerada por operación</span>
+                </div>
+                <div id="sizing-field-martingale" class="hidden">
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Multiplicador Martingala</label>
+                  <input type="number" id="input-martingale-mult" class="tn-input num-tabular" value="1.5" step="0.1" min="1.1" max="3.0">
+                  <span class="text-[10px] text-[#71717a]">Aumento de lotaje tras cada racha negativa (máx 3 trades)</span>
                 </div>
                 <div>
                   <label class="block text-xs text-[#a0a0ab] mb-1">Máx. Operaciones Diarias</label>
-                  <input type="number" class="tn-input num-tabular" value="4" min="1" max="10">
-                  <span class="text-[10px] text-[#71717a]">Control contra el sobretrading</span>
+                  <input type="number" id="input-max-daily-trades" class="tn-input num-tabular" value="4" min="1" max="20">
+                  <span class="text-[10px] text-[#71717a]">Control de sobreoperación por sesión</span>
                 </div>
               </div>
+            </div>
+
+            <!-- Prop Firm Challenge Card -->
+            <div class="tn-card">
+              <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="check-prop-firm-filter" class="w-4 h-4 accent-white cursor-pointer" onchange="togglePropFirmInputs()">
+                  <div>
+                    <label for="check-prop-firm-filter" class="text-sm font-semibold uppercase tracking-wider text-white cursor-pointer">
+                      Activar Filtro Estricto Prop Firm (Cuentas de Fondeo)
+                    </label>
+                    <p class="text-xs text-[#a0a0ab] mt-0.5">
+                      Descarta automáticamente cualquier algoritmo que viole las reglas de pérdida máxima diaria o drawdown total de los Challenges de Fondeo.
+                    </p>
+                  </div>
+                </div>
+                <span class="tn-badge tn-badge-white">PROP FIRM CHALLENGE</span>
+              </div>
+              <div id="prop-firm-inputs-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-50 pointer-events-none transition">
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Pérdida Máxima Diaria (%)</label>
+                  <input type="number" id="input-prop-daily-loss" class="tn-input num-tabular" value="4.0" step="0.5" min="1" max="10">
+                  <span class="text-[10px] text-[#71717a]">Regla diaria (ej. 4% o 5% en FTMO / FundedNext)</span>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Drawdown Total Máximo (%)</label>
+                  <input type="number" id="input-prop-total-dd" class="tn-input num-tabular" value="8.0" step="0.5" min="2" max="20">
+                  <span class="text-[10px] text-[#71717a]">Pérdida máxima total de la cuenta (ej. 8% o 10%)</span>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Target de Ganancia Requerido (%)</label>
+                  <input type="number" id="input-prop-target" class="tn-input num-tabular" value="8.0" step="0.5" min="1" max="30">
+                  <span class="text-[10px] text-[#71717a]">Profit target del challenge (ej. 8% o 10%)</span>
+                </div>
+              </div>
+
+              <!-- Horarios y Sesiones -->
               <div class="mt-4 pt-4 border-t border-[#22222a] flex flex-wrap gap-6 text-xs text-[#a0a0ab]">
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked class="accent-white">
+                  <input type="checkbox" id="check-close-weekend" checked class="accent-white">
                   <span>Cerrar posiciones antes del fin de semana (Viernes 20:00 UTC)</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" class="accent-white">
+                  <input type="checkbox" id="check-close-ny" class="accent-white">
                   <span>Cerrar posiciones antes del cierre de NY</span>
                 </label>
               </div>
@@ -484,6 +568,11 @@
                 </label>
               </div>
               <div class="flex flex-wrap items-center gap-2">
+                <!-- Límite Aprobadas Visible -->
+                <div class="flex items-center gap-1.5 p-1 px-2.5 rounded bg-[#13131a] border border-[#262634]" title="Límite máximo de algoritmos retenidos en resultados (los mejores reemplazan a los peores)">
+                  <span class="text-[11px] text-[#a0a0ab] font-bold">Límite Top:</span>
+                  <input type="number" id="input-max-candidates-results" class="tn-input num-tabular w-20 text-xs py-0.5 px-1 font-mono font-bold text-center text-white bg-[#0a0a0e] border-[#30303e]" value="1000" min="10" max="10000" step="100">
+                </div>
                 <button id="btn-batch-save" class="btn-secondary text-xs py-1.5 px-3" onclick="saveAllApprovedBatch()" title="Guardar todas las estrategias aprobadas actuales en Mis Algoritmos">
                   <span>💾</span> Guardar Todas (Lote)
                 </button>
@@ -896,6 +985,93 @@
           <button id="btn-export-mql5" class="btn-secondary text-xs">💾 Exportar MT5 (.mq5)</button>
           <button id="btn-export-python" class="btn-secondary text-xs">🐍 Exportar Python (.py)</button>
           <button id="btn-export-json" class="btn-secondary text-xs">📋 Exportar JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- MODAL: DETALLE DEL PORTAFOLIO MULTI-ACTIVO (ANÁLISIS COMPLETO) -->
+  <!-- ================================================================== -->
+  <div id="portfolio-detail-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-[#101014] border border-[#2a2a34] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
+      <div class="p-6 border-b border-[#22222a] flex items-center justify-between sticky top-0 bg-[#101014] z-10">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📁</span>
+            <h3 id="port-modal-title" class="text-lg font-bold text-white tracking-wide">Nombre del Portafolio</h3>
+          </div>
+          <p id="port-modal-subtitle" class="text-xs text-[#a0a0ab] mt-0.5">Carpeta · Fecha · Algoritmos Combinados</p>
+        </div>
+        <button id="btn-close-port-modal" class="text-[#a0a0ab] hover:text-white text-lg p-2" onclick="closePortfolioModal()">✕</button>
+      </div>
+
+      <div class="p-6 space-y-6">
+        <!-- KPIs Combinados -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Net Profit Combinado</div>
+            <div id="port-modal-pnl" class="text-lg font-mono font-bold text-white mt-1">+$0.00</div>
+            <div class="text-[10px] text-[#a0a0ab]">Suma ponderada de estrategias</div>
+          </div>
+          <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Win Rate Global</div>
+            <div id="port-modal-wr" class="text-lg font-mono font-bold text-white mt-1">0.0%</div>
+            <div class="text-[10px] text-[#a0a0ab]">Promedio ponderado</div>
+          </div>
+          <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Descorrelación / Diversif.</div>
+            <div id="port-modal-div" class="text-lg font-mono font-bold text-white mt-1">0%</div>
+            <div class="text-[10px] text-[#a0a0ab]">Grado de amortiguación multi-activo</div>
+          </div>
+          <div class="p-3 rounded-lg bg-[#0c0c10] border border-[#202028]">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Reducción Est. Drawdown</div>
+            <div id="port-modal-dd-red" class="text-lg font-mono font-bold text-emerald-400 mt-1">-35%</div>
+            <div class="text-[10px] text-[#a0a0ab]">Frente a operar monopar</div>
+          </div>
+        </div>
+
+        <!-- Curva de Equidad Combinada -->
+        <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Curva de Equidad Combinada del Portafolio</h4>
+              <p class="text-[11px] text-[#71717a]">Evolución patrimonial conjunta suavizada por la descorrelación de activos</p>
+            </div>
+            <span class="tn-badge tn-badge-white text-[10px]">BALANCE COMBINADO</span>
+          </div>
+          <div class="h-64 relative w-full">
+            <canvas id="portfolio-equity-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Desglose de Estrategias Componentes -->
+        <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
+          <h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-2">Estrategias Combinadas en esta Cartera</h4>
+          <div class="overflow-x-auto max-h-56">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-[#22222a] text-[10px] text-[#71717a] uppercase">
+                  <th class="py-1 px-3">Estrategia</th>
+                  <th class="py-1 px-3">Par</th>
+                  <th class="py-1 px-3">TF</th>
+                  <th class="py-1 px-3">Peso Asignado</th>
+                  <th class="py-1 px-3">Win Rate</th>
+                  <th class="py-1 px-3">Net Profit</th>
+                  <th class="py-1 px-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="port-modal-strategies-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 border-t border-[#22222a] flex items-center justify-between bg-[#0e0e12]">
+        <div class="text-xs text-[#71717a]">Listo para conectar a cuentas de trading / MT5:</div>
+        <div class="flex items-center gap-2">
+          <button id="btn-port-modal-export" class="btn-primary text-xs">📥 Exportar Bot JSON</button>
+          <button class="btn-secondary text-xs" onclick="closePortfolioModal()">Cerrar</button>
         </div>
       </div>
     </div>

@@ -56,6 +56,23 @@ class ExplorationConfigRequest(BaseModel):
     min_dsr: float = 0.2
     max_candidates: int = 1000
 
+    # Risk management & Position sizing
+    sizing_mode: str = "FIXED_RISK"  # "FIXED_RISK", "FIXED_LOT", "FIXED_CASH", "MARTINGALE", "ANTI_MARTINGALE"
+    risk_per_trade_pct: float = 1.0
+    fixed_lot: float = 0.01
+    fixed_cash_risk: float = 100.0
+    martingale_mult: float = 1.5
+
+    # Multi-indicator synergy
+    min_indicators_per_strategy: int = 1
+    max_indicators_per_strategy: int = 3
+
+    # Prop Firm Challenge Filter
+    prop_firm_filter: bool = False
+    prop_firm_daily_loss_pct: float = 4.0
+    prop_firm_total_dd_pct: float = 8.0
+    prop_firm_target_pct: float = 8.0
+
 class UpdateDataRequest(BaseModel):
     symbol: Optional[str] = None
 
@@ -247,20 +264,26 @@ def delete_portfolio_folder(folder_name: str):
         raise HTTPException(status_code=404, detail="Carpeta de portafolios no encontrada.")
     return {"status": "deleted_portfolio_folder", "folder": folder_name}
 
+
+
 @app.get("/api/portfolio/{portfolio_id}")
-def get_portfolio(portfolio_id: str):
+def get_portfolio_detail(portfolio_id: str):
+    """Returns full analytics, constituent strategies and combined equity curve for a portfolio."""
     try:
         port = Portfolio.load(portfolio_id)
-        return port.to_dict()
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Portafolio no encontrado.")
+        combined_curve = port.get_combined_equity_curve()
+        data = port.to_dict()
+        data["combined_equity_curve"] = combined_curve
+        data["strategies"] = port.strategies
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Portafolio no encontrado: {str(e)}")
 
 @app.delete("/api/portfolio/{portfolio_id}")
 def delete_portfolio(portfolio_id: str):
     deleted = Portfolio.delete(portfolio_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Portafolio no encontrado.")
-    return {"status": "deleted", "portfolio_id": portfolio_id}
     return {"status": "deleted", "portfolio_id": portfolio_id}
 
 @app.post("/api/start-exploration")
@@ -304,32 +327,83 @@ def get_candidates(
 
 @app.get("/api/candidate/{candidate_id}")
 def get_candidate_detail(candidate_id: str):
+    # 1. Search in live engine memory
     candidates = genetic_engine.get_candidates()
     for c in candidates:
         if c["strategy"]["id"] == candidate_id:
             return c
-    raise HTTPException(status_code=404, detail="Candidato no encontrado.")
+
+    # 2. Search in saved strategies on disk
+    try:
+        rec = StrategyRecord.load(candidate_id)
+        st_data = rec.data.get("strategy", rec.data)
+        strat = Strategy.from_dict(st_data)
+
+        equity_curve = rec.data.get("equity_curve")
+        trades = rec.data.get("trades_sample", rec.data.get("trades", []))
+        metrics = rec.data.get("metrics", {})
+
+        if not equity_curve or not trades:
+            try:
+                df = data_manager.load_data(strat.symbol, strat.timeframe)
+                init_cap = float(metrics.get("initial_capital", 10000.0))
+                res = backtester.run_backtest(strat, df, initial_deposit=init_cap)
+                equity_curve = res.equity_curve
+                trades = res.trades[:50]
+                if not metrics or "sharpe_ratio" not in metrics:
+                    metrics = res.metrics
+            except Exception as be_err:
+                print(f"Error backtesting saved strategy: {be_err}")
+
+        sparkline = rec.data.get("sparkline")
+        if not sparkline and equity_curve:
+            sparkline = [e["equity"] for e in equity_curve[::max(1, len(equity_curve)//25)]]
+
+        return {
+            "strategy": strat.to_dict(),
+            "metrics": metrics,
+            "equity_curve": equity_curve or [],
+            "sparkline": sparkline or [],
+            "trades_sample": trades or [],
+            "rules_desc": strat.to_human_description(),
+            "indicators_used": strat.get_used_indicators(),
+            "validation": rec.data.get("validation", {}),
+            "batch_name": rec.data.get("batch_name", ""),
+            "folder": rec.data.get("folder", "General"),
+            "saved_at": rec.data.get("saved_at", "")
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+    raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
 
 @app.post("/api/candidate/{candidate_id}/validate")
 def validate_candidate(candidate_id: str):
     """Runs full Walk-Forward and Multiverse Monte Carlo simulations on the candidate."""
     candidates = genetic_engine.get_candidates()
-    target_c = None
-    for c in candidates:
-        if c["strategy"]["id"] == candidate_id:
-            target_c = c
-            break
+    target_c = next((c for c in candidates if c["strategy"]["id"] == candidate_id), None)
+    is_from_disk = False
+    rec = None
 
     if not target_c:
-        raise HTTPException(status_code=404, detail="Candidato no encontrado.")
+        try:
+            rec = StrategyRecord.load(candidate_id)
+            target_c = rec.data
+            is_from_disk = True
+        except Exception:
+            pass
 
-    strat = Strategy.from_dict(target_c["strategy"])
+    if not target_c:
+        raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
+
+    strat = Strategy.from_dict(target_c.get("strategy", target_c))
     df = data_manager.load_data(strat.symbol, strat.timeframe)
 
     # 1. Run Walk-Forward
     wf_res = validation_suite.run_walk_forward(strat, df, n_windows=4, test_ratio=0.25)
 
-    # 2. Run Multiverse (100 synthetic universes)
+    # 2. Run Multiverse (80 synthetic universes)
     mv_res = validation_suite.run_multiverse(strat, df, n_universes=80)
 
     # 3. Prop firm challenge evaluation
@@ -341,28 +415,34 @@ def validate_candidate(candidate_id: str):
         "prop_firm": pf_res
     }
 
-    # Cache validation result on candidate
-    with genetic_engine.lock:
-        for c in genetic_engine.candidates_passed:
-            if c["strategy"]["id"] == candidate_id:
-                c["validation"] = validation_data
-                break
+    if is_from_disk and rec:
+        rec.data["validation"] = validation_data
+        rec.save(folder=rec.data.get("folder", "General"))
+    else:
+        # Cache validation result on live candidate
+        with genetic_engine.lock:
+            for c in genetic_engine.candidates_passed:
+                if c["strategy"]["id"] == candidate_id:
+                    c["validation"] = validation_data
+                    break
 
     return validation_data
 
 @app.get("/api/candidate/{candidate_id}/export/{export_format}")
 def export_candidate(candidate_id: str, export_format: str):
     candidates = genetic_engine.get_candidates()
-    target_c = None
-    for c in candidates:
-        if c["strategy"]["id"] == candidate_id:
-            target_c = c
-            break
+    target_c = next((c for c in candidates if c["strategy"]["id"] == candidate_id), None)
+    if not target_c:
+        try:
+            rec = StrategyRecord.load(candidate_id)
+            target_c = rec.data
+        except Exception:
+            pass
 
     if not target_c:
-        raise HTTPException(status_code=404, detail="Candidato no encontrado.")
+        raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
 
-    strat = Strategy.from_dict(target_c["strategy"])
+    strat = Strategy.from_dict(target_c.get("strategy", target_c))
 
     if export_format == "mq5":
         content = code_generator.to_mql5(strat)
@@ -375,6 +455,8 @@ def export_candidate(candidate_id: str, export_format: str):
         return PlainTextResponse(content, media_type="application/json", headers={"Content-Disposition": f"attachment; filename={strat.id}.json"})
     else:
         raise HTTPException(status_code=400, detail="Formato no soportado. Usa mq5, python o json.")
+
+
 
 @app.get("/api/neural-tree")
 def get_neural_tree():
