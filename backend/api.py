@@ -146,6 +146,11 @@ class CreatePortfolioRequest(BaseModel):
     risk_budget: float = 1.0
     folder: Optional[str] = None
 
+class BatchRetestRequest(BaseModel):
+    folder: Optional[str] = "ALL"
+    strategy_ids: Optional[List[str]] = None
+    limit: Optional[int] = 30
+
 @app.post("/api/strategy/save")
 def save_strategy(req: SaveStrategyRequest):
     """Saves a strategy with its metrics to disk inside a labeled folder/batch."""
@@ -344,6 +349,86 @@ def save_all_top_portfolios(req: SaveAllTopPortfoliosRequest):
         return {"status": "saved_batch", "count": len(saved_list), "folder": req.folder}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# ============================================================================
+# RETEST & ROBUSTNESS PIPELINE (RUTA TRADINGNOTE)
+# ============================================================================
+RETEST_CACHE_FILE = Path("data/retest_results.json")
+
+@app.post("/api/retest/batch")
+def run_batch_retest(req: BatchRetestRequest):
+    """
+    Runs the canonical 4-layer TradingNote robustness retest on saved strategies:
+    - Walk-Forward Out-Of-Sample (WFE, pass rate)
+    - Monte Carlo (1000 shuffle & skip simulations, P95 drawdown)
+    - Multiverso (synthetic market bootstrap)
+    """
+    raw_strats = StrategyRecord.list_all()
+    if req.strategy_ids:
+        targets = [s for s in raw_strats if s.get("strategy", s).get("id") in req.strategy_ids]
+    elif req.folder and req.folder != "ALL":
+        targets = [s for s in raw_strats if s.get("folder") == req.folder]
+    else:
+        targets = raw_strats
+
+    if req.limit and req.limit > 0:
+        targets = targets[:req.limit]
+
+    results = []
+    for s_data in targets:
+        try:
+            r = validation_suite.run_full_retest(s_data)
+            results.append(r)
+            # Save into strategy file as well
+            try:
+                strat_id = r["strategy_id"]
+                rec = StrategyRecord.load(strat_id)
+                rec.data["retest"] = r
+                rec.save(folder=rec.data.get("folder", "General"))
+            except Exception:
+                pass
+        except Exception as e:
+            continue
+
+    # Save cache file
+    try:
+        RETEST_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        RETEST_CACHE_FILE.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+    return {
+        "status": "success",
+        "tested_count": len(results),
+        "approved_count": len([r for r in results if r.get("approved_for_portfolio")]),
+        "results": results
+    }
+
+@app.get("/api/retest/results")
+def get_retest_results():
+    """Returns the latest retest results from disk cache or strategy records."""
+    if RETEST_CACHE_FILE.exists():
+        try:
+            return json.loads(RETEST_CACHE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    res = []
+    for s in StrategyRecord.list_all():
+        if "retest" in s:
+            res.append(s["retest"])
+    return res
+
+@app.post("/api/retest/send-to-portfolio")
+def send_retested_to_portfolio(req: Dict[str, Any]):
+    """Receives approved strategy IDs and confirms them ready for the portfolio builder."""
+    ids = req.get("strategy_ids", [])
+    raw_strats = StrategyRecord.list_all()
+    selected = [s for s in raw_strats if s.get("strategy", s).get("id") in ids]
+    return {
+        "status": "ready_for_portfolio",
+        "count": len(selected),
+        "strategy_ids": [s.get("strategy", s).get("id") for s in selected]
+    }
 
 @app.post("/api/start-exploration")
 def start_exploration(req: ExplorationConfigRequest):

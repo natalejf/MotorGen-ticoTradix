@@ -637,11 +637,17 @@ async function fetchCandidates() {
   }
 }
 
+function changeCandidatesSort(val) {
+  state.candidatesSortBy = val;
+  renderCandidates();
+}
+window.changeCandidatesSort = changeCandidatesSort;
+
 function renderCandidates() {
   const container = document.getElementById('candidates-grid');
   if (!container) return;
 
-  let list = state.candidates;
+  let list = [...state.candidates];
 
   if (state.filterWfOnly) {
     list = list.filter(c => c.validation?.walk_forward?.passed);
@@ -649,6 +655,30 @@ function renderCandidates() {
   if (state.filterMultiverseOnly) {
     list = list.filter(c => c.validation?.multiverse?.passed);
   }
+
+  // Sort candidates according to user selection
+  const sortBy = state.candidatesSortBy || 'tn_score';
+  list.sort((a, b) => {
+    const ma = a.metrics || {};
+    const mb = b.metrics || {};
+    if (sortBy === 'ret_dd') {
+      const rA = (ma.total_return_usd || 0) / Math.max(1.0, ma.max_drawdown_usd || 1.0);
+      const rB = (mb.total_return_usd || 0) / Math.max(1.0, mb.max_drawdown_usd || 1.0);
+      return rB - rA;
+    } else if (sortBy === 'net_profit') {
+      return (mb.total_return_usd || 0) - (ma.total_return_usd || 0);
+    } else if (sortBy === 'min_dd') {
+      return (ma.max_drawdown_pct || 999) - (mb.max_drawdown_pct || 999);
+    } else if (sortBy === 'sharpe') {
+      return (mb.sharpe_ratio || 0) - (ma.sharpe_ratio || 0);
+    } else if (sortBy === 'win_rate') {
+      return (mb.win_rate_pct || 0) - (ma.win_rate_pct || 0);
+    } else if (sortBy === 'trades') {
+      return (mb.total_trades || 0) - (ma.total_trades || 0);
+    } else { // 'tn_score'
+      return (b.fitness || mb.tn_score || 0) - (a.fitness || ma.tn_score || 0);
+    }
+  });
 
   if (list.length === 0) {
     container.innerHTML = `
@@ -1123,6 +1153,8 @@ function showSection(sectionId) {
     }
   } else if (sectionId === 'portfolio-builder') {
     renderPortfolioStrategyChecklist();
+  } else if (sectionId === 'retest-validation') {
+    loadRetestView();
   } else if (sectionId === 'saved-portfolios') {
     if (state.savedPortfoliosViewMode === 'folders') {
       loadPortfolioFolders();
@@ -2139,6 +2171,25 @@ async function pollPortfolioEngine() {
   }
 }
 
+function changePortfoliosSort(val) {
+  state.portfoliosSortBy = val;
+  const badge = document.getElementById('port-ranking-badge');
+  if (badge) {
+    const labels = {
+      ret_dd: 'ORDEN: POR RET / MAX DD',
+      sq_corr: 'ORDEN: POR DESCORRELACIÓN SQ',
+      net_profit: 'ORDEN: POR NET PROFIT',
+      dd_reduction: 'ORDEN: POR REDUCCIÓN DE DD',
+      min_dd: 'ORDEN: MENOR DRAWDOWN',
+      sharpe: 'ORDEN: POR SHARPE',
+      score: 'ORDEN: POR TN SCORE'
+    };
+    badge.textContent = labels[val] || 'ORDEN: POR RET / MAX DD';
+  }
+  renderPortfolioEngineCards(window.__livePortfoliosCache || []);
+}
+window.changePortfoliosSort = changePortfoliosSort;
+
 function renderPortfolioEngineCards(items) {
   const container = document.getElementById('port-engine-cards-grid');
   if (!container) return;
@@ -2170,7 +2221,33 @@ function renderPortfolioEngineCards(items) {
   // Cache live items in memory for modal preview
   window.__livePortfoliosCache = items;
 
-  container.innerHTML = items.map((p, idx) => {
+  let sortedItems = [...items];
+  const sortBy = state.portfoliosSortBy || 'ret_dd';
+  sortedItems.sort((a, b) => {
+    const ma = a.metrics || {};
+    const mb = b.metrics || {};
+    if (sortBy === 'ret_dd') {
+      return (mb.ret_to_dd_ratio || 0) - (ma.ret_to_dd_ratio || 0);
+    } else if (sortBy === 'sq_corr') {
+      const sqA = ma.sq_correlation_index !== undefined ? ma.sq_correlation_index : 0.5;
+      const sqB = mb.sq_correlation_index !== undefined ? mb.sq_correlation_index : 0.5;
+      return sqA - sqB; // Lower SQ index = better decorrelation
+    } else if (sortBy === 'net_profit') {
+      return (mb.combined_net_profit_usd || 0) - (ma.combined_net_profit_usd || 0);
+    } else if (sortBy === 'dd_reduction') {
+      const redA = ma.dd_reduction_pct !== undefined ? ma.dd_reduction_pct : (ma.estimated_dd_reduction_pct || 0);
+      const redB = mb.dd_reduction_pct !== undefined ? mb.dd_reduction_pct : (mb.estimated_dd_reduction_pct || 0);
+      return redB - redA;
+    } else if (sortBy === 'min_dd') {
+      return (ma.combined_max_drawdown_pct || 999) - (mb.combined_max_drawdown_pct || 999);
+    } else if (sortBy === 'sharpe') {
+      return (mb.combined_sharpe || 0) - (ma.combined_sharpe || 0);
+    } else { // 'score'
+      return (mb.tn_score || 0) - (ma.tn_score || 0);
+    }
+  });
+
+  container.innerHTML = sortedItems.map((p, idx) => {
     const m = p.metrics || {};
     const rank = idx + 1;
     const rankBadge = rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`;
@@ -2720,9 +2797,10 @@ async function exportPortfolioJson(portfolioId) {
 }
 async function refreshSidebarBadges() {
   try {
-    const [resStrat, resPort] = await Promise.all([
+    const [resStrat, resPort, resRetest] = await Promise.all([
       fetch('/api/strategies/saved'),
-      fetch('/api/portfolios')
+      fetch('/api/portfolios'),
+      fetch('/api/retest/results')
     ]);
     if (resStrat.ok) {
       const strats = await resStrat.json();
@@ -2733,6 +2811,12 @@ async function refreshSidebarBadges() {
       const ports = await resPort.json();
       const b2 = document.getElementById('badge-sidebar-portfolios');
       if (b2) b2.textContent = ports.length;
+    }
+    if (resRetest.ok) {
+      const retests = await resRetest.json();
+      const appCount = (retests || []).filter(r => r.approved_for_portfolio).length;
+      const b3 = document.getElementById('badge-sidebar-retest');
+      if (b3) b3.textContent = appCount;
     }
   } catch (e) {
     // Silent badge update failure
@@ -2960,3 +3044,268 @@ function renderPortfolioEquityChart(curve, individualCurves = []) {
   });
 }
 window.renderPortfolioEquityChart = renderPortfolioEquityChart;
+
+// ============================================================================
+// RETEST & ROBUSTNESS ENGINE (RUTA TRADINGNOTE)
+// ============================================================================
+
+state.retestResults = [];
+state.retestFilter = 'ALL';
+state.retestRunning = false;
+
+async function loadRetestView() {
+  await loadRetestFolderOptions();
+  await refreshRetestResults();
+}
+window.loadRetestView = loadRetestView;
+
+async function loadRetestFolderOptions() {
+  const sel = document.getElementById('select-retest-folder');
+  if (!sel) return;
+  try {
+    const res = await fetch('/api/strategy-folders');
+    if (res.ok) {
+      const folders = await res.json();
+      sel.innerHTML = `<option value="ALL">Todas las Estrategias Guardadas</option>` +
+        folders.map(f => `<option value="${f.name}">${f.name} (${f.count} estrategias)</option>`).join('');
+    }
+  } catch (e) {
+    console.error('Error loading retest folder options:', e);
+  }
+}
+
+async function refreshRetestResults() {
+  try {
+    const res = await fetch('/api/retest/results');
+    if (res.ok) {
+      const data = await res.json();
+      state.retestResults = data || [];
+      updateRetestKpis();
+      renderRetestCards();
+      refreshSidebarBadges();
+    }
+  } catch (e) {
+    console.error('Error fetching retest results:', e);
+  }
+}
+window.refreshRetestView = refreshRetestResults;
+
+function updateRetestKpis() {
+  const list = state.retestResults || [];
+  const total = list.length;
+  const approved = list.filter(r => r.approved_for_portfolio).length;
+  const discarded = total - approved;
+  const avgScore = total > 0 ? (list.reduce((acc, r) => acc + (r.robustness_score || 0), 0) / total).toFixed(1) : '0.0';
+
+  const elTot = document.getElementById('kpi-retest-total');
+  const elApp = document.getElementById('kpi-retest-approved');
+  const elDisc = document.getElementById('kpi-retest-discarded');
+  const elAvg = document.getElementById('kpi-retest-avg-score');
+  const elBadge = document.getElementById('retest-results-badge');
+
+  if (elTot) elTot.textContent = total;
+  if (elApp) elApp.textContent = approved;
+  if (elDisc) elDisc.textContent = discarded;
+  if (elAvg) elAvg.textContent = `${avgScore} pts`;
+  if (elBadge) elBadge.textContent = `${total} EVALUADAS (${approved} APROBADAS)`;
+}
+
+async function runBatchRetest() {
+  if (state.retestRunning) return;
+  const folder = document.getElementById('select-retest-folder')?.value || 'ALL';
+  const limit = parseInt(document.getElementById('input-retest-limit')?.value || '20', 10);
+
+  const btn = document.getElementById('btn-run-batch-retest');
+  const progressBox = document.getElementById('retest-progress-box');
+  const progressBar = document.getElementById('retest-progress-bar');
+  const progressText = document.getElementById('retest-progress-text');
+  const progressCounter = document.getElementById('retest-progress-counter');
+
+  state.retestRunning = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Retesteando...`;
+  }
+  if (progressBox) progressBox.classList.remove('hidden');
+  if (progressBar) progressBar.style.width = '20%';
+  if (progressText) progressText.textContent = `Analizando estrategias del lote "${folder}" con Walk-Forward y Monte Carlo...`;
+  if (progressCounter) progressCounter.textContent = '20%';
+
+  try {
+    const res = await fetch('/api/retest/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: folder, limit: limit })
+    });
+
+    if (progressBar) progressBar.style.width = '85%';
+    if (progressCounter) progressCounter.textContent = '85%';
+
+    if (res.ok) {
+      const data = await res.json();
+      state.retestResults = data.results || [];
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressCounter) progressCounter.textContent = '100%';
+      if (progressText) progressText.textContent = `✓ Retest completado: ${data.approved_count} de ${data.tested_count} estrategias aprobadas para portafolio.`;
+      updateRetestKpis();
+      renderRetestCards();
+      refreshSidebarBadges();
+      setTimeout(() => {
+        if (progressBox) progressBox.classList.add('hidden');
+      }, 3500);
+    } else {
+      alert('Error al ejecutar el retest.');
+      if (progressBox) progressBox.classList.add('hidden');
+    }
+  } catch (err) {
+    console.error('Error running batch retest:', err);
+    alert('Ocurrió un error al ejecutar el retest.');
+    if (progressBox) progressBox.classList.add('hidden');
+  } finally {
+    state.retestRunning = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>⚡</span> Iniciar Retest de Robustez`;
+    }
+  }
+}
+window.runBatchRetest = runBatchRetest;
+
+function filterRetestCards(filterVal) {
+  state.retestFilter = filterVal;
+  renderRetestCards();
+}
+window.filterRetestCards = filterRetestCards;
+
+function renderRetestCards() {
+  const container = document.getElementById('retest-cards-grid');
+  if (!container) return;
+
+  let list = state.retestResults || [];
+  if (state.retestFilter === 'APPROVED') {
+    list = list.filter(r => r.approved_for_portfolio);
+  } else if (state.retestFilter === 'MODERATE') {
+    list = list.filter(r => r.verdict === 'MODERADO');
+  } else if (state.retestFilter === 'DISCARDED') {
+    list = list.filter(r => r.verdict === 'FRAGIL');
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full py-16 text-center text-[#71717a]">
+        <div class="text-3xl mb-3">🛡️</div>
+        <div class="text-sm font-medium text-white mb-1">No hay resultados para este filtro</div>
+        <div class="text-xs">Ejecuta el retest o cambia el filtro superior para ver las estrategias analizadas.</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(r => {
+    const isApp = r.approved_for_portfolio;
+    const badgeCls = isApp 
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+      : r.verdict === 'MODERADO' 
+        ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' 
+        : 'bg-red-500/10 text-red-400 border-red-500/30';
+
+    const wf = r.walk_forward || {};
+    const mc = r.monte_carlo || {};
+    const mv = r.multiverse || {};
+
+    const wfeVal = Number(wf.overall_wfe || 0).toFixed(2);
+    const mcP95Dd = Number(mc.drawdown_p95_pct || 0).toFixed(1);
+    const mcProfPct = Number(mc.profitable_pct || 0).toFixed(1);
+    const mvProfPct = Number(mv.profitable_pct || 0).toFixed(1);
+
+    return `
+      <div class="candidate-card group flex flex-col justify-between p-4 ${isApp ? 'border-emerald-500/30 hover:border-emerald-400' : ''}">
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-white tracking-wide truncate max-w-[170px]" title="${r.strategy_name || r.strategy_id}">
+              ${r.strategy_name || r.strategy_id}
+            </span>
+            <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${badgeCls}">
+              ${r.verdict_badge || r.verdict}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 mb-3">
+            <span class="tn-badge tn-badge-white text-[10px]">${r.symbol || 'N/A'}</span>
+            <span class="text-[10px] font-mono text-[#a0a0ab]">${r.timeframe || '1h'}</span>
+            <span class="text-[10px] text-[#71717a]">Probado: ${r.tested_at || 'Reciente'}</span>
+          </div>
+
+          <!-- Robustness Score Bar -->
+          <div class="p-2.5 rounded bg-[#08080c] border border-[#202028] mb-3">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="text-[10px] text-[#71717a] uppercase font-bold">TradingNote Robustness Score</span>
+              <span class="font-mono font-bold ${isApp ? 'text-emerald-400' : 'text-white'}">${r.robustness_score || 0} / 100</span>
+            </div>
+            <div class="w-full bg-[#1c1c24] h-1.5 rounded-full overflow-hidden">
+              <div class="h-full ${isApp ? 'bg-emerald-400' : r.verdict === 'MODERADO' ? 'bg-yellow-400' : 'bg-red-400'}" style="width: ${r.robustness_score || 0}%"></div>
+            </div>
+          </div>
+
+          <!-- 4 Layers Metrics Grid -->
+          <div class="grid grid-cols-2 gap-2 text-center text-xs">
+            <div class="p-2 rounded bg-[#09090c] border border-[#1e1e26]">
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">Walk-Forward WFE</div>
+              <div class="text-xs font-mono font-bold text-white mt-0.5">${wfeVal}</div>
+              <div class="text-[9px] text-[#a0a0ab]">${wfeVal >= 0.5 ? '✓ Robustez Temporal' : '⚠ Sobreajuste'}</div>
+            </div>
+            <div class="p-2 rounded bg-[#09090c] border border-[#1e1e26]">
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">Monte Carlo P95 DD</div>
+              <div class="text-xs font-mono font-bold text-red-400 mt-0.5">${mcP95Dd}%</div>
+              <div class="text-[9px] text-[#a0a0ab]">Peor caso 95% conf.</div>
+            </div>
+            <div class="p-2 rounded bg-[#09090c] border border-[#1e1e26]">
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">MC Rentable (1000 iter)</div>
+              <div class="text-xs font-mono font-bold text-emerald-400 mt-0.5">${mcProfPct}%</div>
+              <div class="text-[9px] text-[#a0a0ab]">Escenarios en verde</div>
+            </div>
+            <div class="p-2 rounded bg-[#09090c] border border-[#1e1e26]">
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">Multiverso Profitable</div>
+              <div class="text-xs font-mono font-bold text-white mt-0.5">${mvProfPct}%</div>
+              <div class="text-[9px] text-[#a0a0ab]">Mercados sintéticos</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="mt-3.5 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+          ${isApp ? `
+            <button onclick="sendSingleRetestToPortfolio('${r.strategy_id}')" class="btn-primary text-[11px] py-1.5 px-3 flex-1 flex items-center justify-center gap-1.5 font-bold" title="Enviar directamente a la Ruta de Portafolios Multi-Par">
+              <span>🧬</span> Enviar a Portafolio
+            </button>
+          ` : `
+            <span class="text-[10px] text-[#71717a] italic flex-1 text-center py-1">No apta para portafolio</span>
+          `}
+          <button onclick="openCandidateModal('${r.strategy_id}')" class="btn-secondary text-[11px] py-1.5 px-3 flex items-center justify-center gap-1" title="Ver análisis y backtest completo">
+            📊 Detalles
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function sendSingleRetestToPortfolio(stratId) {
+  state.portfolioSelectedIds.add(stratId);
+  showSection('portfolio-builder');
+  alert(`✓ Estrategia ${stratId} añadida a la selección del Creador de Portafolios.`);
+}
+window.sendSingleRetestToPortfolio = sendSingleRetestToPortfolio;
+
+function sendAllApprovedRetestToPortfolio() {
+  const approved = (state.retestResults || []).filter(r => r.approved_for_portfolio);
+  if (approved.length === 0) {
+    alert('No hay estrategias aprobadas en el retest todavía.');
+    return;
+  }
+  approved.forEach(r => state.portfolioSelectedIds.add(r.strategy_id));
+  showSection('portfolio-builder');
+  alert(`✓ ¡${approved.length} estrategias aprobadas transferidas con éxito a la Ruta de Portafolios!`);
+}
+window.sendAllApprovedRetestToPortfolio = sendAllApprovedRetestToPortfolio;

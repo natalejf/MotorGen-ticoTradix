@@ -330,5 +330,153 @@ class ValidationSuite:
             "max_dd_pct": max_total_loss_pct
         }
 
+    # =========================================================================
+    # 5. MONTE CARLO STRESS TEST (TRADINGNOTE CANON)
+    # =========================================================================
+    def run_monte_carlo(
+        self,
+        trades: List[Dict[str, Any]],
+        initial_deposit: float = 10000.0,
+        n_simulations: int = 1000,
+        skip_rate: float = 0.05
+    ) -> Dict[str, Any]:
+        """
+        Monte Carlo Simulation (TradingNote canon):
+        - Shuffles trades sequence (tests sequence/streak vulnerability).
+        - Skips skip_rate of trades (simulates missed signals/slippage).
+        - Returns P95 Drawdown, % Profitable Runs, Ruin Probability (DD > 20%),
+          and Return Percentiles (P5, P50, P95).
+        """
+        if not trades or len(trades) < 4:
+            return {
+                "passed": False,
+                "n_simulations": n_simulations,
+                "profitable_pct": 50.0,
+                "drawdown_p95_pct": 10.0,
+                "drawdown_median_pct": 5.0,
+                "ruin_probability_pct": 0.0,
+                "return_p5_usd": 0.0,
+                "return_median_usd": 0.0,
+                "return_p95_usd": 0.0
+            }
+
+        pnls = np.array([float(t.get("pnl_usd", 0.0)) for t in trades], dtype=float)
+        n_trades = max(3, int(len(pnls) * (1.0 - skip_rate)))
+
+        sim_max_dds = []
+        sim_final_pnls = []
+
+        for _ in range(n_simulations):
+            idx = np.random.choice(len(pnls), size=n_trades, replace=True)
+            sampled = pnls[idx]
+            curve = np.insert(np.cumsum(sampled), 0, 0.0) + initial_deposit
+            peak = np.maximum.accumulate(curve)
+            dd_pct = ((peak - curve) / np.maximum(peak, 1.0)) * 100.0
+            sim_max_dds.append(float(np.max(dd_pct)))
+            sim_final_pnls.append(float(curve[-1] - initial_deposit))
+
+        p95_dd = round(float(np.percentile(sim_max_dds, 95)), 2)
+        p50_dd = round(float(np.percentile(sim_max_dds, 50)), 2)
+        profitable_pct = round(float(np.mean(np.array(sim_final_pnls) > 0) * 100.0), 1)
+        ruin_prob = round(float(np.mean(np.array(sim_max_dds) > 20.0) * 100.0), 1)
+
+        p5_ret = round(float(np.percentile(sim_final_pnls, 5)), 2)
+        p50_ret = round(float(np.percentile(sim_final_pnls, 50)), 2)
+        p95_ret = round(float(np.percentile(sim_final_pnls, 95)), 2)
+
+        # Passed if at least 80% profitable and P95 DD under 15% and ruin prob <= 3%
+        passed = (profitable_pct >= 80.0) and (p95_dd <= 15.0) and (ruin_prob <= 3.0)
+
+        return {
+            "passed": passed,
+            "n_simulations": n_simulations,
+            "profitable_pct": profitable_pct,
+            "drawdown_p95_pct": p95_dd,
+            "drawdown_median_pct": p50_dd,
+            "ruin_probability_pct": ruin_prob,
+            "return_p5_usd": p5_ret,
+            "return_median_usd": p50_ret,
+            "return_p95_usd": p95_ret
+        }
+
+    # =========================================================================
+    # 6. FULL RETEST SUITE (RUTA TRADINGNOTE)
+    # =========================================================================
+    def run_full_retest(
+        self,
+        strategy_data: Dict[str, Any],
+        df: Optional[pd.DataFrame] = None
+    ) -> Dict[str, Any]:
+        """
+        Runs the canonical 4-layer TradingNote robustness retest:
+        1. Walk-Forward OOS (temporal validation)
+        2. Monte Carlo (1000 trade-shuffling iterations)
+        3. Multiverso (alternative synthetic markets)
+        Calculates holistic Robustness Score (0-100) and Portfolio Approval.
+        """
+        st_dict = strategy_data.get("strategy", strategy_data)
+        strat = Strategy.from_dict(st_dict) if isinstance(st_dict, dict) else st_dict
+        
+        if df is None:
+            from backend.data_manager import data_manager
+            df = data_manager.load_data(strat.symbol, strat.timeframe)
+
+        # 1. Backtest if trades_sample not already provided
+        trades = strategy_data.get("trades_sample", [])
+        if not trades:
+            res = backtester.run_backtest(strat, df, initial_deposit=10000.0)
+            trades = [t.to_dict() for t in res.trades]
+
+        # 2. Walk-Forward OOS
+        wf_res = self.run_walk_forward(strat, df, n_windows=4, test_ratio=0.25)
+
+        # 3. Monte Carlo
+        mc_res = self.run_monte_carlo(trades, initial_deposit=10000.0, n_simulations=1000)
+
+        # 4. Multiverse (quick 60 synthetic universes)
+        mv_res = self.run_multiverse(strat, df, n_universes=60)
+
+        # 5. Composite Robustness Score (0 to 100)
+        wfe = wf_res.get("overall_wfe", 0.0)
+        wf_score = min(35.0, (wfe / 0.7) * 35.0)
+
+        mc_prof = mc_res.get("profitable_pct", 50.0)
+        p95_dd = mc_res.get("drawdown_p95_pct", 10.0)
+        mc_score = max(0.0, min(35.0, (mc_prof / 100.0) * 35.0 - (p95_dd * 0.4)))
+
+        mv_prof = mv_res.get("profitable_pct", 50.0)
+        mv_score = min(30.0, (mv_prof / 100.0) * 30.0)
+
+        robustness_score = round(max(0.0, min(100.0, wf_score + mc_score + mv_score)), 1)
+
+        # TradingNote Verdict
+        if robustness_score >= 65.0 and wfe >= 0.40 and p95_dd <= 15.0:
+            verdict = "ROBUSTO"
+            verdict_badge = "✅ Robusto (Aprobado)"
+            approved_for_portfolio = True
+        elif robustness_score >= 48.0:
+            verdict = "MODERADO"
+            verdict_badge = "⚠️ Moderado"
+            approved_for_portfolio = False
+        else:
+            verdict = "FRAGIL"
+            verdict_badge = "❌ Frágil (Sobreajustado)"
+            approved_for_portfolio = False
+
+        return {
+            "strategy_id": strat.id,
+            "strategy_name": strat.name,
+            "symbol": strat.symbol,
+            "timeframe": strat.timeframe,
+            "robustness_score": robustness_score,
+            "verdict": verdict,
+            "verdict_badge": verdict_badge,
+            "approved_for_portfolio": approved_for_portfolio,
+            "walk_forward": wf_res,
+            "monte_carlo": mc_res,
+            "multiverse": mv_res,
+            "tested_at": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
 # Global singleton
 validation_suite = ValidationSuite()

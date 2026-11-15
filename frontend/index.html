@@ -53,6 +53,14 @@
           <span id="badge-sidebar-strategies" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-[#a0a0ab] border border-white/5">0</span>
         </button>
 
+        <!-- Robustez y Retest (Ruta TradingNote) -->
+        <div class="sidebar-section-label mt-4">Validación & Robustez</div>
+        <button class="sidebar-item" data-section="retest-validation" onclick="showSection('retest-validation')">
+          <span class="sidebar-item-icon">🛡️</span>
+          <span class="flex-1">Retest de Robustez</span>
+          <span id="badge-sidebar-retest" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">0</span>
+        </button>
+
         <!-- Portafolios -->
         <div class="sidebar-section-label mt-4">Portafolios</div>
         <button class="sidebar-item" data-section="portfolio-builder" onclick="showSection('portfolio-builder')">
@@ -568,6 +576,19 @@
                 </label>
               </div>
               <div class="flex flex-wrap items-center gap-2">
+                <!-- Selector de Ordenamiento -->
+                <div class="flex items-center gap-1.5 p-1 px-2.5 rounded bg-[#13131a] border border-[#262634]" title="Ordenar algoritmos aprobados">
+                  <span class="text-[11px] text-[#a0a0ab] font-bold">Ordenar:</span>
+                  <select id="select-candidates-sort" class="tn-input text-xs py-0.5 px-2 font-semibold text-white bg-[#0a0a0e] border-[#30303e]" onchange="changeCandidatesSort(this.value)">
+                    <option value="tn_score">TN Score (Ranking Top)</option>
+                    <option value="ret_dd">Ret / Max DD (Ratio SQ)</option>
+                    <option value="net_profit">Net Profit ($)</option>
+                    <option value="min_dd">Menor Max Drawdown (%)</option>
+                    <option value="sharpe">Sharpe Ratio</option>
+                    <option value="win_rate">Win Rate (%)</option>
+                    <option value="trades">Total Operaciones</option>
+                  </select>
+                </div>
                 <!-- Límite Aprobadas Visible -->
                 <div class="flex items-center gap-1.5 p-1 px-2.5 rounded bg-[#13131a] border border-[#262634]" title="Límite máximo de algoritmos retenidos en resultados (los mejores reemplazan a los peores)">
                   <span class="text-[11px] text-[#a0a0ab] font-bold">Límite Top:</span>
@@ -687,7 +708,188 @@
       <!-- END SECTION: SAVED STRATEGIES -->
 
       <!-- ============================================================ -->
-      <!-- SECTION: PORTFOLIO BUILDER & ENGINE (Motor de Portafolio)       -->
+      <!-- SECTION: RETEST & ROBUSTNESS (Ruta TradingNote)               -->
+      <!-- ============================================================ -->
+      <div id="section-retest-validation" class="app-section hidden">
+        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🛡️</span>
+            <div>
+              <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
+                <span>Validación & Robustez</span>
+                <span>/</span>
+                <span class="text-white font-medium">Bucle de Robustez TradingNote</span>
+              </div>
+              <h1 class="text-sm font-bold text-white tracking-wide mt-0.5">Retest Anti-Sobreajuste: Walk-Forward OOS & Monte Carlo</h1>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="btn-retest-to-port" class="btn-primary text-xs py-1.5 px-4 font-bold flex items-center gap-1.5" onclick="sendAllApprovedRetestToPortfolio()">
+              <span>🚀</span> Enviar Aprobadas al Portafolio →
+            </button>
+            <button class="btn-secondary text-xs py-1.5 px-3" onclick="refreshRetestView()">
+              <span>🔄</span> Actualizar
+            </button>
+          </div>
+        </header>
+
+        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+
+          <!-- RUTA DEL TRADER ALGORÍTMICO (PIPELINE STEPPER) -->
+          <div class="p-4 rounded-xl bg-[#0e0e14] border border-[#22222e]">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-2">Ruta de Creación y Selección de Estrategias</div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              <div class="p-2.5 rounded-lg bg-[#08080c] border border-[#1c1c24] flex items-center gap-2.5 opacity-70">
+                <div class="w-6 h-6 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-[11px]">1</div>
+                <div>
+                  <div class="font-bold text-white">Motor Genético</div>
+                  <div class="text-[10px] text-[#71717a]">Exploración continua</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-[#08080c] border border-[#1c1c24] flex items-center gap-2.5 opacity-70">
+                <div class="w-6 h-6 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-[11px]">2</div>
+                <div>
+                  <div class="font-bold text-white">Mis Algoritmos</div>
+                  <div class="text-[10px] text-[#71717a]">Guardadas por Lotes</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-[#14141c] border border-white text-white flex items-center gap-2.5 shadow-md shadow-white/5">
+                <div class="w-6 h-6 rounded-full bg-white text-black flex items-center justify-center font-bold text-[11px]">3</div>
+                <div>
+                  <div class="font-bold text-white flex items-center gap-1.5">
+                    <span>Retest de Robustez</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  </div>
+                  <div class="text-[10px] text-emerald-400 font-mono">ESTÁS AQUÍ (Filtro)</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-[#08080c] border border-[#1c1c24] flex items-center gap-2.5 opacity-70">
+                <div class="w-6 h-6 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-[11px]">4</div>
+                <div>
+                  <div class="font-bold text-white">Portafolios</div>
+                  <div class="text-[10px] text-[#71717a]">Carteras Multi-Par</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL DE CONTROL DEL RETEST -->
+          <div class="tn-card space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-[#202028]">
+              <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Configuración del Retest de Robustez</h2>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Somete tus algoritmos al bucle de 4 capas de TradingNote para desenmascarar el sobreajuste antes de combinarlos.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-run-batch-retest" class="btn-primary text-xs py-2 px-5 font-bold flex items-center gap-2" onclick="runBatchRetest()">
+                  <span>⚡</span> Iniciar Retest de Robustez
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <!-- Selector de Lote/Carpeta -->
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-white">Lote o Carpeta Origen:</label>
+                <select id="select-retest-folder" class="tn-input w-full text-xs">
+                  <option value="ALL">Todas las Estrategias Guardadas</option>
+                </select>
+                <p class="text-[10px] text-[#71717a]">Elige qué grupo de algoritmos someter a prueba.</p>
+              </div>
+
+              <!-- Límite a Retestear -->
+              <div class="space-y-1">
+                <label class="text-xs font-semibold text-white">Límite a Retestear:</label>
+                <input type="number" id="input-retest-limit" class="tn-input w-full text-xs font-mono font-bold" value="20" min="2" max="200" step="5">
+                <p class="text-[10px] text-[#71717a]">Evalúa las mejores N estrategias del lote.</p>
+              </div>
+
+              <!-- Capas Activas -->
+              <div class="col-span-2 space-y-1">
+                <label class="text-xs font-semibold text-white">Capas de Validación TradingNote:</label>
+                <div class="grid grid-cols-3 gap-2 mt-1">
+                  <label class="flex items-center gap-1.5 p-2 rounded bg-[#0a0a0e] border border-[#22222c] text-xs text-white cursor-pointer">
+                    <input type="checkbox" id="chk-retest-wf" checked class="accent-white">
+                    <span>Walk-Forward (OOS 1/4)</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 p-2 rounded bg-[#0a0a0e] border border-[#22222c] text-xs text-white cursor-pointer">
+                    <input type="checkbox" id="chk-retest-mc" checked class="accent-white">
+                    <span>Monte Carlo (1000 iter)</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 p-2 rounded bg-[#0a0a0e] border border-[#22222c] text-xs text-white cursor-pointer">
+                    <input type="checkbox" id="chk-retest-mv" checked class="accent-white">
+                    <span>Multiverso (Sintético)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barra de Progreso y Estado -->
+            <div id="retest-progress-box" class="hidden p-3 rounded-lg bg-[#09090c] border border-[#202028]">
+              <div class="flex items-center justify-between text-xs mb-1.5">
+                <span id="retest-progress-text" class="text-white font-medium">Ejecutando Walk-Forward y Monte Carlo...</span>
+                <span id="retest-progress-counter" class="font-mono text-emerald-400 font-bold">0%</span>
+              </div>
+              <div class="w-full bg-[#1c1c24] h-2 rounded-full overflow-hidden">
+                <div id="retest-progress-bar" class="bg-white h-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI COUNTERS BANNER -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="p-3.5 rounded-lg bg-[#0e0e14] border border-[#202028] text-center">
+              <div class="text-[10px] text-[#71717a] uppercase font-bold">Total Retestadas</div>
+              <div id="kpi-retest-total" class="text-xl font-mono font-bold text-white mt-0.5">0</div>
+              <div class="text-[10px] text-[#a0a0ab]">Estrategias analizadas</div>
+            </div>
+            <div class="p-3.5 rounded-lg bg-[#0e0e14] border border-[#202028] text-center">
+              <div class="text-[10px] text-[#71717a] uppercase font-bold">Aprobadas para Portafolio</div>
+              <div id="kpi-retest-approved" class="text-xl font-mono font-bold text-emerald-400 mt-0.5">0</div>
+              <div class="text-[10px] text-emerald-500/80 font-medium">Robustez comprobada</div>
+            </div>
+            <div class="p-3.5 rounded-lg bg-[#0e0e14] border border-[#202028] text-center">
+              <div class="text-[10px] text-[#71717a] uppercase font-bold">Descartadas (Sobreajuste)</div>
+              <div id="kpi-retest-discarded" class="text-xl font-mono font-bold text-red-400 mt-0.5">0</div>
+              <div class="text-[10px] text-red-400/80">Fallaron OOS / Monte Carlo</div>
+            </div>
+            <div class="p-3.5 rounded-lg bg-[#0e0e14] border border-[#202028] text-center">
+              <div class="text-[10px] text-[#71717a] uppercase font-bold">Score Medio de Robustez</div>
+              <div id="kpi-retest-avg-score" class="text-xl font-mono font-bold text-white mt-0.5">0.0</div>
+              <div class="text-[10px] text-[#a0a0ab]">Escala 0 a 100 pts</div>
+            </div>
+          </div>
+
+          <!-- RESULTADOS DEL RETEST (GRID DE TARJETAS) -->
+          <div class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg bg-[#0e0e14] border border-[#222230]">
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold text-white uppercase tracking-wider">Estrategias Evaluadas en el Retest</span>
+                <span id="retest-results-badge" class="tn-badge tn-badge-white text-[10px]">0 DISPONIBLES</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="text-xs text-[#a0a0ab]">Filtrar:</label>
+                <select id="select-retest-filter" class="tn-input text-xs py-0.5 px-2 font-semibold text-white bg-[#0a0a0e] border-[#30303e]" onchange="filterRetestCards(this.value)">
+                  <option value="ALL">Todas las Evaluadas</option>
+                  <option value="APPROVED">Solo Aprobadas (Robusto)</option>
+                  <option value="MODERATE">Solo Moderadas</option>
+                  <option value="DISCARDED">Solo Descartadas (Frágil)</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="retest-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full py-16 text-center text-[#71717a]">
+                <div class="text-4xl mb-3">🛡️</div>
+                <div class="text-sm font-medium text-white mb-1">Sin retests ejecutados todavía</div>
+                <div class="text-xs max-w-md mx-auto mb-4">Selecciona un lote de estrategias y haz clic en <strong>"Iniciar Retest de Robustez"</strong> para comprobar qué algoritmos son verdaderamente sólidos y cuáles fueron solo fruto de la suerte.</div>
+              </div>
+            </div>
+          </div>
+
+        </main>
+      </div>
+      <!-- END SECTION: RETEST & ROBUSTNESS -->
       <!-- ============================================================ -->
       <div id="section-portfolio-builder" class="app-section hidden">
         <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
@@ -769,11 +971,26 @@
             <div class="flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg bg-[#0e0e14] border border-[#222230]">
               <div class="flex items-center gap-3">
                 <span class="text-xs font-semibold text-white uppercase tracking-wider">Ranking Top de Portafolios Multi-Par</span>
-                <span id="port-ranking-badge" class="tn-badge tn-badge-white text-[10px]">ORDEN: POR DESCORRELACIÓN</span>
+                <span id="port-ranking-badge" class="tn-badge tn-badge-white text-[10px]">ORDEN: POR RET / MAX DD</span>
               </div>
-              <div class="flex items-center gap-3">
-                <label class="text-xs text-[#a0a0ab]">Límite del Top:</label>
-                <input type="number" id="input-port-max-top" class="tn-input text-xs py-1 px-2 w-20 num-tabular text-center" value="50" min="5" max="200" onchange="updatePortfolioEngineConfig()">
+              <div class="flex flex-wrap items-center gap-3">
+                <!-- Selector de Ordenamiento Portafolios -->
+                <div class="flex items-center gap-1.5 p-1 px-2.5 rounded bg-[#13131a] border border-[#262634]" title="Ordenar portafolios generados">
+                  <span class="text-[11px] text-[#a0a0ab] font-bold">Ordenar:</span>
+                  <select id="select-portfolios-sort" class="tn-input text-xs py-0.5 px-2 font-semibold text-white bg-[#0a0a0e] border-[#30303e]" onchange="changePortfoliosSort(this.value)">
+                    <option value="ret_dd">Ret / Max DD (Ratio SQ)</option>
+                    <option value="sq_corr">Descorrelación SQ (0.0 a 1.0)</option>
+                    <option value="net_profit">Net Profit Comb. ($)</option>
+                    <option value="dd_reduction">Mayor Reducción de DD</option>
+                    <option value="min_dd">Menor Max Drawdown (%)</option>
+                    <option value="sharpe">Sharpe Ratio</option>
+                    <option value="score">TN Portfolio Score</option>
+                  </select>
+                </div>
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-[#a0a0ab]">Límite del Top:</label>
+                  <input type="number" id="input-port-max-top" class="tn-input text-xs py-1 px-2 w-20 num-tabular text-center" value="50" min="5" max="200" onchange="updatePortfolioEngineConfig()">
+                </div>
               </div>
             </div>
 
