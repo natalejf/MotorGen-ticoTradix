@@ -103,8 +103,28 @@ def update_data(req: UpdateDataRequest):
 # PORTFOLIO ENDPOINTS
 # ---------------------------------------------------------------------
 from backend.portfolio import StrategyRecord, Portfolio
+from backend.portfolio_engine import portfolio_engine
 from pydantic import conint, confloat
 from typing import List
+
+class PortfolioEngineConfigRequest(BaseModel):
+    source_pairs: Optional[List[str]] = None
+    source_folders: Optional[List[str]] = None
+    min_strategies: int = 2
+    max_strategies: int = 5
+    weight_mode: str = "EQUAL"  # "EQUAL", "SHARPE", "PROFIT"
+    objective: str = "diversification_score"  # "diversification_score", "combined_sharpe", "combined_net_profit_usd", "tn_score"
+    min_diversification: float = 25.0
+    min_sharpe: float = 0.8
+    max_portfolios: int = 50
+    folder: str = "Portafolios_Principales"
+
+class SavePortfolioCandidateRequest(BaseModel):
+    candidate_id: str
+    folder: Optional[str] = "Portafolios_Principales"
+
+class SaveAllTopPortfoliosRequest(BaseModel):
+    folder: Optional[str] = "Lote_Portafolios_Top"
 
 class SaveStrategyRequest(BaseModel):
     strategy_id: Optional[str] = None
@@ -285,6 +305,44 @@ def delete_portfolio(portfolio_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Portafolio no encontrado.")
     return {"status": "deleted", "portfolio_id": portfolio_id}
+
+# =============================================================================
+# PORTFOLIO ENGINE (MULTI-PAIR EXPLORATION & OPTIMIZATION)
+# =============================================================================
+
+@app.post("/api/portfolio-engine/start")
+def start_portfolio_engine(req: PortfolioEngineConfigRequest):
+    portfolio_engine.start_exploration(req.dict())
+    return {"status": "started", "config": req.dict()}
+
+@app.post("/api/portfolio-engine/stop")
+def stop_portfolio_engine():
+    portfolio_engine.stop_exploration()
+    return {"status": "stopping"}
+
+@app.get("/api/portfolio-engine/status")
+def get_portfolio_engine_status():
+    return portfolio_engine.get_status()
+
+@app.get("/api/portfolio-engine/top")
+def get_portfolio_engine_top():
+    return portfolio_engine.get_top_portfolios()
+
+@app.post("/api/portfolio-engine/save-candidate")
+def save_portfolio_engine_candidate(req: SavePortfolioCandidateRequest):
+    try:
+        saved = portfolio_engine.save_portfolio_candidate(req.candidate_id, folder=req.folder or "Portafolios_Principales")
+        return {"status": "saved", "portfolio": saved}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/portfolio-engine/save-all")
+def save_all_top_portfolios(req: SaveAllTopPortfoliosRequest):
+    try:
+        saved_list = portfolio_engine.save_all_top(folder=req.folder or "Lote_Portafolios_Top")
+        return {"status": "saved_batch", "count": len(saved_list), "folder": req.folder}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/start-exploration")
 def start_exploration(req: ExplorationConfigRequest):

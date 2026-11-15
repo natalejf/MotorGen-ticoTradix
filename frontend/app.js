@@ -78,7 +78,10 @@ const state = {
   portfolioPairFilter: 'ALL',
   portfolioBatchFilter: 'ALL',
   portfolioFolders: [],
-  savedPortfoliosViewMode: 'grid',
+  savedPortfoliosViewMode: 'folders',
+  savedPortfolioSelectedFolder: 'ALL',
+  portEngineTimer: null,
+  portEngineRunning: false,
 
   // 3D Neural Explorer
   neuralScene: null,
@@ -2003,11 +2006,381 @@ async function createPortfolio() {
 window.createPortfolio = createPortfolio;
 
 // ============================================================================
+// PORTFOLIO ENGINE (MULTI-PAIR EXPLORATION & LIVE RESULTS TOP)
+// ============================================================================
+
+function switchPortSubTab(subTabName) {
+  const tabs = ['results', 'config', 'strategies'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tab-port-btn-${t}`);
+    const view = document.getElementById(`tab-port-view-${t}`);
+    if (t === subTabName) {
+      if (btn) {
+        btn.className = 'py-3 font-semibold border-b-2 border-white text-white flex items-center gap-2';
+      }
+      if (view) view.classList.remove('hidden');
+    } else {
+      if (btn) {
+        btn.className = 'py-3 font-medium border-b-2 border-transparent text-[#a0a0ab] hover:text-white flex items-center gap-2';
+      }
+      if (view) view.classList.add('hidden');
+    }
+  });
+}
+window.switchPortSubTab = switchPortSubTab;
+
+async function startPortfolioEngine() {
+  const minStrat = parseInt(document.getElementById('input-port-min-strat')?.value) || 2;
+  const maxStrat = parseInt(document.getElementById('input-port-max-strat')?.value) || 5;
+  const weightMode = document.getElementById('select-port-weight-mode')?.value || 'EQUAL';
+  const objective = document.getElementById('select-port-objective')?.value || 'diversification_score';
+  const minDiv = parseFloat(document.getElementById('input-port-min-div')?.value) || 25.0;
+  const maxTop = parseInt(document.getElementById('input-port-max-top')?.value) || 50;
+  const targetFolder = document.getElementById('input-port-target-folder')?.value?.trim() || 'Portafolios_Principales';
+
+  const payload = {
+    min_strategies: minStrat,
+    max_strategies: maxStrat,
+    weight_mode: weightMode,
+    objective: objective,
+    min_diversification: minDiv,
+    max_portfolios: maxTop,
+    folder: targetFolder
+  };
+
+  try {
+    const res = await fetch('/api/portfolio-engine/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      alert('Error al iniciar motor de portafolios.');
+      return;
+    }
+
+    state.portEngineRunning = true;
+    updatePortEngineUIState(true);
+    switchPortSubTab('results');
+
+    // Start polling
+    if (state.portEngineTimer) clearInterval(state.portEngineTimer);
+    state.portEngineTimer = setInterval(pollPortfolioEngine, 1000);
+    pollPortfolioEngine();
+
+  } catch (err) {
+    console.error('Error starting portfolio engine:', err);
+    alert('Error de conexión al iniciar motor de portafolios.');
+  }
+}
+window.startPortfolioEngine = startPortfolioEngine;
+
+async function stopPortfolioEngine() {
+  try {
+    await fetch('/api/portfolio-engine/stop', { method: 'POST' });
+    state.portEngineRunning = false;
+    updatePortEngineUIState(false);
+    if (state.portEngineTimer) {
+      clearInterval(state.portEngineTimer);
+      state.portEngineTimer = null;
+    }
+  } catch (err) {
+    console.error('Error stopping portfolio engine:', err);
+  }
+}
+window.stopPortfolioEngine = stopPortfolioEngine;
+
+function updatePortEngineUIState(isRunning) {
+  const startBtn = document.getElementById('btn-start-port-engine');
+  const stopBtn = document.getElementById('btn-stop-port-engine');
+  const pill = document.getElementById('port-engine-status-pill');
+
+  if (startBtn) startBtn.classList.toggle('hidden', isRunning);
+  if (stopBtn) stopBtn.classList.toggle('hidden', !isRunning);
+  if (pill) pill.classList.toggle('hidden', !isRunning);
+}
+
+async function pollPortfolioEngine() {
+  try {
+    const [resStatus, resTop] = await Promise.all([
+      fetch('/api/portfolio-engine/status'),
+      fetch('/api/portfolio-engine/top')
+    ]);
+
+    if (!resStatus.ok || !resTop.ok) return;
+
+    const st = await resStatus.json();
+    const topItems = await resTop.json();
+
+    state.portEngineRunning = st.is_running;
+    updatePortEngineUIState(st.is_running);
+
+    // Update Telemetry Bar
+    const testedEl = document.getElementById('port-metric-tested');
+    const acceptedEl = document.getElementById('port-metric-accepted');
+    const bestDivEl = document.getElementById('port-metric-best-div');
+    const bestSharpeEl = document.getElementById('port-metric-best-sharpe');
+    const badgeTopCount = document.getElementById('badge-port-top-count');
+
+    if (testedEl) testedEl.textContent = (st.tested_count || 0).toLocaleString();
+    if (acceptedEl) acceptedEl.textContent = (st.accepted_count || 0).toLocaleString();
+    if (badgeTopCount) badgeTopCount.textContent = topItems.length;
+
+    if (st.best_portfolio && st.best_portfolio.metrics) {
+      const bm = st.best_portfolio.metrics;
+      if (bestDivEl) bestDivEl.textContent = `${(bm.diversification_score || 0).toFixed(1)}%`;
+      if (bestSharpeEl) bestSharpeEl.textContent = (bm.combined_sharpe || 1.0).toFixed(2);
+    }
+
+    renderPortfolioEngineCards(topItems);
+
+  } catch (err) {
+    console.error('Error polling portfolio engine:', err);
+  }
+}
+
+function renderPortfolioEngineCards(items) {
+  const container = document.getElementById('port-engine-cards-grid');
+  if (!container) return;
+
+  if (!items || items.length === 0) {
+    if (!state.portEngineRunning) {
+      container.innerHTML = `
+        <div class="col-span-full py-16 text-center text-[#71717a]">
+          <div class="text-4xl mb-3">🧬</div>
+          <div class="text-sm font-medium text-white mb-1">El Motor de Portafolios está listo</div>
+          <div class="text-xs max-w-md mx-auto mb-4">Haz clic en <strong>"Iniciar Motor de Portafolios"</strong> para comenzar a generar y clasificar combinaciones multi-par en tiempo real.</div>
+          <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="startPortfolioEngine()">
+            ▶ Iniciar Exploración de Portafolios
+          </button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div class="col-span-full py-16 text-center text-[#71717a]">
+          <span class="animate-spin inline-block w-6 h-6 border-2 border-white border-t-transparent rounded-full mb-3"></span>
+          <div class="text-sm font-medium text-white mb-1">Evaluando combinaciones multi-activo...</div>
+          <div class="text-xs">Los mejores portafolios aparecerán aquí ordenados en el ranking TOP.</div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // Cache live items in memory for modal preview
+  window.__livePortfoliosCache = items;
+
+  container.innerHTML = items.map((p, idx) => {
+    const m = p.metrics || {};
+    const rank = idx + 1;
+    const rankBadge = rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`;
+    const symbolsList = (m.symbols || []).map(sym => `<span class="tn-badge text-[10px] tn-badge-white font-bold">${sym}</span>`).join(' ');
+    const netProfitFormatted = m.combined_net_profit_usd !== undefined
+      ? `${m.combined_net_profit_usd >= 0 ? '+' : ''}$${Number(m.combined_net_profit_usd).toLocaleString(undefined, {minimumFractionDigits: 2})}`
+      : 'N/A';
+
+    return `
+      <div class="candidate-card group">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
+              ${rankBadge}
+            </span>
+            <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[170px]" title="${p.name}">
+              ${p.name}
+            </span>
+          </div>
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            ${m.diversification_score || 0}% Descorr.
+          </span>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5 mb-2.5">
+          ${symbolsList}
+          <span class="tn-badge text-[10px]">${m.strategies_count || 0} ESTRATEGIAS</span>
+        </div>
+
+        <!-- Sparkline -->
+        <div class="h-10 my-2 flex items-end gap-0.5 overflow-hidden px-1 py-1 rounded bg-[#09090c] border border-[#1e1e24]">
+          ${renderMiniSparklineSvg(p.sparkline || [])}
+        </div>
+
+        <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-2">
+          <div>
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Capital Inicial</div>
+            <div class="text-xs font-mono text-[#a0a0ab]">$10,000</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-white uppercase font-bold">Net Profit Comb.</div>
+            <div class="text-sm font-mono font-bold text-white">${netProfitFormatted}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-[#1e1e26] text-center">
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">Sharpe</div>
+            <div class="text-xs font-mono font-semibold text-white">${Number(m.combined_sharpe || 1.0).toFixed(2)}</div>
+          </div>
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">Win Rate</div>
+            <div class="text-xs font-mono font-semibold text-white">${Number(m.weighted_win_rate_pct || 0).toFixed(1)}%</div>
+          </div>
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
+            <div class="text-xs font-mono font-semibold text-emerald-400">-${m.estimated_dd_reduction_pct || 30}%</div>
+          </div>
+          <div>
+            <div class="text-[9px] text-[#71717a] uppercase font-bold">TN Score</div>
+            <div class="text-xs font-mono font-semibold text-white">${Number(m.tn_score || 80).toFixed(1)}</div>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+          <button onclick="openLivePortfolioCandidateModal('${p.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo de la cartera y curva combinada">
+            📊 Ver Análisis
+          </button>
+          <button onclick="savePortfolioCandidateFromEngine('${p.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Guardar portafolio en disco">
+            💾 Guardar
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMiniSparklineSvg(sparkline) {
+  if (!sparkline || sparkline.length < 2) {
+    return `<div class="w-full text-center text-[10px] text-[#71717a]">Curva combinada suave</div>`;
+  }
+  const min = Math.min(...sparkline);
+  const max = Math.max(...sparkline);
+  const range = (max - min) || 1;
+  const h = 32;
+  const w = 280;
+  const points = sparkline.map((val, idx) => {
+    const x = (idx / (sparkline.length - 1)) * w;
+    const y = h - ((val - min) / range) * (h - 6) - 3;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  return `
+    <svg viewBox="0 0 ${w} ${h}" class="w-full h-full overflow-visible">
+      <polyline fill="none" stroke="#ffffff" stroke-width="1.8" points="${points}" />
+    </svg>
+  `;
+}
+
+function openLivePortfolioCandidateModal(candId) {
+  const p = (window.__livePortfoliosCache || []).find(it => it.id === candId);
+  if (!p) {
+    alert('Portafolio no encontrado.');
+    return;
+  }
+  const modal = document.getElementById('portfolio-detail-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  document.getElementById('port-modal-title').textContent = p.name;
+  document.getElementById('port-modal-subtitle').textContent = `Candidato Top · ${p.created_at} · Algoritmos Combinados: ${p.strategies?.length || 0}`;
+
+  const met = p.metrics || {};
+  document.getElementById('port-modal-pnl').textContent = `+$${Number(met.combined_net_profit_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+  document.getElementById('port-modal-wr').textContent = `${Number(met.weighted_win_rate_pct || 0).toFixed(1)}%`;
+  document.getElementById('port-modal-div').textContent = `${met.diversification_score || 0}%`;
+  document.getElementById('port-modal-dd-red').textContent = `-${met.estimated_dd_reduction_pct || 30}%`;
+
+  const exportBtn = document.getElementById('btn-port-modal-export');
+  if (exportBtn) {
+    exportBtn.onclick = () => savePortfolioCandidateFromEngine(p.id);
+    exportBtn.textContent = '💾 Guardar Este Portafolio';
+  }
+
+  const tbody = document.getElementById('port-modal-strategies-body');
+  if (tbody) {
+    const strats = p.strategies || [];
+    const weights = p.weights || [];
+    tbody.innerHTML = strats.map((st, i) => {
+      const s = st.strategy || st;
+      const m = st.metrics || {};
+      const w = weights[i] || (1 / strats.length);
+      return `
+        <tr class="border-b border-[#1c1c24] hover:bg-[#14141a]">
+          <td class="py-2.5 px-3 font-semibold text-white">${s.name || s.id}</td>
+          <td class="py-2.5 px-3"><span class="tn-badge tn-badge-white text-[10px]">${s.symbol || '-'}</span></td>
+          <td class="py-2.5 px-3 font-mono">${s.timeframe || '1h'}</td>
+          <td class="py-2.5 px-3 font-mono font-bold text-white">${Math.round(w * 100)}%</td>
+          <td class="py-2.5 px-3 font-mono text-[#a0a0ab]">${(m.win_rate_pct || 0).toFixed(1)}%</td>
+          <td class="py-2.5 px-3 font-mono text-white font-semibold">+$${(m.total_return_usd || 0).toLocaleString()}</td>
+          <td class="py-2.5 px-3 text-right">
+            <button onclick="closePortfolioModal(); openCandidateModal('${s.id}')" class="btn-secondary text-[10px] py-0.5 px-2.5">
+              Ver Estrategia
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  renderPortfolioEquityChart(p.equity_curve || []);
+}
+window.openLivePortfolioCandidateModal = openLivePortfolioCandidateModal;
+
+async function savePortfolioCandidateFromEngine(candId) {
+  const folder = document.getElementById('input-port-target-folder')?.value?.trim() || 'Portafolios_Principales';
+  try {
+    const res = await fetch('/api/portfolio-engine/save-candidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidate_id: candId, folder: folder })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      alert(`✓ Portafolio "${data.portfolio.name}" guardado con éxito en la carpeta "${folder}"!`);
+      refreshSidebarBadges();
+    } else {
+      const err = await res.json();
+      alert(`Error al guardar: ${err.detail || 'Ocurrió un error'}`);
+    }
+  } catch (err) {
+    console.error('Error saving portfolio candidate:', err);
+    alert('Error al guardar portafolio.');
+  }
+}
+window.savePortfolioCandidateFromEngine = savePortfolioCandidateFromEngine;
+
+async function saveAllTopPortfoliosBatch() {
+  const defaultFolder = `Lote_Portafolios_Top_${new Date().toISOString().slice(0,10)}`;
+  const folder = prompt('Ingresa el nombre de la carpeta para guardar todos los portafolios del Top:', defaultFolder);
+  if (!folder) return;
+
+  try {
+    const res = await fetch('/api/portfolio-engine/save-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: folder })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      alert(`✓ Se guardaron con éxito ${data.count} portafolios en la carpeta "${data.folder}"!`);
+      refreshSidebarBadges();
+      showSection('saved-portfolios');
+    } else {
+      alert('Error al guardar lote de portafolios.');
+    }
+  } catch (err) {
+    console.error('Error saving batch portfolios:', err);
+    alert('Error de conexión al guardar lote.');
+  }
+}
+window.saveAllTopPortfoliosBatch = saveAllTopPortfoliosBatch;
+
+// ============================================================================
 // SAVED PORTFOLIOS VIEW (FOLDERS & INDIVIDUAL)
 // ============================================================================
 
-function switchSavedPortfoliosView(mode) {
+function switchSavedPortfoliosView(mode, folderName = 'ALL') {
   state.savedPortfoliosViewMode = mode;
+  state.savedPortfolioSelectedFolder = folderName;
   const btnFolders = document.getElementById('btn-view-port-folders');
   const btnAll = document.getElementById('btn-view-port-all');
   const viewFolders = document.getElementById('view-portfolio-folders');
@@ -2032,7 +2405,7 @@ function switchSavedPortfoliosView(mode) {
     }
     if (viewFolders) viewFolders.classList.add('hidden');
     if (viewIndividual) viewIndividual.classList.remove('hidden');
-    loadSavedPortfolios();
+    loadSavedPortfolios(folderName);
   }
 }
 window.switchSavedPortfoliosView = switchSavedPortfoliosView;
@@ -2041,7 +2414,7 @@ function refreshPortfoliosView() {
   if (state.savedPortfoliosViewMode === 'folders') {
     loadPortfolioFolders();
   } else {
-    loadSavedPortfolios();
+    loadSavedPortfolios(state.savedPortfolioSelectedFolder || 'ALL');
   }
 }
 window.refreshPortfoliosView = refreshPortfoliosView;
@@ -2115,8 +2488,8 @@ async function loadPortfolioFolders() {
           </div>
 
           <div class="mt-4 pt-3 flex items-center justify-between border-t border-[#1e1e24] gap-2">
-            <button onclick="switchSavedPortfoliosView('all')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1">
-              👁 Ver Portafolios
+            <button onclick="switchSavedPortfoliosView('all', '${f.folder}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1">
+              👁 Ver Portafolios (${f.count})
             </button>
             <button onclick="deletePortfolioFolder('${f.folder}')" class="btn-danger text-[11px] py-1 px-2" title="Eliminar carpeta de portafolios">
               🗑
@@ -2149,7 +2522,7 @@ async function deletePortfolioFolder(folderName) {
 }
 window.deletePortfolioFolder = deletePortfolioFolder;
 
-async function loadSavedPortfolios() {
+async function loadSavedPortfolios(folderFilter = 'ALL') {
   const container = document.getElementById('saved-portfolios-grid');
   const countBadge = document.getElementById('saved-portfolios-count');
   if (!container) return;
@@ -2162,22 +2535,29 @@ async function loadSavedPortfolios() {
 
   try {
     const res = await fetch('/api/portfolios');
-    const items = await res.json();
+    let items = await res.json();
+    if (!Array.isArray(items)) items = [];
 
-    if (countBadge) {
-      countBadge.textContent = `${items.length} portafolios`;
-    }
+    const totalCount = items.length;
     const sidebarBadge = document.getElementById('badge-sidebar-portfolios');
     if (sidebarBadge) {
-      sidebarBadge.textContent = items.length;
+      sidebarBadge.textContent = totalCount;
+    }
+
+    if (folderFilter && folderFilter !== 'ALL') {
+      items = items.filter(p => (p.folder === folderFilter) || (p.batch_name === folderFilter));
+    }
+
+    if (countBadge) {
+      countBadge.textContent = `${items.length} portafolios ${folderFilter !== 'ALL' ? 'en ' + folderFilter : ''}`;
     }
 
     if (!items || items.length === 0) {
       container.innerHTML = `
         <div class="col-span-full py-12 text-center text-[#71717a]">
           <div class="text-3xl mb-3">📁</div>
-          <div class="text-sm font-medium text-white mb-1">Aún no hay portafolios guardados</div>
-          <div class="text-xs">Crea tu primer portafolio multi-estrategia en la pestaña "Creador de Portafolio".</div>
+          <div class="text-sm font-medium text-white mb-1">Sin portafolios en esta carpeta</div>
+          <div class="text-xs">Usa el botón "← Volver a Carpetas" para ver otras carpetas.</div>
         </div>
       `;
       return;

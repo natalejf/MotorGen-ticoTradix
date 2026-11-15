@@ -687,108 +687,215 @@
       <!-- END SECTION: SAVED STRATEGIES -->
 
       <!-- ============================================================ -->
-      <!-- SECTION: PORTFOLIO BUILDER (Creador de Portafolio)            -->
+      <!-- SECTION: PORTFOLIO BUILDER & ENGINE (Motor de Portafolio)       -->
       <!-- ============================================================ -->
       <div id="section-portfolio-builder" class="app-section hidden">
-        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-          <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
-            <span>Portafolios</span>
-            <span>/</span>
-            <span class="text-white font-medium">Creador de Portafolio Multi-Par</span>
+        <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🧬</span>
+            <div>
+              <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
+                <span>Portafolios</span>
+                <span>/</span>
+                <span class="text-white font-medium">Motor de Portafolios Multi-Par</span>
+              </div>
+              <h1 class="text-sm font-bold text-white tracking-wide mt-0.5">Generador y Optimizador Genético de Carteras Multi-Activo</h1>
+            </div>
+          </div>
+
+          <!-- Live Telemetry & Control Actions -->
+          <div class="flex items-center gap-3">
+            <div id="port-engine-status-pill" class="hidden items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Explorando combinaciones...</span>
+            </div>
+            <button id="btn-start-port-engine" class="btn-primary text-xs py-2 px-5 font-bold flex items-center gap-2" onclick="startPortfolioEngine()">
+              <span>▶</span> Iniciar Motor de Portafolios
+            </button>
+            <button id="btn-stop-port-engine" class="btn-danger text-xs py-2 px-4 font-bold hidden flex items-center gap-2" onclick="stopPortfolioEngine()">
+              <span>⏹</span> Detener
+            </button>
           </div>
         </header>
+
+        <!-- Subtabs Navigation -->
+        <div class="border-b border-[#1c1c22] bg-[#09090d] px-6 flex items-center gap-6 text-xs">
+          <button id="tab-port-btn-results" class="py-3 font-semibold border-b-2 border-white text-white flex items-center gap-2" onclick="switchPortSubTab('results')">
+            <span>🏆</span> Top Portafolios en Vivo <span id="badge-port-top-count" class="px-1.5 py-0.5 rounded bg-white text-black font-mono font-bold text-[10px]">0</span>
+          </button>
+          <button id="tab-port-btn-config" class="py-3 font-medium border-b-2 border-transparent text-[#a0a0ab] hover:text-white flex items-center gap-2" onclick="switchPortSubTab('config')">
+            <span>⚙️</span> Configuración y Objetivos
+          </button>
+          <button id="tab-port-btn-strategies" class="py-3 font-medium border-b-2 border-transparent text-[#a0a0ab] hover:text-white flex items-center gap-2" onclick="switchPortSubTab('strategies')">
+            <span>📚</span> Estrategias Base y Filtros
+          </button>
+        </div>
+
         <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
-          <!-- Portfolio Config -->
-          <div class="tn-card">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-white mb-2">Configuración del Portafolio Multi-Par</h2>
-            <p class="text-xs text-[#a0a0ab] mb-4">Combina estrategias de diferentes pares (EURUSD, XAUUSD, NASDAQ, etc.) y lotes guardados. La descorrelación de diferentes activos es la técnica clave de TradingNote y StrategyQuant para amortiguar el drawdown global.</p>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-xs text-[#a0a0ab] mb-1">Nombre del Portafolio</label>
-                <input type="text" id="portfolio-name-input" class="tn-input" placeholder="Ej: Portafolio Multi-Activo (EUR+ORO+NDX)">
+
+          <!-- TAB 1: RESULTADOS EN VIVO (TOP PORTAFOLIOS) -->
+          <div id="tab-port-view-results" class="space-y-6">
+            <!-- Telemetry Metrics Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div class="p-3 rounded-lg bg-[#0e0e14] border border-[#20202a]">
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Combinaciones Evaluadas</div>
+                <div id="port-metric-tested" class="text-lg font-mono font-bold text-white mt-0.5">0</div>
+                <div class="text-[10px] text-[#a0a0ab]">Monte Carlo / Genético</div>
               </div>
-              <div>
-                <label class="block text-xs text-[#a0a0ab] mb-1">Carpeta de Guardado</label>
-                <input type="text" id="portfolio-folder-input" class="tn-input" value="Portafolios_Principales" placeholder="Ej: Portafolios_Principales">
+              <div class="p-3 rounded-lg bg-[#0e0e14] border border-[#20202a]">
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Portafolios en Top</div>
+                <div id="port-metric-accepted" class="text-lg font-mono font-bold text-white mt-0.5">0</div>
+                <div class="text-[10px] text-[#a0a0ab]">Aprobados en ranking</div>
               </div>
-              <div>
-                <label class="block text-xs text-[#a0a0ab] mb-1">Máximo de Estrategias Combinadas</label>
-                <input type="number" id="portfolio-max-strategies" class="tn-input num-tabular" value="10" min="2" max="50">
+              <div class="p-3 rounded-lg bg-[#0e0e14] border border-[#20202a]">
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Descorrelación Máxima</div>
+                <div id="port-metric-best-div" class="text-lg font-mono font-bold text-emerald-400 mt-0.5">0.0%</div>
+                <div class="text-[10px] text-[#a0a0ab]">Líder del ranking</div>
               </div>
-              <div>
-                <label class="block text-xs text-[#a0a0ab] mb-1">Presupuesto de Riesgo (total = 1.0)</label>
-                <input type="number" id="portfolio-risk-budget" class="tn-input num-tabular" value="1.0" step="0.1" min="0.1">
+              <div class="p-3 rounded-lg bg-[#0e0e14] border border-[#20202a]">
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Sharpe Máximo</div>
+                <div id="port-metric-best-sharpe" class="text-lg font-mono font-bold text-white mt-0.5">0.00</div>
+                <div class="text-[10px] text-[#a0a0ab]">Ratio combinado</div>
+              </div>
+              <div class="p-3 rounded-lg bg-[#0e0e14] border border-[#20202a] flex flex-col justify-between">
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Guardar Todo el Lote</div>
+                <button class="btn-secondary text-[11px] py-1.5 px-3 font-semibold w-full mt-1 flex items-center justify-center gap-1.5" onclick="saveAllTopPortfoliosBatch()">
+                  💾 Guardar Lote Top
+                </button>
+              </div>
+            </div>
+
+            <!-- Top Portfolios Header Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg bg-[#0e0e14] border border-[#222230]">
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold text-white uppercase tracking-wider">Ranking Top de Portafolios Multi-Par</span>
+                <span id="port-ranking-badge" class="tn-badge tn-badge-white text-[10px]">ORDEN: POR DESCORRELACIÓN</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="text-xs text-[#a0a0ab]">Límite del Top:</label>
+                <input type="number" id="input-port-max-top" class="tn-input text-xs py-1 px-2 w-20 num-tabular text-center" value="50" min="5" max="200" onchange="updatePortfolioEngineConfig()">
+              </div>
+            </div>
+
+            <!-- Top Portfolios Cards Grid -->
+            <div id="port-engine-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full py-16 text-center text-[#71717a]">
+                <div class="text-4xl mb-3">🧬</div>
+                <div class="text-sm font-medium text-white mb-1">El Motor de Portafolios está listo</div>
+                <div class="text-xs max-w-md mx-auto mb-4">Haz clic en <strong>"Iniciar Motor de Portafolios"</strong> para comenzar a generar y clasificar combinaciones multi-par en tiempo real.</div>
+                <button class="btn-primary text-xs py-2 px-5 font-bold" onclick="startPortfolioEngine()">
+                  ▶ Iniciar Exploración de Portafolios
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- Strategy Selection with Multi-Pair & Batch Controls -->
-          <div class="tn-card">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
-              <div>
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Seleccionar Estrategias entre Diferentes Pares y Lotes</h2>
-                <p class="text-xs text-[#a0a0ab] mt-0.5">Mezcla libremente estrategias de distintos lotes guardados para crear una cartera balanceada.</p>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <button class="btn-primary text-xs py-1 px-3 font-semibold" onclick="selectTopOnePerPair()" title="Selecciona automáticamente la mejor estrategia de cada par para maximizar la descorrelación">
-                  🎲 1 Mejor de Cada Par
-                </button>
-                <button class="btn-secondary text-xs py-1 px-3" onclick="selectCurrentBatchOnly()" title="Marca todas las estrategias del lote o carpeta seleccionada actualmente">
-                  📁 Seleccionar Todo el Lote
-                </button>
-                <button class="btn-secondary text-xs py-1 px-3" onclick="selectAllVisiblePortfolioStrategies()">Marcar Visibles</button>
-                <button class="btn-secondary text-xs py-1 px-3" onclick="deselectAllPortfolioStrategies()">Desmarcar Todas</button>
-              </div>
-            </div>
-
-            <!-- Multi-Pair Live Mix Banner -->
-            <div id="portfolio-multipair-banner" class="p-3 rounded-lg bg-[#0e0e14] border border-[#262634] flex flex-wrap items-center justify-between gap-3 text-xs mb-4">
-              <div class="flex items-center gap-2">
-                <span class="text-[#71717a] font-bold uppercase text-[10px]">Pares en Selección:</span>
-                <div id="portfolio-active-pairs-tags" class="flex flex-wrap gap-1.5">
-                  <span class="text-[11px] text-[#a0a0ab]">Ningún par seleccionado aún</span>
+          <!-- TAB 2: CONFIGURACIÓN Y OBJETIVOS -->
+          <div id="tab-port-view-config" class="space-y-6 hidden">
+            <div class="tn-card">
+              <h2 class="text-sm font-semibold uppercase tracking-wider text-white mb-2">Parámetros de Combinación y Ponderación</h2>
+              <p class="text-xs text-[#a0a0ab] mb-4">Define el tamaño de la cartera, el método de ponderación de pesos y los objetivos de optimización.</p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Mínimo de Estrategias por Cartera</label>
+                  <input type="number" id="input-port-min-strat" class="tn-input num-tabular" value="2" min="2" max="10">
+                  <span class="text-[10px] text-[#71717a]">Al menos 2 para permitir descorrelación</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Máximo de Estrategias por Cartera</label>
+                  <input type="number" id="input-port-max-strat" class="tn-input num-tabular" value="5" min="2" max="12">
+                  <span class="text-[10px] text-[#71717a]">Tamaño óptimo recomendado: entre 3 y 6</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Modo de Ponderación de Pesos</label>
+                  <select id="select-port-weight-mode" class="tn-select">
+                    <option value="EQUAL" selected>Equiponderado (1/N)</option>
+                    <option value="SHARPE">Ponderado por Ratio Sharpe</option>
+                    <option value="PROFIT">Ponderado por Rentabilidad Neta</option>
+                  </select>
+                  <span class="text-[10px] text-[#71717a]">Asignación de capital entre estrategias</span>
                 </div>
               </div>
-              <div class="text-[11px] text-[#a0a0ab]">
-                Descorrelación estimada: <strong id="portfolio-mix-score" class="text-white">Baja</strong>
-              </div>
-            </div>
 
-            <!-- Filters Bar (By Pair & By Batch) -->
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-2.5 rounded-lg bg-[#0b0b0f] border border-[#1e1e26]">
-              <div class="flex flex-wrap items-center gap-1.5" id="portfolio-pair-filters">
-                <span class="text-[10px] text-[#71717a] uppercase font-bold mr-1">Filtrar Par:</span>
-                <button class="port-pair-filter active text-xs py-1 px-2.5 rounded bg-white text-black font-semibold" data-pair="ALL" onclick="filterPortfolioChecklistByPair('ALL')">TODOS</button>
-                <!-- Populated dynamically -->
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] text-[#71717a] uppercase font-bold">Lote / Carpeta:</span>
-                <select id="portfolio-batch-select" class="tn-select text-xs py-1 px-2.5 w-auto" onchange="filterPortfolioChecklistByBatch(this.value)">
-                  <option value="ALL">Todos los Lotes</option>
-                </select>
-              </div>
-            </div>
-
-            <div id="portfolio-strategy-checklist" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
-                Cargando estrategias guardadas...
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Objetivo de Optimización del Ranking</label>
+                  <select id="select-port-objective" class="tn-select">
+                    <option value="diversification_score" selected>Maximizar Descorrelación / Diversificación</option>
+                    <option value="combined_sharpe">Maximizar Sharpe Combinado</option>
+                    <option value="combined_net_profit_usd">Maximizar Ganancia Neta Total ($)</option>
+                    <option value="tn_score">Score Holístico TradingNote</option>
+                  </select>
+                  <span class="text-[10px] text-[#71717a]">Criterio para posicionar en el TOP</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Filtro Mínimo de Descorrelación (%)</label>
+                  <input type="number" id="input-port-min-div" class="tn-input num-tabular" value="25.0" step="5" min="10" max="90">
+                  <span class="text-[10px] text-[#71717a]">Descarta portafolios altamente correlacionados</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Carpeta de Guardado Predeterminada</label>
+                  <input type="text" id="input-port-target-folder" class="tn-input" value="Portafolios_Principales">
+                  <span class="text-[10px] text-[#71717a]">Donde se guardarán los portafolios aprobados</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Create Button & Status -->
-          <div class="flex items-center justify-between p-4 rounded-lg bg-[#0f0f14] border border-[#242430]">
-            <div>
-              <div class="text-xs text-white font-medium">
-                <span id="portfolio-selected-count" class="font-bold font-mono text-sm">0</span> estrategias seleccionadas
+          <!-- TAB 3: ESTRATEGIAS BASE Y FILTROS -->
+          <div id="tab-port-view-strategies" class="space-y-6 hidden">
+            <div class="tn-card">
+              <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Estrategias Guardadas Disponibles para Combinar</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">El motor combinará automáticamente estrategias de este pool para formar las carteras.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button class="btn-primary text-xs py-1 px-3 font-semibold" onclick="selectTopOnePerPair()">
+                    🎲 1 Mejor de Cada Par
+                  </button>
+                  <button class="btn-secondary text-xs py-1 px-3" onclick="selectCurrentBatchOnly()">
+                    📁 Seleccionar Todo el Lote
+                  </button>
+                  <button class="btn-secondary text-xs py-1 px-3" onclick="selectAllVisiblePortfolioStrategies()">Marcar Visibles</button>
+                  <button class="btn-secondary text-xs py-1 px-3" onclick="deselectAllPortfolioStrategies()">Desmarcar Todas</button>
+                </div>
               </div>
-              <div class="text-[11px] text-[#71717a] mt-0.5" id="portfolio-selection-summary">
-                Selecciona al menos 2 estrategias (preferiblemente de distintos pares) para crear el portafolio.
+
+              <!-- Multi-Pair Live Mix Banner -->
+              <div id="portfolio-multipair-banner" class="p-3 rounded-lg bg-[#0e0e14] border border-[#262634] flex flex-wrap items-center justify-between gap-3 text-xs mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-[#71717a] font-bold uppercase text-[10px]">Pares Disponibles en el Pool:</span>
+                  <div id="portfolio-active-pairs-tags" class="flex flex-wrap gap-1.5">
+                    <span class="text-[11px] text-[#a0a0ab]">Cargando pares...</span>
+                  </div>
+                </div>
+                <div class="text-[11px] text-[#a0a0ab]">
+                  Diversificación potencial: <strong id="portfolio-mix-score" class="text-white">Alta</strong>
+                </div>
+              </div>
+
+              <!-- Filters Bar (By Pair & By Batch) -->
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-2.5 rounded-lg bg-[#0b0b0f] border border-[#1e1e26]">
+                <div class="flex flex-wrap items-center gap-1.5" id="portfolio-pair-filters">
+                  <span class="text-[10px] text-[#71717a] uppercase font-bold mr-1">Filtrar Par:</span>
+                  <button class="port-pair-filter active text-xs py-1 px-2.5 rounded bg-white text-black font-semibold" data-pair="ALL" onclick="filterPortfolioChecklistByPair('ALL')">TODOS</button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-[#71717a] uppercase font-bold">Lote / Carpeta:</span>
+                  <select id="portfolio-batch-select" class="tn-select text-xs py-1 px-2.5 w-auto" onchange="filterPortfolioChecklistByBatch(this.value)">
+                    <option value="ALL">Todos los Lotes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="portfolio-strategy-checklist" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div class="col-span-full py-8 text-center text-[#71717a] text-xs">
+                  Cargando estrategias guardadas...
+                </div>
               </div>
             </div>
-            <button id="btn-create-portfolio" class="btn-primary text-xs py-2 px-6 font-bold" onclick="createPortfolio()">
-              🧬 Crear Portafolio Multi-Par
-            </button>
           </div>
         </main>
       </div>
