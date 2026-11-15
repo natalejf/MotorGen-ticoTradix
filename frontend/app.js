@@ -2180,72 +2180,74 @@ function renderPortfolioEngineCards(items) {
       : 'N/A';
     const retToDd = (m.ret_to_dd_ratio || 0).toFixed(1);
     const maxDdPct = Number(m.combined_max_drawdown_pct || 0).toFixed(1);
-    const ddRed = Number(m.dd_reduction_pct || m.estimated_dd_reduction_pct || 0).toFixed(0);
+    const ddRed = Number(m.dd_reduction_pct !== undefined ? m.dd_reduction_pct : (m.estimated_dd_reduction_pct || 0)).toFixed(1);
     const sqIndex = Number(m.sq_correlation_index || 0.20).toFixed(2);
     const sqRating = m.sq_rating || 'Excelente';
 
     return `
-      <div class="candidate-card group">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
-              ${rankBadge}
+      <div class="candidate-card group flex flex-col justify-between min-h-[390px] p-4">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
+                ${rankBadge}
+              </span>
+              <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[170px]" title="${p.name}">
+                ${p.name}
+              </span>
+            </div>
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Descorrelación según escala StrategyQuant (0.00 a 1.00)">
+              SQ ${sqIndex} · ${sqRating}
             </span>
-            <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[170px]" title="${p.name}">
-              ${p.name}
-            </span>
           </div>
-          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Descorrelación según escala StrategyQuant (0.00 a 1.00)">
-            SQ ${sqIndex} · ${sqRating}
-          </span>
-        </div>
 
-        <div class="flex flex-wrap gap-1.5 mb-2.5">
-          ${symbolsList}
-          <span class="tn-badge text-[10px]">${m.strategies_count || 0} ESTRATEGIAS</span>
-        </div>
+          <div class="flex flex-wrap gap-1.5 mb-2.5">
+            ${symbolsList}
+            <span class="tn-badge text-[10px]">${m.strategies_count || 0} ESTRATEGIAS</span>
+          </div>
 
-        <!-- Sparkline -->
-        <div class="h-10 my-2 flex items-end gap-0.5 overflow-hidden px-1 py-1 rounded bg-[#09090c] border border-[#1e1e24]">
-          ${renderMiniSparklineSvg(p.sparkline || [])}
-        </div>
+          <!-- Sparkline Taller Preview (Curva de Balance Expandida) -->
+          <div class="h-20 my-2.5 flex items-center justify-center overflow-hidden px-2 py-1 rounded-lg bg-[#08080b] border border-[#202028] relative">
+            ${renderMiniSparklineSvg(p.sparkline || [], idx)}
+          </div>
 
-        <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-2">
-          <div>
-            <div class="text-[10px] text-[#71717a] uppercase font-bold">Capital Inicial</div>
-            <div class="text-xs font-mono text-[#a0a0ab]">$10,000</div>
+          <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-2">
+            <div>
+              <div class="text-[10px] text-[#71717a] uppercase font-bold">Capital Inicial</div>
+              <div class="text-xs font-mono text-[#a0a0ab]">$10,000</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-white uppercase font-bold">Net Profit Comb.</div>
+              <div class="text-sm font-mono font-bold text-white">${netProfitFormatted}</div>
+            </div>
           </div>
-          <div class="text-right">
-            <div class="text-[10px] text-white uppercase font-bold">Net Profit Comb.</div>
-            <div class="text-sm font-mono font-bold text-white">${netProfitFormatted}</div>
-          </div>
-        </div>
 
-        <!-- Key Metrics: Ret/DD, Max DD, DD Reducción, Sharpe -->
-        <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-[#1e1e26] text-center">
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">Ret / Max DD</div>
-            <div class="text-xs font-mono font-bold text-emerald-400">${retToDd}x</div>
-          </div>
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">Max DD</div>
-            <div class="text-xs font-mono font-semibold text-red-400">${maxDdPct}%</div>
-          </div>
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
-            <div class="text-xs font-mono font-semibold text-emerald-400">-${ddRed}%</div>
-          </div>
-          <div>
-            <div class="text-[9px] text-[#71717a] uppercase font-bold">Sharpe</div>
-            <div class="text-xs font-mono font-semibold text-white">${Number(m.combined_sharpe || 1.0).toFixed(2)}</div>
+          <!-- Key Metrics: Ret/DD, Max DD, DD Reducción, Sharpe -->
+          <div class="grid grid-cols-4 gap-1.5 mt-2.5 pt-2 border-t border-[#1e1e26] text-center">
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">Ret / Max DD</div>
+              <div class="text-xs font-mono font-bold text-emerald-400">${retToDd}x</div>
+            </div>
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">Max DD</div>
+              <div class="text-xs font-mono font-semibold text-red-400">${maxDdPct}%</div>
+            </div>
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">DD Reducción</div>
+              <div class="text-xs font-mono font-bold text-emerald-400">-${ddRed}%</div>
+            </div>
+            <div>
+              <div class="text-[9px] text-[#71717a] uppercase font-bold">Sharpe</div>
+              <div class="text-xs font-mono font-semibold text-white">${Number(m.combined_sharpe || 1.0).toFixed(2)}</div>
+            </div>
           </div>
         </div>
 
-        <div class="mt-3 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
-          <button onclick="openLivePortfolioCandidateModal('${p.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo de la cartera y curva combinada superpuesta">
+        <div class="mt-3.5 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+          <button onclick="openLivePortfolioCandidateModal('${p.id}')" class="btn-secondary text-[11px] py-1.5 px-2.5 flex-1 flex items-center justify-center gap-1.5 font-medium" title="Ver análisis completo de la cartera y curva combinada superpuesta">
             📊 Ver Análisis
           </button>
-          <button onclick="savePortfolioCandidateFromEngine('${p.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Guardar portafolio en disco">
+          <button onclick="savePortfolioCandidateFromEngine('${p.id}')" class="btn-primary text-[11px] py-1.5 px-2.5 flex-1 flex items-center justify-center gap-1.5 font-bold" title="Guardar portafolio en disco">
             💾 Guardar
           </button>
         </div>
@@ -2254,24 +2256,34 @@ function renderPortfolioEngineCards(items) {
   }).join('');
 }
 
-function renderMiniSparklineSvg(sparkline) {
+function renderMiniSparklineSvg(sparkline, idx = 0) {
   if (!sparkline || sparkline.length < 2) {
     return `<div class="w-full text-center text-[10px] text-[#71717a]">Curva combinada suave</div>`;
   }
   const min = Math.min(...sparkline);
   const max = Math.max(...sparkline);
   const range = (max - min) || 1;
-  const h = 32;
-  const w = 280;
-  const points = sparkline.map((val, idx) => {
-    const x = (idx / (sparkline.length - 1)) * w;
-    const y = h - ((val - min) / range) * (h - 6) - 3;
+  const h = 64;
+  const w = 320;
+  const pad = 6;
+  const points = sparkline.map((val, i) => {
+    const x = (i / (sparkline.length - 1)) * w;
+    const y = (h - pad) - ((val - min) / range) * (h - pad * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
 
+  const gradId = `spark-port-grad-${idx}-${Math.floor(Math.random() * 10000)}`;
+
   return `
-    <svg viewBox="0 0 ${w} ${h}" class="w-full h-full overflow-visible">
-      <polyline fill="none" stroke="#ffffff" stroke-width="1.8" points="${points}" />
+    <svg viewBox="0 0 ${w} ${h}" class="w-full h-full overflow-visible" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="0.01" />
+        </linearGradient>
+      </defs>
+      <polygon fill="url(#${gradId})" points="0,${h} ${points} ${w},${h}" />
+      <polyline fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
     </svg>
   `;
 }

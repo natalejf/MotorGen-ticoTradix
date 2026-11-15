@@ -222,12 +222,19 @@ class Portfolio:
         else:
             sq_rating = "Alta / Débil"
 
-        # Calculate average individual DD
-        ind_dds = [float(s.get("metrics", {}).get("max_drawdown_pct", 3.0)) for s in self.strategies]
-        avg_ind_dd = round(sum(ind_dds) / max(1, len(ind_dds)), 2)
+        # Calculate standalone worst-case DD in USD (weighted sum without decorrelation benefit)
+        standalone_dd_usd = 0.0
+        for i, s in enumerate(self.strategies):
+            m_ind = s.get("metrics", {})
+            w_ind = self.weights[i] if i < len(self.weights) else (1.0 / max(1, len(self.strategies)))
+            dd_u = m_ind.get("max_drawdown_usd")
+            if dd_u is None or float(dd_u) <= 0:
+                dd_pct = float(m_ind.get("max_drawdown_pct", 3.0))
+                dd_u = 10000.0 * (dd_pct / 100.0)
+            standalone_dd_usd += float(dd_u) * w_ind
 
-        # Estimated portfolio DD and reduction
-        est_dd_red = min(55.0, round(12.0 * len(symbols_covered) + 6.0 * strat_div, 1))
+        avg_ind_dd = round((standalone_dd_usd / 10000.0) * 100.0, 2)
+        est_dd_red = min(55.0, round(15.0 * len(symbols_covered) + 6.0 * strat_div, 1))
         comb_dd_pct = round(max(0.5, avg_ind_dd * (1.0 - (est_dd_red / 100.0))), 2)
         comb_dd_usd = round(10000.0 * (comb_dd_pct / 100.0), 2)
         ret_to_dd = round(total_net_profit / max(1.0, comb_dd_usd), 2)
