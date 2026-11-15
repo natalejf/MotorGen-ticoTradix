@@ -413,7 +413,8 @@ async function startExploration() {
     min_net_profit_usd: parseFloat(document.getElementById('input-min-profit').value) || 0.0,
     min_sharpe: parseFloat(document.getElementById('input-min-sharpe').value) || 0.8,
     min_profit_factor: parseFloat(document.getElementById('input-min-pf').value) || 1.1,
-    min_dsr: parseFloat(document.getElementById('input-min-dsr').value) || 0.20
+    min_dsr: parseFloat(document.getElementById('input-min-dsr').value) || 0.20,
+    max_candidates: parseInt(document.getElementById('input-max-candidates')?.value) || 1000
   };
 
   try {
@@ -1031,11 +1032,19 @@ function showSection(sectionId) {
 
   // Trigger relevant data loaders
   if (sectionId === 'saved-strategies') {
-    loadSavedStrategies();
+    if (state.savedStrategiesViewMode === 'folders') {
+      loadStrategyFolders();
+    } else {
+      loadSavedStrategies();
+    }
   } else if (sectionId === 'portfolio-builder') {
     renderPortfolioStrategyChecklist();
   } else if (sectionId === 'saved-portfolios') {
-    loadSavedPortfolios();
+    if (state.savedPortfoliosViewMode === 'folders') {
+      loadPortfolioFolders();
+    } else {
+      loadSavedPortfolios();
+    }
   } else if (sectionId === 'engine') {
     if (state.activeTab === 'results') {
       renderCandidates();
@@ -1045,22 +1054,32 @@ function showSection(sectionId) {
 window.showSection = showSection;
 
 // ============================================================================
-// STRATEGY PERSISTENCE (INDIVIDUAL & BATCH)
+// STRATEGY PERSISTENCE (INDIVIDUAL & BATCH FOLDERS)
 // ============================================================================
+
+state.savedStrategies = [];
+state.strategyFolders = [];
+state.savedPairFilter = 'ALL';
+state.savedBatchFilter = 'ALL';
+state.savedStrategiesViewMode = 'folders';
 
 async function saveSingleStrategy(strategyId) {
   try {
+    const defaultFolder = state.selectedSymbol ? `Lote_${state.selectedSymbol}` : 'General';
+    const folderName = prompt('Carpeta / Lote donde guardar esta estrategia:', defaultFolder) || defaultFolder;
+
     const res = await fetch('/api/strategy/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ strategy_id: strategyId })
+      body: JSON.stringify({ strategy_id: strategyId, folder: folderName })
     });
     if (!res.ok) {
       const err = await res.json();
       alert(`Error al guardar: ${err.detail || 'No se pudo guardar la estrategia.'}`);
       return;
     }
-    alert(`✓ Estrategia guardada exitosamente en Mis Algoritmos.`);
+    alert(`✓ Estrategia guardada exitosamente en la carpeta "${folderName}".`);
+    refreshSidebarBadges();
   } catch (err) {
     console.error('Error saving strategy:', err);
     alert('Error de conexión al guardar la estrategia.');
@@ -1074,6 +1093,7 @@ async function deleteSavedStrategy(strategyId) {
     const res = await fetch(`/api/strategy/${strategyId}`, { method: 'DELETE' });
     if (res.ok) {
       loadSavedStrategies();
+      refreshSidebarBadges();
     } else {
       alert('Error al eliminar la estrategia.');
     }
@@ -1091,19 +1111,27 @@ async function saveAllApprovedBatch() {
   
   const tf = document.getElementById('select-timeframe')?.value || '1h';
   const sym = state.selectedSymbol || 'EURUSD';
-  const nowStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-  const defaultBatch = `Lote ${sym} ${tf} (${nowStr})`;
-  const batchName = prompt(`Etiqueta o nombre para este lote de estrategias:`, defaultBatch) || defaultBatch;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).replace(':', '');
+  const defaultBatch = `Lote_${sym}_${tf}_${dateStr}_${timeStr}`;
+  const batchName = prompt(`Nombre de la Carpeta / Lote para guardar las ${state.candidates.length} estrategias aprobadas:`, defaultBatch) || defaultBatch;
 
   try {
     const res = await fetch('/api/strategy/batch-save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ save_all_candidates: true, batch_name: batchName })
+      body: JSON.stringify({
+        save_all_candidates: true,
+        batch_name: batchName,
+        folder: batchName
+      })
     });
     const data = await res.json();
-    alert(`✓ Se guardaron ${data.count} estrategias aprobadas en Mis Algoritmos bajo la etiqueta:\n"${batchName}"`);
+    alert(`✓ Se guardaron ${data.count} estrategias aprobadas organizadas en la carpeta:\n"${batchName}"`);
     refreshSidebarBadges();
+    if (document.getElementById('section-saved-strategies')?.classList.contains('hidden') === false) {
+      refreshStrategiesView();
+    }
   } catch (err) {
     console.error('Error saving batch:', err);
     alert('Error al guardar el lote de estrategias.');
@@ -1125,13 +1153,19 @@ async function sendBatchToPortfolio() {
   // 2. Batch-save current candidates with auto label
   const tf = document.getElementById('select-timeframe')?.value || '1h';
   const sym = state.selectedSymbol || 'EURUSD';
-  const batchLabel = `Lote ${sym} ${tf} (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).replace(':', '');
+  const batchLabel = `Lote_${sym}_${tf}_${dateStr}_${timeStr}`;
 
   try {
     await fetch('/api/strategy/batch-save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ save_all_candidates: true, batch_name: batchLabel })
+      body: JSON.stringify({
+        save_all_candidates: true,
+        batch_name: batchLabel,
+        folder: batchLabel
+      })
     });
     refreshSidebarBadges();
   } catch (e) {
@@ -1148,18 +1182,212 @@ async function sendBatchToPortfolio() {
 }
 window.sendBatchToPortfolio = sendBatchToPortfolio;
 
-// State extensions for multi-pair and multi-batch management
-state.savedStrategies = [];
-state.savedPairFilter = 'ALL';
-state.savedBatchFilter = 'ALL';
+// ============================================================================
+// STRATEGY FOLDERS & INDIVIDUAL VIEWS
+// ============================================================================
 
-state.availableForPortfolio = [];
-state.portfolioPairFilter = 'ALL';
-state.portfolioBatchFilter = 'ALL';
-state.portfolioSelectedIds = new Set();
+function switchSavedStrategiesView(mode) {
+  state.savedStrategiesViewMode = mode;
+  const btnFolders = document.getElementById('btn-view-folders');
+  const btnAll = document.getElementById('btn-view-all');
+  const viewFolders = document.getElementById('view-strategy-folders');
+  const viewIndividual = document.getElementById('view-strategy-individual');
+
+  if (mode === 'folders') {
+    if (btnFolders) {
+      btnFolders.className = 'text-xs py-1 px-3 rounded bg-white text-black font-semibold transition';
+    }
+    if (btnAll) {
+      btnAll.className = 'text-xs py-1 px-3 rounded text-[#a0a0ab] hover:text-white font-medium transition';
+    }
+    if (viewFolders) viewFolders.classList.remove('hidden');
+    if (viewIndividual) viewIndividual.classList.add('hidden');
+    loadStrategyFolders();
+  } else {
+    if (btnFolders) {
+      btnFolders.className = 'text-xs py-1 px-3 rounded text-[#a0a0ab] hover:text-white font-medium transition';
+    }
+    if (btnAll) {
+      btnAll.className = 'text-xs py-1 px-3 rounded bg-white text-black font-semibold transition';
+    }
+    if (viewFolders) viewFolders.classList.add('hidden');
+    if (viewIndividual) viewIndividual.classList.remove('hidden');
+    loadSavedStrategies();
+  }
+}
+window.switchSavedStrategiesView = switchSavedStrategiesView;
+
+function refreshStrategiesView() {
+  if (state.savedStrategiesViewMode === 'folders') {
+    loadStrategyFolders();
+  } else {
+    loadSavedStrategies();
+  }
+}
+window.refreshStrategiesView = refreshStrategiesView;
+
+async function loadStrategyFolders() {
+  const container = document.getElementById('saved-folders-grid');
+  const countBadge = document.getElementById('saved-folders-count');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="col-span-full py-12 text-center text-[#71717a]">
+      <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Cargando carpetas de estrategias...
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/strategy-folders');
+    const folders = await res.json();
+    state.strategyFolders = folders;
+
+    if (countBadge) {
+      countBadge.textContent = `${folders.length} carpetas`;
+    }
+
+    if (!folders || folders.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-12 text-center text-[#71717a]">
+          <div class="text-3xl mb-3">📁</div>
+          <div class="text-sm font-medium text-white mb-1">Aún no hay carpetas guardadas</div>
+          <div class="text-xs">Genera estrategias en el Motor Genético y pulsa "Guardar Todas (Lote)" para crear tu primera carpeta.</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = folders.map(f => {
+      const symbolsBadges = (f.symbols || []).map(s => `<span class="tn-badge text-[10px] tn-badge-white font-bold">${s}</span>`).join(' ') || '<span class="tn-badge text-[10px]">N/A</span>';
+      const timeframesBadges = (f.timeframes || []).map(t => `<span class="tn-badge text-[10px]">${t}</span>`).join(' ');
+      const indicatorsBadges = (f.indicators || []).slice(0, 5).map(ind => `<span class="px-1.5 py-0.5 rounded text-[9px] bg-[#1a1a24] text-[#a0a0ab] border border-[#2d2d3a]">${ind}</span>`).join(' ');
+      const moreInd = (f.indicators || []).length > 5 ? `<span class="text-[9px] text-[#71717a]">+${f.indicators.length - 5}</span>` : '';
+
+      const netProfitFormatted = (f.total_profit || 0) >= 0
+        ? `+$${(f.total_profit || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+        : `-$${Math.abs(f.total_profit || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      return `
+        <div class="tn-card group hover:border-[#383848] transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📁</span>
+                <span class="text-xs font-bold text-white tracking-wide truncate max-w-[190px]" title="${f.folder}">
+                  ${f.folder}
+                </span>
+              </div>
+              <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f] shrink-0">
+                ${f.count} algos
+              </span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 mb-2.5">
+              ${symbolsBadges}
+              ${timeframesBadges}
+            </div>
+
+            <div class="mb-3">
+              <div class="text-[10px] text-[#71717a] uppercase font-bold mb-1">Indicadores Usados:</div>
+              <div class="flex flex-wrap items-center gap-1">
+                ${indicatorsBadges} ${moreInd}
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-2">
+              <div>
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Sharpe Medio</div>
+                <div class="text-xs font-mono font-bold text-white">${(f.avg_sharpe || 0).toFixed(2)}</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Win Rate</div>
+                <div class="text-xs font-mono font-bold text-white">${(f.avg_win_rate || 0).toFixed(1)}%</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-white uppercase font-bold">Net Profit Lote</div>
+                <div class="text-xs font-mono font-bold text-white">${netProfitFormatted}</div>
+              </div>
+            </div>
+
+            <div class="text-[10px] text-[#71717a] mt-1">
+              Última actualización: <span class="text-[#a0a0ab]">${f.created_at || 'Reciente'}</span>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+            <button onclick="viewFolderStrategies('${f.folder}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1" title="Ver estrategias de este lote">
+              👁 Ver Estrategias (${f.count})
+            </button>
+            <button onclick="useFolderInPortfolio('${f.folder}')" class="btn-primary text-[11px] py-1 px-2.5" title="Enviar todas las estrategias al Creador de Portafolio">
+              🧬 + Portafolio
+            </button>
+            <button onclick="deleteStrategyFolder('${f.folder}')" class="btn-danger text-[11px] py-1 px-2" title="Eliminar carpeta y sus estrategias">
+              🗑
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Error loading strategy folders:', err);
+    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar carpetas.</div>`;
+  }
+}
+window.loadStrategyFolders = loadStrategyFolders;
+
+function viewFolderStrategies(folderName) {
+  state.savedBatchFilter = folderName;
+  const title = document.getElementById('individual-view-title');
+  if (title) {
+    title.textContent = `Carpeta: ${folderName}`;
+  }
+  switchSavedStrategiesView('all');
+}
+window.viewFolderStrategies = viewFolderStrategies;
+
+async function useFolderInPortfolio(folderName) {
+  try {
+    const res = await fetch('/api/strategies/saved');
+    const items = await res.json();
+    const folderStrategies = items.filter(s => (s.folder === folderName) || (s.batch_name === folderName));
+    
+    if (folderStrategies.length === 0) {
+      alert(`No se encontraron estrategias en la carpeta "${folderName}".`);
+      return;
+    }
+
+    folderStrategies.forEach(s => {
+      state.portfolioSelectedIds.add((s.strategy || s).id);
+    });
+
+    alert(`✓ Se agregaron ${folderStrategies.length} estrategias de la carpeta "${folderName}" al Creador de Portafolio.`);
+    showSection('portfolio-builder');
+  } catch (err) {
+    console.error('Error using folder in portfolio:', err);
+    alert('Error al transferir carpeta a portafolio.');
+  }
+}
+window.useFolderInPortfolio = useFolderInPortfolio;
+
+async function deleteStrategyFolder(folderName) {
+  if (!confirm(`¿Estás seguro de eliminar la carpeta "${folderName}" y todos sus algoritmos?`)) return;
+  try {
+    const res = await fetch(`/api/strategy-folder/${encodeURIComponent(folderName)}`, { method: 'DELETE' });
+    if (res.ok) {
+      loadStrategyFolders();
+      refreshSidebarBadges();
+    } else {
+      alert('Error al eliminar la carpeta.');
+    }
+  } catch (err) {
+    console.error('Error deleting folder:', err);
+  }
+}
+window.deleteStrategyFolder = deleteStrategyFolder;
 
 // ============================================================================
-// LOAD SAVED STRATEGIES VIEW (WITH PAIR & BATCH FILTERS)
+// INDIVIDUAL SAVED STRATEGIES VIEW (WITH PAIR & BATCH FILTERS)
 // ============================================================================
 
 async function loadSavedStrategies() {
@@ -1200,9 +1428,9 @@ function renderSavedStrategiesFilters() {
   const batchSelect = document.getElementById('saved-batch-select');
   if (!pairContainer || !batchSelect) return;
 
-  // Extract unique symbols and batches
+  // Extract unique symbols and batches/folders
   const symbols = Array.from(new Set(state.savedStrategies.map(s => (s.strategy || s).symbol).filter(Boolean)));
-  const batches = Array.from(new Set(state.savedStrategies.map(s => s.batch_name).filter(Boolean)));
+  const batches = Array.from(new Set(state.savedStrategies.map(s => s.folder || s.batch_name).filter(Boolean)));
 
   // Render pair filter buttons
   pairContainer.innerHTML = `
@@ -1215,7 +1443,7 @@ function renderSavedStrategiesFilters() {
 
   // Render batch select options
   batchSelect.innerHTML = `
-    <option value="ALL">Todos los Lotes (${state.savedStrategies.length})</option>
+    <option value="ALL">Todas las Carpetas (${state.savedStrategies.length})</option>
     ${batches.map(b => `<option value="${b}" ${state.savedBatchFilter === b ? 'selected' : ''}>${b}</option>`).join('')}
   `;
 }
@@ -1244,7 +1472,7 @@ function renderSavedStrategiesGrid() {
     items = items.filter(cand => (cand.strategy || cand).symbol === state.savedPairFilter);
   }
   if (state.savedBatchFilter !== 'ALL') {
-    items = items.filter(cand => cand.batch_name === state.savedBatchFilter);
+    items = items.filter(cand => (cand.folder === state.savedBatchFilter) || (cand.batch_name === state.savedBatchFilter));
   }
 
   if (items.length === 0) {
@@ -1265,6 +1493,7 @@ function renderSavedStrategiesGrid() {
       ? `${m.total_return_usd >= 0 ? '+' : ''}$${m.total_return_usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`
       : 'N/A';
     const initialDepositFormatted = `$${(m.initial_capital || 10000).toLocaleString()}`;
+    const folderDisplay = cand.folder || cand.batch_name || '';
 
     return `
       <div class="candidate-card group">
@@ -1282,7 +1511,7 @@ function renderSavedStrategiesGrid() {
           <span class="tn-badge text-[10px] text-[#a0a0ab]">${(s.exit_mode || 'ATR_CLASSIC').replace('_', ' ')}</span>
         </div>
 
-        ${cand.batch_name ? `<div class="text-[10px] font-mono text-[#717182] truncate mb-2">🏷️ ${cand.batch_name}</div>` : ''}
+        ${folderDisplay ? `<div class="text-[10px] font-mono text-[#717182] truncate mb-2">📁 ${folderDisplay}</div>` : ''}
 
         <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-1">
           <div>
@@ -1391,13 +1620,30 @@ async function renderPortfolioStrategyChecklist() {
 }
 window.renderPortfolioStrategyChecklist = renderPortfolioStrategyChecklist;
 
+function selectCurrentBatchOnly() {
+  let targetItems = state.availableForPortfolio;
+  if (state.portfolioBatchFilter !== 'ALL') {
+    targetItems = targetItems.filter(it => (it.folder === state.portfolioBatchFilter) || (it.batch_name === state.portfolioBatchFilter));
+  }
+  if (state.portfolioPairFilter !== 'ALL') {
+    targetItems = targetItems.filter(it => (it.strategy || it).symbol === state.portfolioPairFilter);
+  }
+
+  targetItems.forEach(it => {
+    state.portfolioSelectedIds.add((it.strategy || it).id);
+  });
+
+  renderFilteredPortfolioChecklist();
+}
+window.selectCurrentBatchOnly = selectCurrentBatchOnly;
+
 function renderPortfolioFilterControls() {
   const pairContainer = document.getElementById('portfolio-pair-filters');
   const batchSelect = document.getElementById('portfolio-batch-select');
   if (!pairContainer || !batchSelect) return;
 
   const symbols = Array.from(new Set(state.availableForPortfolio.map(s => (s.strategy || s).symbol).filter(Boolean)));
-  const batches = Array.from(new Set(state.availableForPortfolio.map(s => s.batch_name).filter(Boolean)));
+  const batches = Array.from(new Set(state.availableForPortfolio.map(s => s.folder || s.batch_name).filter(Boolean)));
 
   pairContainer.innerHTML = `
     <span class="text-[10px] text-[#71717a] uppercase font-bold mr-1">Filtrar Par:</span>
@@ -1408,7 +1654,7 @@ function renderPortfolioFilterControls() {
   `;
 
   batchSelect.innerHTML = `
-    <option value="ALL">Todos los Lotes (${state.availableForPortfolio.length})</option>
+    <option value="ALL">Todas las Carpetas / Lotes (${state.availableForPortfolio.length})</option>
     ${batches.map(b => `<option value="${b}" ${state.portfolioBatchFilter === b ? 'selected' : ''}>${b}</option>`).join('')}
   `;
 }
@@ -1598,6 +1844,7 @@ window.deselectAllPortfolioStrategies = deselectAllPortfolioStrategies;
 
 async function createPortfolio() {
   const nameInput = document.getElementById('portfolio-name-input');
+  const folderInput = document.getElementById('portfolio-folder-input');
   const maxInput = document.getElementById('portfolio-max-strategies');
   const riskInput = document.getElementById('portfolio-risk-budget');
   const btn = document.getElementById('btn-create-portfolio');
@@ -1610,13 +1857,15 @@ async function createPortfolio() {
   const selectedIds = Array.from(state.portfolioSelectedIds);
   const maxStrategies = parseInt(maxInput?.value) || 10;
   const riskBudget = parseFloat(riskInput?.value) || 1.0;
+  const portfolioFolder = folderInput?.value.trim() || 'Portafolios_Principales';
   const portfolioName = nameInput?.value.trim() || `Portafolio Multi-Par (${selectedIds.length} Algoritmos)`;
 
   const payload = {
     name: portfolioName,
     strategy_ids: selectedIds,
     max_strategies: maxStrategies,
-    risk_budget: riskBudget
+    risk_budget: riskBudget,
+    folder: portfolioFolder
   };
 
   const originalText = btn.innerHTML;
@@ -1641,7 +1890,7 @@ async function createPortfolio() {
     const met = port.metrics || {};
     const symbolsList = (met.symbols || []).join(' + ') || 'Multi-Par';
 
-    alert(`✓ Portafolio Multi-Par "${port.name}" creado con éxito!\n\n• Pares combinados: ${symbolsList}\n• Total de estrategias: ${met.strategies_count}\n• Descorrelación / Diversificación: ${met.diversification_score}%\n• Reducción de Drawdown estimada: -${met.estimated_dd_reduction_pct}%\n• Net Profit combinado estimado: $${(met.combined_net_profit_usd || 0).toLocaleString()}`);
+    alert(`✓ Portafolio Multi-Par "${port.name}" creado con éxito en la carpeta "${portfolioFolder}"!\n\n• Pares combinados: ${symbolsList}\n• Total de estrategias: ${met.strategies_count}\n• Descorrelación / Diversificación: ${met.diversification_score}%\n• Reducción de Drawdown estimada: -${met.estimated_dd_reduction_pct}%\n• Net Profit combinado estimado: $${(met.combined_net_profit_usd || 0).toLocaleString()}`);
 
     showSection('saved-portfolios');
 
@@ -1656,8 +1905,151 @@ async function createPortfolio() {
 window.createPortfolio = createPortfolio;
 
 // ============================================================================
-// SAVED PORTFOLIOS VIEW
+// SAVED PORTFOLIOS VIEW (FOLDERS & INDIVIDUAL)
 // ============================================================================
+
+function switchSavedPortfoliosView(mode) {
+  state.savedPortfoliosViewMode = mode;
+  const btnFolders = document.getElementById('btn-view-port-folders');
+  const btnAll = document.getElementById('btn-view-port-all');
+  const viewFolders = document.getElementById('view-portfolio-folders');
+  const viewIndividual = document.getElementById('view-portfolio-individual');
+
+  if (mode === 'folders') {
+    if (btnFolders) {
+      btnFolders.className = 'text-xs py-1 px-3 rounded bg-white text-black font-semibold transition';
+    }
+    if (btnAll) {
+      btnAll.className = 'text-xs py-1 px-3 rounded text-[#a0a0ab] hover:text-white font-medium transition';
+    }
+    if (viewFolders) viewFolders.classList.remove('hidden');
+    if (viewIndividual) viewIndividual.classList.add('hidden');
+    loadPortfolioFolders();
+  } else {
+    if (btnFolders) {
+      btnFolders.className = 'text-xs py-1 px-3 rounded text-[#a0a0ab] hover:text-white font-medium transition';
+    }
+    if (btnAll) {
+      btnAll.className = 'text-xs py-1 px-3 rounded bg-white text-black font-semibold transition';
+    }
+    if (viewFolders) viewFolders.classList.add('hidden');
+    if (viewIndividual) viewIndividual.classList.remove('hidden');
+    loadSavedPortfolios();
+  }
+}
+window.switchSavedPortfoliosView = switchSavedPortfoliosView;
+
+function refreshPortfoliosView() {
+  if (state.savedPortfoliosViewMode === 'folders') {
+    loadPortfolioFolders();
+  } else {
+    loadSavedPortfolios();
+  }
+}
+window.refreshPortfoliosView = refreshPortfoliosView;
+
+async function loadPortfolioFolders() {
+  const container = document.getElementById('saved-portfolio-folders-grid');
+  const countBadge = document.getElementById('saved-portfolio-folders-count');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="col-span-full py-12 text-center text-[#71717a]">
+      <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> Cargando carpetas de portafolios...
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/portfolio-folders');
+    const folders = await res.json();
+    state.portfolioFolders = folders;
+
+    if (countBadge) {
+      countBadge.textContent = `${folders.length} carpetas`;
+    }
+
+    if (!folders || folders.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-12 text-center text-[#71717a]">
+          <div class="text-3xl mb-3">📁</div>
+          <div class="text-sm font-medium text-white mb-1">Aún no hay carpetas de portafolios</div>
+          <div class="text-xs">Crea portafolios en el "Creador de Portafolio" para verlos organizados aquí.</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = folders.map(f => {
+      const symbolsBadges = (f.symbols || []).map(s => `<span class="tn-badge text-[10px] tn-badge-white font-bold">${s}</span>`).join(' ') || '<span class="tn-badge text-[10px]">Multi-Par</span>';
+      return `
+        <div class="tn-card group hover:border-[#383848] transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📁</span>
+                <span class="text-xs font-bold text-white tracking-wide truncate max-w-[190px]" title="${f.folder}">
+                  ${f.folder}
+                </span>
+              </div>
+              <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f] shrink-0">
+                ${f.count} portafolios
+              </span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 mb-3">
+              ${symbolsBadges}
+            </div>
+
+            <div class="p-2.5 rounded bg-[#09090c] border border-[#22222a] flex items-center justify-between my-2">
+              <div>
+                <div class="text-[10px] text-[#71717a] uppercase font-bold">Total Estrategias</div>
+                <div class="text-xs font-mono font-bold text-white">${f.total_strategies || 0}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-white uppercase font-bold">Net Profit Comb.</div>
+                <div class="text-xs font-mono font-bold text-white">+$${(f.total_profit || 0).toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div class="text-[10px] text-[#71717a] mt-1">
+              Última actualización: <span class="text-[#a0a0ab]">${f.created_at || 'Reciente'}</span>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+            <button onclick="switchSavedPortfoliosView('all')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1">
+              👁 Ver Portafolios
+            </button>
+            <button onclick="deletePortfolioFolder('${f.folder}')" class="btn-danger text-[11px] py-1 px-2" title="Eliminar carpeta de portafolios">
+              🗑
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Error loading portfolio folders:', err);
+    container.innerHTML = `<div class="col-span-full py-8 text-center text-red-400 text-xs">Error al cargar carpetas de portafolios.</div>`;
+  }
+}
+window.loadPortfolioFolders = loadPortfolioFolders;
+
+async function deletePortfolioFolder(folderName) {
+  if (!confirm(`¿Estás seguro de eliminar la carpeta de portafolios "${folderName}"?`)) return;
+  try {
+    const res = await fetch(`/api/portfolio-folder/${encodeURIComponent(folderName)}`, { method: 'DELETE' });
+    if (res.ok) {
+      loadPortfolioFolders();
+      refreshSidebarBadges();
+    } else {
+      alert('Error al eliminar la carpeta.');
+    }
+  } catch (err) {
+    console.error('Error deleting portfolio folder:', err);
+  }
+}
+window.deletePortfolioFolder = deletePortfolioFolder;
 
 async function loadSavedPortfolios() {
   const container = document.getElementById('saved-portfolios-grid');
@@ -1696,6 +2088,7 @@ async function loadSavedPortfolios() {
     container.innerHTML = items.map(port => {
       const met = port.metrics || {};
       const subStrats = port.strategies_summary || [];
+      const folderDisplay = port.folder || 'Portafolios_Principales';
 
       return `
         <div class="tn-card flex flex-col justify-between">
@@ -1706,6 +2099,7 @@ async function loadSavedPortfolios() {
                 ${met.diversification_score ? met.diversification_score + '% Descorrelación' : 'PORTAFOLIO'}
               </span>
             </div>
+            <div class="text-[11px] text-[#71717a] mb-1">📁 Carpeta: <span class="font-mono text-[#a0a0ab]">${folderDisplay}</span></div>
             <div class="text-[11px] text-[#71717a] mb-3">Creado: ${port.created_at || 'Reciente'} · ID: <span class="font-mono text-[#a0a0ab]">${port.id}</span></div>
 
             <div class="grid grid-cols-3 gap-2 p-2.5 rounded bg-[#09090c] border border-[#22222a] text-center my-3">

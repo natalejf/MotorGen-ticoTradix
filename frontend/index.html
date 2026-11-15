@@ -415,9 +415,10 @@
                   <input type="number" id="input-min-dsr" class="tn-input num-tabular" value="0.20" step="0.05">
                   <span class="text-[10px] text-[#71717a]">Penalización matemática por azar</span>
                 </div>
-                <div class="p-4 rounded-lg bg-[#14141a] border border-[#2a2a34] flex flex-col justify-center">
-                  <div class="text-[10px] text-[#71717a] uppercase font-bold">Resumen de Clasificación</div>
-                  <div class="text-xs text-[#a0a0ab] mt-1">Los algoritmos que cumplan con todos estos parámetros aparecerán ordenados por <strong class="text-white">TN Score</strong> en Resultados.</div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Límite Aprobadas (Top Pool)</label>
+                  <input type="number" id="input-max-candidates" class="tn-input num-tabular" value="1000" step="100" min="10" max="10000">
+                  <span class="text-[10px] text-[#71717a]">Cupo máx. Los mejores reemplazan a los peores</span>
                 </div>
               </div>
             </div>
@@ -519,20 +520,53 @@
           <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
             <span>Mis Algoritmos</span>
             <span>/</span>
-            <span class="text-white font-medium">Estrategias Guardadas</span>
+            <span class="text-white font-medium">Estrategias Guardadas en Carpetas</span>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-refresh-strategies" class="btn-secondary text-xs py-1.5 px-3" onclick="loadSavedStrategies()">
+            <div class="inline-flex rounded-md p-0.5 bg-[#14141a] border border-[#242430]">
+              <button id="btn-view-folders" class="text-xs py-1 px-3 rounded bg-white text-black font-semibold transition" onclick="switchSavedStrategiesView('folders')">
+                📁 Por Carpetas / Lotes
+              </button>
+              <button id="btn-view-all" class="text-xs py-1 px-3 rounded text-[#a0a0ab] hover:text-white font-medium transition" onclick="switchSavedStrategiesView('all')">
+                📄 Todas las Estrategias
+              </button>
+            </div>
+            <button id="btn-refresh-strategies" class="btn-secondary text-xs py-1.5 px-3" onclick="refreshStrategiesView()">
               <span>🔄</span> Actualizar
             </button>
           </div>
         </header>
         <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
-          <div class="tn-card">
+          <!-- VIEW 1: FOLDERS / BATCHES CARDS -->
+          <div id="view-strategy-folders" class="tn-card">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
               <div>
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Estrategias Guardadas por Pares y Lotes</h2>
-                <p class="text-xs text-[#a0a0ab] mt-0.5">Filtra y explora las estrategias que has generado en diferentes pares (EURUSD, XAUUSD, NASDAQ, etc.)</p>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Carpetas y Lotes de Algoritmos Guardados</h2>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Tus estrategias organizadas ordenadamente por lotes, pares, temporalidad e indicadores utilizados.</p>
+              </div>
+              <span id="saved-folders-count" class="tn-badge text-xs font-mono">0 carpetas</span>
+            </div>
+
+            <div id="saved-folders-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full py-12 text-center text-[#71717a]">
+                <div class="text-3xl mb-3">📁</div>
+                <div class="text-sm font-medium text-white mb-1">Aún no hay carpetas guardadas</div>
+                <div class="text-xs">Genera estrategias en el Motor Genético y pulsa "Guardar Todas (Lote)" para crear tu primera carpeta rotulada.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEW 2: INDIVIDUAL STRATEGIES GRID -->
+          <div id="view-strategy-individual" class="tn-card hidden">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
+              <div class="flex items-center gap-3">
+                <button onclick="switchSavedStrategiesView('folders')" class="btn-secondary text-xs py-1 px-2.5">
+                  ← Volver a Carpetas
+                </button>
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white" id="individual-view-title">Estrategias Guardadas</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Explora y gestiona los algoritmos individuales.</p>
+                </div>
               </div>
               <span id="saved-strategies-count" class="tn-badge text-xs font-mono">0 estrategias</span>
             </div>
@@ -542,12 +576,11 @@
               <div class="flex flex-wrap items-center gap-1.5" id="saved-pair-filters">
                 <span class="text-[11px] text-[#71717a] uppercase font-bold mr-1">Filtrar Par:</span>
                 <button class="pair-filter-btn active text-xs py-1 px-2.5 rounded bg-white text-black font-semibold" data-pair="ALL" onclick="filterSavedStrategiesByPair('ALL')">TODOS</button>
-                <!-- Populated dynamically -->
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-[11px] text-[#71717a] uppercase font-bold">Lote:</span>
+                <span class="text-[11px] text-[#71717a] uppercase font-bold">Lote / Carpeta:</span>
                 <select id="saved-batch-select" class="tn-select text-xs py-1 px-2.5 w-auto" onchange="filterSavedStrategiesByBatch(this.value)">
-                  <option value="ALL">Todos los Lotes</option>
+                  <option value="ALL">Todas las Carpetas</option>
                 </select>
               </div>
             </div>
@@ -580,17 +613,21 @@
           <div class="tn-card">
             <h2 class="text-sm font-semibold uppercase tracking-wider text-white mb-2">Configuración del Portafolio Multi-Par</h2>
             <p class="text-xs text-[#a0a0ab] mb-4">Combina estrategias de diferentes pares (EURUSD, XAUUSD, NASDAQ, etc.) y lotes guardados. La descorrelación de diferentes activos es la técnica clave de TradingNote y StrategyQuant para amortiguar el drawdown global.</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label class="block text-xs text-[#a0a0ab] mb-1">Nombre del Portafolio</label>
                 <input type="text" id="portfolio-name-input" class="tn-input" placeholder="Ej: Portafolio Multi-Activo (EUR+ORO+NDX)">
+              </div>
+              <div>
+                <label class="block text-xs text-[#a0a0ab] mb-1">Carpeta de Guardado</label>
+                <input type="text" id="portfolio-folder-input" class="tn-input" value="Portafolios_Principales" placeholder="Ej: Portafolios_Principales">
               </div>
               <div>
                 <label class="block text-xs text-[#a0a0ab] mb-1">Máximo de Estrategias Combinadas</label>
                 <input type="number" id="portfolio-max-strategies" class="tn-input num-tabular" value="10" min="2" max="50">
               </div>
               <div>
-                <label class="block text-xs text-[#a0a0ab] mb-1">Presupuesto de Riesgo (capital total = 1.0)</label>
+                <label class="block text-xs text-[#a0a0ab] mb-1">Presupuesto de Riesgo (total = 1.0)</label>
                 <input type="number" id="portfolio-risk-budget" class="tn-input num-tabular" value="1.0" step="0.1" min="0.1">
               </div>
             </div>
@@ -606,6 +643,9 @@
               <div class="flex flex-wrap items-center gap-2">
                 <button class="btn-primary text-xs py-1 px-3 font-semibold" onclick="selectTopOnePerPair()" title="Selecciona automáticamente la mejor estrategia de cada par para maximizar la descorrelación">
                   🎲 1 Mejor de Cada Par
+                </button>
+                <button class="btn-secondary text-xs py-1 px-3" onclick="selectCurrentBatchOnly()" title="Marca todas las estrategias del lote o carpeta seleccionada actualmente">
+                  📁 Seleccionar Todo el Lote
                 </button>
                 <button class="btn-secondary text-xs py-1 px-3" onclick="selectAllVisiblePortfolioStrategies()">Marcar Visibles</button>
                 <button class="btn-secondary text-xs py-1 px-3" onclick="deselectAllPortfolioStrategies()">Desmarcar Todas</button>
@@ -633,7 +673,7 @@
                 <!-- Populated dynamically -->
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-[#71717a] uppercase font-bold">Lote:</span>
+                <span class="text-[10px] text-[#71717a] uppercase font-bold">Lote / Carpeta:</span>
                 <select id="portfolio-batch-select" class="tn-select text-xs py-1 px-2.5 w-auto" onchange="filterPortfolioChecklistByBatch(this.value)">
                   <option value="ALL">Todos los Lotes</option>
                 </select>
@@ -673,18 +713,52 @@
           <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
             <span>Portafolios</span>
             <span>/</span>
-            <span class="text-white font-medium">Portafolios Guardados</span>
+            <span class="text-white font-medium">Portafolios Guardados en Carpetas</span>
           </div>
-          <button class="btn-secondary text-xs py-1.5 px-3" onclick="loadSavedPortfolios()">
-            <span>🔄</span> Actualizar
-          </button>
+          <div class="flex items-center gap-2">
+            <div class="inline-flex rounded-md p-0.5 bg-[#14141a] border border-[#242430]">
+              <button id="btn-view-port-folders" class="text-xs py-1 px-3 rounded bg-white text-black font-semibold transition" onclick="switchSavedPortfoliosView('folders')">
+                📁 Por Carpetas / Lotes
+              </button>
+              <button id="btn-view-port-all" class="text-xs py-1 px-3 rounded text-[#a0a0ab] hover:text-white font-medium transition" onclick="switchSavedPortfoliosView('all')">
+                📄 Todos los Portafolios
+              </button>
+            </div>
+            <button class="btn-secondary text-xs py-1.5 px-3" onclick="refreshPortfoliosView()">
+              <span>🔄</span> Actualizar
+            </button>
+          </div>
         </header>
-        <main class="max-w-7xl w-full mx-auto p-6">
-          <div class="tn-card">
-            <div class="flex items-center justify-between mb-4">
+        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+          <!-- VIEW 1: PORTFOLIO FOLDERS -->
+          <div id="view-portfolio-folders" class="tn-card">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
               <div>
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Portafolios Guardados</h2>
-                <p class="text-xs text-[#a0a0ab] mt-0.5">Tus portafolios combinados de múltiples estrategias. A futuro podrás conectarlos a tus cuentas de trading para operar automáticamente.</p>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Carpetas de Portafolios</h2>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Tus portafolios multi-par agrupados en carpetas organizadas.</p>
+              </div>
+              <span id="saved-portfolio-folders-count" class="tn-badge text-xs font-mono">0 carpetas</span>
+            </div>
+            <div id="saved-portfolio-folders-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="col-span-full py-12 text-center text-[#71717a]">
+                <div class="text-3xl mb-3">📁</div>
+                <div class="text-sm font-medium text-white mb-1">Aún no hay carpetas de portafolios</div>
+                <div class="text-xs">Crea portafolios desde el "Creador de Portafolio" para verlos organizados aquí.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEW 2: ALL PORTFOLIOS -->
+          <div id="view-portfolio-individual" class="tn-card hidden">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-[#202028]">
+              <div class="flex items-center gap-3">
+                <button onclick="switchSavedPortfoliosView('folders')" class="btn-secondary text-xs py-1 px-2.5">
+                  ← Volver a Carpetas
+                </button>
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Portafolios Guardados</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Tus portafolios combinados de múltiples estrategias. A futuro podrás conectarlos a tus cuentas de trading para operar automáticamente.</p>
+                </div>
               </div>
               <span id="saved-portfolios-count" class="tn-badge text-xs font-mono">0 portafolios</span>
             </div>

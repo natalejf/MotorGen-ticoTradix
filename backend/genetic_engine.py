@@ -92,6 +92,10 @@ class GeneticEngine:
         self.neural_nodes: List[Dict[str, Any]] = []
         self.neural_edges: List[Dict[str, Any]] = []
 
+        # Deduplication sets
+        self.seen_signatures: set = set()
+        self.seen_perf_signatures: set = set()
+
         self.lock = threading.Lock()
 
     def reset_state(self):
@@ -106,6 +110,8 @@ class GeneticEngine:
             self.log_messages = []
             self.neural_nodes = []
             self.neural_edges = []
+            self.seen_signatures = set()
+            self.seen_perf_signatures = set()
 
     def log(self, msg: str):
         with self.lock:
@@ -413,9 +419,10 @@ class GeneticEngine:
             min_sharpe = float(config.get("min_sharpe", 0.8))
             min_profit_factor = float(config.get("min_profit_factor", 1.1))
             min_dsr = float(config.get("min_dsr", 0.2))
+            max_candidates = int(config.get("max_candidates", 1000))
 
             self.log(f"Iniciando Fábrica de Algoritmos en modo {'INFINITO CONTINUO' if infinite_mode else 'PROGRAMADO'} sobre {symbol} ({timeframe})...")
-            self.log(f"Indicadores activos: {len(enabled_indicators)}/28 · Entradas: {len(enabled_entry_types)} · Salidas: {len(enabled_exit_modes)}")
+            self.log(f"Límite Top Aprobadas: {max_candidates} | Indicadores activos: {len(enabled_indicators)}/28 | Deduplicación activada")
 
             df = data_manager.load_data(symbol, timeframe)
             self.log(f"Datos históricos listos: {len(df)} velas ({df.index[0].date()} a {df.index[-1].date()}).")
@@ -495,27 +502,72 @@ class GeneticEngine:
                         self.neural_edges.append({"source": p_id, "target": individual.id})
 
                     if passes_classification:
-                        self.accepted_count += 1
-                        candidate_entry = {
-                            "strategy": individual.to_dict(),
-                            "metrics": m,
-                            "equity_curve": res.equity_curve,
-                            "sparkline": [e["equity"] for e in res.equity_curve[::max(1, len(res.equity_curve)//25)]],
-                            "trades_sample": res.trades[:15],
-                            "rules_desc": individual.to_human_description(),
-                            "indicators_used": individual.get_used_indicators(),
-                            "passed_filters": True
-                        }
-                        
-                        # Add or update
-                        existing_ids = [c["strategy"]["id"] for c in self.candidates_passed]
-                        if individual.id not in existing_ids:
-                            self.candidates_passed.append(candidate_entry)
-                            self.candidates_passed.sort(key=lambda x: x["metrics"]["tn_score"], reverse=True)
+                        # Deduplication check: logic signature + performance signature
+                        sig = individual.get_signature()
+                        perf_sig = (
+                            individual.symbol,
+                            individual.timeframe,
+                            individual.entry_order_type,
+                            m["total_trades"],
+                            round(m["total_return_usd"], 1),
+                            round(m["max_drawdown_pct"], 1),
+                            round(m["win_rate_pct"], 1)
+                        )
 
-                        if self.best_candidate is None or m["tn_score"] > self.best_candidate["metrics"]["tn_score"]:
-                            self.best_candidate = candidate_entry
-                            self.log(f"★ APROBADO: Algo {individual.id[-4:]} | TN Score: {m['tn_score']} | Net Profit: +${m['total_return_usd']:,.2f} | Win Rate: {m['win_rate_pct']}% | Trades: {m['total_trades']}")
+                        is_duplicate = (sig in self.seen_signatures) or (perf_sig in self.seen_perf_signatures)
+
+                        if is_duplicate:
+                            # Discard duplicate clone to keep results 100% unique
+                            self.discarded_count += 1
+                        else:
+                            self.seen_signatures.add(sig)
+                            self.seen_perf_signatures.add(perf_sig)
+
+                            candidate_entry = {
+                                "strategy": individual.to_dict(),
+                                "metrics": m,
+                                "equity_curve": res.equity_curve,
+                                "sparkline": [e["equity"] for e in res.equity_curve[::max(1, len(res.equity_curve)//25)]],
+                                "trades_sample": res.trades[:15],
+                                "rules_desc": individual.to_human_description(),
+                                "indicators_used": individual.get_used_indicators(),
+                                "signature": sig,
+                                "perf_sig": perf_sig,
+                                "passed_filters": True
+                            }
+
+                            cand_score = m.get(objective, m.get("tn_score", 0.0))
+
+                            with self.lock:
+                                if len(self.candidates_passed) < max_candidates:
+                                    self.accepted_count += 1
+                                    self.candidates_passed.append(candidate_entry)
+                                    self.candidates_passed.sort(
+                                        key=lambda x: x["metrics"].get(objective, x["metrics"].get("tn_score", 0.0)),
+                                        reverse=True
+                                    )
+                                else:
+                                    # Pool is full (e.g. 1000 items) - replace lowest candidate if this one is better
+                                    lowest_cand = self.candidates_passed[-1]
+                                    lowest_score = lowest_cand["metrics"].get(objective, lowest_cand["metrics"].get("tn_score", 0.0))
+                                    if cand_score > lowest_score:
+                                        evicted = self.candidates_passed.pop(-1)
+                                        if evicted.get("signature") in self.seen_signatures:
+                                            self.seen_signatures.remove(evicted["signature"])
+                                        if evicted.get("perf_sig") in self.seen_perf_signatures:
+                                            self.seen_perf_signatures.remove(evicted["perf_sig"])
+                                        self.candidates_passed.append(candidate_entry)
+                                        self.candidates_passed.sort(
+                                            key=lambda x: x["metrics"].get(objective, x["metrics"].get("tn_score", 0.0)),
+                                            reverse=True
+                                        )
+                                        self.log(f"⚡ Top {max_candidates} actualizado: Algo {individual.id[-4:].upper()} ({cand_score:.1f}) desplazó a uno menor ({lowest_score:.1f})")
+                                    else:
+                                        self.discarded_count += 1
+
+                            if self.best_candidate is None or cand_score > self.best_candidate["metrics"].get(objective, self.best_candidate["metrics"].get("tn_score", 0.0)):
+                                self.best_candidate = candidate_entry
+                                self.log(f"★ NUEVO LÍDER: Algo {individual.id[-4:].upper()} | TN Score: {m['tn_score']} | Net Profit: +${m['total_return_usd']:,.2f} | WR: {m['win_rate_pct']}% | Trades: {m['total_trades']}")
 
                     else:
                         self.discarded_count += 1

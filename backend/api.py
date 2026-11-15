@@ -54,6 +54,7 @@ class ExplorationConfigRequest(BaseModel):
     min_sharpe: float = 0.8
     min_profit_factor: float = 1.1
     min_dsr: float = 0.2
+    max_candidates: int = 1000
 
 class UpdateDataRequest(BaseModel):
     symbol: Optional[str] = None
@@ -92,11 +93,13 @@ class SaveStrategyRequest(BaseModel):
     strategy_id: Optional[str] = None
     candidate_data: Optional[Dict[str, Any]] = None
     batch_name: Optional[str] = None
+    folder: Optional[str] = None
 
 class BatchSaveStrategiesRequest(BaseModel):
     strategy_ids: Optional[List[str]] = None
     save_all_candidates: bool = False
     batch_name: Optional[str] = None
+    folder: Optional[str] = None
 
 class CreatePortfolioRequest(BaseModel):
     name: str
@@ -104,10 +107,11 @@ class CreatePortfolioRequest(BaseModel):
     weights: Optional[List[float]] = None
     max_strategies: int = 10
     risk_budget: float = 1.0
+    folder: Optional[str] = None
 
 @app.post("/api/strategy/save")
 def save_strategy(req: SaveStrategyRequest):
-    """Saves a strategy with its metrics to disk."""
+    """Saves a strategy with its metrics to disk inside a labeled folder/batch."""
     import time
     cand = None
     if req.candidate_data:
@@ -118,19 +122,20 @@ def save_strategy(req: SaveStrategyRequest):
     if not cand:
         raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
     
-    # Enrich with batch/timestamp info if not present
     sym = cand.get("strategy", {}).get("symbol", "N/A")
     tf = cand.get("strategy", {}).get("timeframe", "1h")
-    cand["batch_name"] = req.batch_name or cand.get("batch_name") or f"Lote {sym} {tf}"
+    folder_name = req.folder or req.batch_name or f"Lote {sym} {tf}"
+    cand["batch_name"] = folder_name
+    cand["folder"] = folder_name
     cand["saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
     rec = StrategyRecord(cand)
-    rec.save()
-    return {"status": "saved", "strategy_id": rec.id}
+    rec.save(folder=folder_name)
+    return {"status": "saved", "strategy_id": rec.id, "folder": folder_name}
 
 @app.post("/api/strategy/batch-save")
 def batch_save_strategies(req: BatchSaveStrategiesRequest):
-    """Saves multiple strategies at once in batch with batch label."""
+    """Saves multiple strategies at once inside a designated folder/batch."""
     import time
     saved_ids = []
     candidates = genetic_engine.get_candidates()
@@ -142,18 +147,24 @@ def batch_save_strategies(req: BatchSaveStrategiesRequest):
     else:
         targets = candidates
 
+    if not targets:
+        return {"status": "saved_batch", "count": 0, "saved_ids": [], "folder": "General"}
+
+    first_cand = targets[0]
+    sym = first_cand.get("strategy", {}).get("symbol", "N/A")
+    tf = first_cand.get("strategy", {}).get("timeframe", "1h")
+    folder_name = req.folder or req.batch_name or f"Lote {sym} {tf} ({time.strftime('%d-%m %H-%M')})"
+
     for cand in targets:
-        sym = cand.get("strategy", {}).get("symbol", "N/A")
-        tf = cand.get("strategy", {}).get("timeframe", "1h")
-        batch_label = req.batch_name or f"Lote {sym} {tf} ({time.strftime('%d/%m %H:%M')})"
-        cand["batch_name"] = batch_label
+        cand["batch_name"] = folder_name
+        cand["folder"] = folder_name
         cand["saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         
         rec = StrategyRecord(cand)
-        rec.save()
+        rec.save(folder=folder_name)
         saved_ids.append(rec.id)
 
-    return {"status": "saved_batch", "count": len(saved_ids), "saved_ids": saved_ids, "batch_name": req.batch_name}
+    return {"status": "saved_batch", "count": len(saved_ids), "saved_ids": saved_ids, "folder": folder_name}
 
 @app.delete("/api/strategy/{strategy_id}")
 def delete_strategy(strategy_id: str):
@@ -163,14 +174,25 @@ def delete_strategy(strategy_id: str):
         raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
     return {"status": "deleted", "strategy_id": strategy_id}
 
+@app.get("/api/strategy-folders")
+def list_strategy_folders():
+    """Lists organized strategy folders with aggregate metrics."""
+    return StrategyRecord.list_folders()
+
+@app.delete("/api/strategy-folder/{folder_name}")
+def delete_strategy_folder(folder_name: str):
+    """Deletes an entire strategy folder and all strategies within it."""
+    deleted = StrategyRecord.delete_folder(folder_name)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Carpeta no encontrada.")
+    return {"status": "deleted_folder", "folder": folder_name}
+
 @app.post("/api/portfolio/create")
 def create_portfolio(req: CreatePortfolioRequest):
-    """Stops engine if running and combines selected strategies into a portfolio."""
-    # 1. Stop engine first as requested
+    """Stops engine if running and combines selected strategies into a portfolio inside folder."""
     if genetic_engine.is_running:
         genetic_engine.stop_exploration()
 
-    # 2. Load strategies (check both saved and active candidate pool)
     candidates_pool = {c["strategy"]["id"]: c for c in genetic_engine.get_candidates()}
     selected = []
     
@@ -180,11 +202,10 @@ def create_portfolio(req: CreatePortfolioRequest):
             rec = StrategyRecord.load(sid)
             selected.append(rec.data)
         except FileNotFoundError:
-            # Check if it's currently in active candidates and auto-persist it
             if sid in candidates_pool:
                 cand = candidates_pool[sid]
                 rec = StrategyRecord(cand)
-                rec.save()
+                rec.save(folder="General")
                 selected.append(cand)
             else:
                 continue
@@ -192,18 +213,19 @@ def create_portfolio(req: CreatePortfolioRequest):
     if not selected:
         raise HTTPException(status_code=400, detail="No se encontraron estrategias válidas para combinar.")
 
-    # 3. Normalise weights if provided
     weights = None
     if req.weights and len(req.weights) == len(selected):
         total = sum(req.weights)
         if total > 0:
             weights = [round(w / total, 4) for w in req.weights]
 
+    folder_name = req.folder or "Portafolios Multi-Activo"
     port = Portfolio(name=req.name or f"Portafolio {len(selected)} Estrategias", 
                      strategies=selected, 
                      weights=weights, 
-                     risk_budget=req.risk_budget)
-    port.save()
+                     risk_budget=req.risk_budget,
+                     folder=folder_name)
+    port.save(folder=folder_name)
     return {"status": "created", "portfolio": port.to_dict()}
 
 @app.get("/api/strategies/saved")
@@ -213,6 +235,17 @@ def list_saved_strategies():
 @app.get("/api/portfolios")
 def list_portfolios():
     return Portfolio.list_all()
+
+@app.get("/api/portfolio-folders")
+def list_portfolio_folders():
+    return Portfolio.list_folders()
+
+@app.delete("/api/portfolio-folder/{folder_name}")
+def delete_portfolio_folder(folder_name: str):
+    deleted = Portfolio.delete_folder(folder_name)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Carpeta de portafolios no encontrada.")
+    return {"status": "deleted_portfolio_folder", "folder": folder_name}
 
 @app.get("/api/portfolio/{portfolio_id}")
 def get_portfolio(portfolio_id: str):
@@ -224,10 +257,10 @@ def get_portfolio(portfolio_id: str):
 
 @app.delete("/api/portfolio/{portfolio_id}")
 def delete_portfolio(portfolio_id: str):
-    path = Path(__file__).resolve().parents[1] / "data" / "portfolios" / f"{portfolio_id}.json"
-    if not path.exists():
+    deleted = Portfolio.delete(portfolio_id)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Portafolio no encontrado.")
-    path.unlink()
+    return {"status": "deleted", "portfolio_id": portfolio_id}
     return {"status": "deleted", "portfolio_id": portfolio_id}
 
 @app.post("/api/start-exploration")

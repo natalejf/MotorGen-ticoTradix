@@ -238,6 +238,18 @@ class Strategy:
         inds.add("ATR") # Used by default for sizing & exits
         return sorted(list(inds))
 
+    def get_signature(self) -> str:
+        """Returns a deterministic signature string representing the exact logic of the strategy."""
+        buy_strs = sorted([c.to_human_string() for c in self.buy_conditions])
+        sell_strs = sorted([c.to_human_string() for c in self.sell_conditions])
+        return (
+            f"{self.symbol}|{self.timeframe}|{self.direction}|{self.entry_order_type}|"
+            f"BUY:{';'.join(buy_strs)}|SELL:{';'.join(sell_strs)}|"
+            f"{self.exit_mode}|sl:{self.sl_atr}|tp:{self.tp_atr}|trail:{self.trail_atr}|"
+            f"be:{self.be_atr}|swing:{self.swing_bars}|maxb:{self.max_bars}|"
+            f"sess:{self.session_filter}"
+        )
+
     def to_human_description(self) -> Dict[str, Any]:
         """Generates detailed human-readable explanation of strategy rules in Spanish."""
         buy_rules = [c.to_human_string("es") for c in self.buy_conditions]

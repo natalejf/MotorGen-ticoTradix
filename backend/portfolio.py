@@ -17,7 +17,7 @@ for d in (PORTFOLIO_DIR, STRATEGY_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
 class StrategyRecord:
-    """Wrap a candidate strategy with its full metrics and metadata for persistence."""
+    """Wrap a candidate strategy with its full metrics and metadata for persistence in folders/batches."""
     def __init__(self, record_dict: Dict[str, Any]):
         if "strategy" in record_dict:
             self.id = record_dict["strategy"]["id"]
@@ -26,38 +26,129 @@ class StrategyRecord:
             self.id = record_dict.get("id", f"strat_{int(time.time()*1000)}")
             self.data = {"strategy": record_dict, "metrics": {}}
 
-    def save(self) -> Path:
-        """Persist the strategy as JSON under `saved_strategies/<id>.json`."""
-        path = STRATEGY_DIR / f"{self.id}.json"
+    def save(self, folder: str = "General") -> Path:
+        """Persist the strategy as JSON inside its designated folder under `saved_strategies/<folder>/<id>.json`."""
+        clean_folder = "".join(c for c in str(folder) if c.isalnum() or c in (" ", "_", "-", ".", "(", ")")).strip() or "General"
+        target_dir = STRATEGY_DIR / clean_folder
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.data["folder"] = clean_folder
+        if "batch_name" not in self.data:
+            self.data["batch_name"] = clean_folder
+        if "saved_at" not in self.data:
+            self.data["saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+        path = target_dir / f"{self.id}.json"
         path.write_text(json.dumps(self.data, indent=2, ensure_ascii=False), encoding="utf-8")
         return path
 
     @staticmethod
     def load(strategy_id: str) -> "StrategyRecord":
-        path = STRATEGY_DIR / f"{strategy_id}.json"
-        if not path.exists():
+        matches = list(STRATEGY_DIR.glob(f"**/{strategy_id}.json"))
+        if not matches:
             raise FileNotFoundError(f"Strategy {strategy_id} not found")
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(matches[0].read_text(encoding="utf-8"))
         return StrategyRecord(data)
 
     @staticmethod
     def delete(strategy_id: str) -> bool:
-        path = STRATEGY_DIR / f"{strategy_id}.json"
-        if path.exists():
-            path.unlink()
+        matches = list(STRATEGY_DIR.glob(f"**/{strategy_id}.json"))
+        deleted = False
+        for p in matches:
+            try:
+                p.unlink()
+                deleted = True
+            except Exception:
+                pass
+        return deleted
+
+    @staticmethod
+    def delete_folder(folder_name: str) -> bool:
+        clean_folder = folder_name.strip()
+        target_dir = STRATEGY_DIR / clean_folder
+        if target_dir.exists() and target_dir.is_dir():
+            import shutil
+            shutil.rmtree(target_dir)
             return True
         return False
 
     @staticmethod
     def list_all() -> List[Dict[str, Any]]:
         results = []
-        for p in STRATEGY_DIR.glob("*.json"):
+        for p in STRATEGY_DIR.glob("**/*.json"):
             try:
                 data = json.loads(p.read_text(encoding="utf-8"))
+                rel = p.relative_to(STRATEGY_DIR)
+                data["folder"] = rel.parts[0] if len(rel.parts) > 1 else data.get("folder", "General")
                 results.append(data)
             except Exception:
                 continue
         return results
+
+    @staticmethod
+    def list_folders() -> List[Dict[str, Any]]:
+        folders_dict: Dict[str, Dict[str, Any]] = {}
+        for p in STRATEGY_DIR.glob("**/*.json"):
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                rel = p.relative_to(STRATEGY_DIR)
+                fname = rel.parts[0] if len(rel.parts) > 1 else data.get("folder", "General")
+                
+                if fname not in folders_dict:
+                    folders_dict[fname] = {
+                        "name": fname,
+                        "count": 0,
+                        "symbols": set(),
+                        "timeframes": set(),
+                        "indicators": set(),
+                        "total_net_profit": 0.0,
+                        "avg_win_rate": 0.0,
+                        "avg_sharpe": 0.0,
+                        "created_at": data.get("saved_at", time.strftime("%Y-%m-%d %H:%M")),
+                        "strategies": []
+                    }
+                
+                f = folders_dict[fname]
+                f["count"] += 1
+                f["strategies"].append(data)
+                
+                s = data.get("strategy", data)
+                m = data.get("metrics", {})
+                
+                if s.get("symbol"):
+                    f["symbols"].add(s["symbol"])
+                if s.get("timeframe"):
+                    f["timeframes"].add(s["timeframe"])
+                for ind in data.get("indicators_used", s.get("indicators_used", [])):
+                    f["indicators"].add(ind)
+                for cond in s.get("buy_conditions", []) + s.get("sell_conditions", []):
+                    if isinstance(cond, dict) and cond.get("indicator"):
+                        f["indicators"].add(cond["indicator"])
+                    
+                f["total_net_profit"] += m.get("total_return_usd", 0.0)
+                f["avg_win_rate"] += m.get("win_rate_pct", 0.0)
+                f["avg_sharpe"] += m.get("sharpe_ratio", 0.0)
+            except Exception:
+                continue
+
+        results = []
+        for fname, f in folders_dict.items():
+            cnt = max(1, f["count"])
+            results.append({
+                "folder": fname,
+                "name": fname,
+                "count": f["count"],
+                "symbols": sorted(list(f["symbols"])),
+                "timeframes": sorted(list(f["timeframes"])),
+                "indicators": sorted(list(f["indicators"])),
+                "total_profit": round(f["total_net_profit"], 2),
+                "total_net_profit": round(f["total_net_profit"], 2),
+                "avg_win_rate": round(f["avg_win_rate"] / cnt, 1),
+                "avg_sharpe": round(f["avg_sharpe"] / cnt, 2),
+                "created_at": f["created_at"],
+                "strategies": f["strategies"]
+            })
+        return sorted(results, key=lambda x: x["created_at"], reverse=True)
 
 
 class Portfolio:
@@ -66,13 +157,15 @@ class Portfolio:
                  weights: Optional[List[float]] = None,
                  risk_budget: float = 1.0,
                  portfolio_id: Optional[str] = None,
-                 created_at: Optional[str] = None):
+                 created_at: Optional[str] = None,
+                 folder: str = "General"):
         self.name = name
         self.strategies = strategies
         n = max(1, len(strategies))
         self.weights = weights if (weights and len(weights) == n) else [round(1.0 / n, 4)] * n
         self.risk_budget = risk_budget
         self.created_at = created_at or time.strftime("%Y-%m-%d %H:%M:%S")
+        self.folder = "".join(c for c in str(folder) if c.isalnum() or c in (" ", "_", "-", ".", "(", ")")).strip() or "General"
         
         # Clean ID
         clean_name = "".join(c if c.isalnum() else "_" for c in name.lower())
@@ -133,6 +226,7 @@ class Portfolio:
         return {
             "id": self.id,
             "name": self.name,
+            "folder": self.folder,
             "strategy_ids": [
                 s.get("strategy", s).get("id", s.get("id")) for s in self.strategies
             ],
@@ -153,11 +247,20 @@ class Portfolio:
             ]
         }
 
-    def save(self) -> Path:
-        """Persist portfolio metadata and snapshot of combined strategies."""
-        path = PORTFOLIO_DIR / f"{self.id}.json"
+    def save(self, folder: Optional[str] = None) -> Path:
+        """Persist portfolio metadata and snapshot of combined strategies inside folder."""
+        f_name = folder or self.folder or "General"
+        clean_folder = "".join(c for c in str(f_name) if c.isalnum() or c in (" ", "_", "-", ".", "(", ")")).strip() or "General"
+        target_dir = PORTFOLIO_DIR / clean_folder
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.folder = clean_folder
+        path = target_dir / f"{self.id}.json"
+        
+        d = self.to_dict()
+        d["folder"] = clean_folder
         payload = {
-            "meta": self.to_dict(),
+            "meta": d,
             "strategies": self.strategies,
         }
         path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -165,28 +268,103 @@ class Portfolio:
 
     @staticmethod
     def load(portfolio_id: str) -> "Portfolio":
-        path = PORTFOLIO_DIR / f"{portfolio_id}.json"
-        if not path.exists():
+        matches = list(PORTFOLIO_DIR.glob(f"**/{portfolio_id}.json"))
+        if not matches:
             raise FileNotFoundError(f"Portfolio {portfolio_id} not found")
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(matches[0].read_text(encoding="utf-8"))
         meta = data["meta"]
+        rel = matches[0].relative_to(PORTFOLIO_DIR)
+        folder = rel.parts[0] if len(rel.parts) > 1 else meta.get("folder", "General")
         return Portfolio(
             name=meta["name"],
             strategies=data.get("strategies", []),
             weights=meta.get("weights"),
             risk_budget=meta.get("risk_budget", 1.0),
             portfolio_id=meta.get("id"),
-            created_at=meta.get("created_at")
+            created_at=meta.get("created_at"),
+            folder=folder
         )
+
+    @staticmethod
+    def delete(portfolio_id: str) -> bool:
+        matches = list(PORTFOLIO_DIR.glob(f"**/{portfolio_id}.json"))
+        deleted = False
+        for p in matches:
+            try:
+                p.unlink()
+                deleted = True
+            except Exception:
+                pass
+        return deleted
+
+    @staticmethod
+    def delete_folder(folder_name: str) -> bool:
+        clean_folder = folder_name.strip()
+        target_dir = PORTFOLIO_DIR / clean_folder
+        if target_dir.exists() and target_dir.is_dir():
+            import shutil
+            shutil.rmtree(target_dir)
+            return True
+        return False
 
     @staticmethod
     def list_all() -> List[Dict[str, Any]]:
         results = []
-        for p in PORTFOLIO_DIR.glob("*.json"):
+        for p in PORTFOLIO_DIR.glob("**/*.json"):
             try:
                 data = json.loads(p.read_text(encoding="utf-8"))
-                results.append(data.get("meta", data))
+                meta = data.get("meta", data)
+                rel = p.relative_to(PORTFOLIO_DIR)
+                meta["folder"] = rel.parts[0] if len(rel.parts) > 1 else meta.get("folder", "General")
+                results.append(meta)
             except Exception:
                 continue
         return results
+
+    @staticmethod
+    def list_folders() -> List[Dict[str, Any]]:
+        folders_dict: Dict[str, Dict[str, Any]] = {}
+        for p in PORTFOLIO_DIR.glob("**/*.json"):
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                meta = data.get("meta", data)
+                rel = p.relative_to(PORTFOLIO_DIR)
+                fname = rel.parts[0] if len(rel.parts) > 1 else meta.get("folder", "General")
+                
+                if fname not in folders_dict:
+                    folders_dict[fname] = {
+                        "name": fname,
+                        "count": 0,
+                        "created_at": meta.get("created_at", time.strftime("%Y-%m-%d")),
+                        "portfolios": []
+                    }
+                f = folders_dict[fname]
+                f["count"] += 1
+                f["portfolios"].append(meta)
+            except Exception:
+                continue
+
+        results = []
+        for fname, f in folders_dict.items():
+            syms = set()
+            tot_strat = 0
+            tot_pnl = 0.0
+            for p in f["portfolios"]:
+                m = p.get("metrics", {})
+                for s in m.get("symbols", []):
+                    syms.add(s)
+                tot_strat += m.get("strategies_count", len(p.get("strategies_summary", [])))
+                tot_pnl += m.get("combined_net_profit_usd", 0.0)
+
+            results.append({
+                "folder": fname,
+                "name": fname,
+                "count": f["count"],
+                "symbols": sorted(list(syms)),
+                "total_strategies": tot_strat,
+                "total_profit": round(tot_pnl, 2),
+                "created_at": f["created_at"],
+                "portfolios": f["portfolios"]
+            })
+        return sorted(results, key=lambda x: x["created_at"], reverse=True)
 
