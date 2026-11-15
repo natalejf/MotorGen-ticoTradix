@@ -225,6 +225,34 @@
                 </div>
               </div>
             </div>
+
+            <!-- Dirección de Trading -->
+            <div class="tn-card">
+              <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Dirección de Trading</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Define si los algoritmos generados operan en ambas direcciones o solo en una.</p>
+                </div>
+                <span class="tn-badge tn-badge-white">DIRECCIÓN</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded bg-[#0e0e12] border border-[#22222a] hover:border-[#3a3a4a] transition">
+                  <input type="radio" name="direction" value="BOTH" checked class="accent-white">
+                  <span class="text-xs text-white">Compras y Ventas</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded bg-[#0e0e12] border border-[#22222a] hover:border-[#3a3a4a] transition">
+                  <input type="radio" name="direction" value="LONG_ONLY" class="accent-white">
+                  <span class="text-xs text-white">Solo Compras</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded bg-[#0e0e12] border border-[#22222a] hover:border-[#3a3a4a] transition">
+                  <input type="radio" name="direction" value="SHORT_ONLY" class="accent-white">
+                  <span class="text-xs text-white">Solo Ventas</span>
+                </label>
+              </div>
+              <p class="text-[10px] text-[#71717a] mt-2">
+                Filtra la dirección de las operaciones: ambas direcciones, solo posiciones largas (compras), o solo posiciones cortas (ventas).
+              </p>
+            </div>
             <div class="tn-card">
               <div class="flex items-center justify-between mb-4">
                 <div>
@@ -557,30 +585,6 @@
                   <input type="checkbox" id="check-close-ny" class="accent-white">
                   <span>Cerrar posiciones antes del cierre de NY</span>
                 </label>
-              </div>
-
-              <!-- Dirección de Trading -->
-              <div class="mt-4 pt-4 border-t border-[#22222a]">
-                <div class="flex flex-wrap items-center gap-3">
-                  <span class="text-xs font-semibold text-white uppercase tracking-wider">Dirección:</span>
-                  <div class="flex gap-2">
-                    <label class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded bg-[#0e0e12] border border-[#22222a] hover:border-[#3a3a4a] transition">
-                      <input type="radio" name="direction" value="BOTH" checked class="accent-white">
-                      <span class="text-xs text-white">Compras y Ventas</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded bg-[#0e0e12] border border-[#22222a] hover:border-[#3a3a4a] transition">
-                      <input type="radio" name="direction" value="LONG_ONLY" class="accent-white">
-                      <span class="text-xs text-white">Solo Compras</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded bg-[#0e0e12] border border-[#22222a] hover:border-[#3a3a4a] transition">
-                      <input type="radio" name="direction" value="SHORT_ONLY" class="accent-white">
-                      <span class="text-xs text-white">Solo Ventas</span>
-                    </label>
-                  </div>
-                </div>
-                <p class="text-[10px] text-[#71717a] mt-1.5">
-                  Filtra la dirección de las operaciones: ambas direcciones, solo posiciones largas (compras), o solo posiciones cortas (ventas).
-                </p>
               </div>
             </div>
             <div class="flex justify-end">
