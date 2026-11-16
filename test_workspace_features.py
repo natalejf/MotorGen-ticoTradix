@@ -32,6 +32,12 @@ def test_catalog_and_defaults():
     assert (cfg.min_sharpe, cfg.max_drawdown, cfg.min_win_rate, cfg.min_dsr) == (1.2,15.,50.,.3)
 
 
+def test_empty_portfolio_does_not_fabricate_equity():
+    result = Portfolio('Empty', []).get_detailed_equity_data()
+    assert result['combined_curve'] == []
+    assert result['data_status'] == 'unavailable'
+
+
 def test_sessions_editor_and_paths(tmp_path, monkeypatch):
     import backend.workspace_features as features
     monkeypatch.setattr(features, 'ROOT', tmp_path)

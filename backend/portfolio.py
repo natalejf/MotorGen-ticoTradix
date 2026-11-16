@@ -299,7 +299,7 @@ class Portfolio:
                     from backend.backtester import backtester
                     st_obj = Strategy.from_dict(st_data)
                     df = data_manager.load_data(st_obj.symbol, st_obj.timeframe)
-                    res = backtester.run_backtest(st_obj, df, initial_capital=initial_capital)
+                    res = backtester.run_backtest(st_obj, df, initial_deposit=initial_capital)
                     eq = res.equity_curve
                 except Exception:
                     eq = []
@@ -308,13 +308,8 @@ class Portfolio:
 
         valid_curves = [c for c in curves if c[1]]
         if not valid_curves:
-            pnl = self.metrics.get("combined_net_profit_usd", 0.0)
-            combined = [
-                {"timestamp": "Inicio", "equity": initial_capital, "drawdown_pct": 0.0},
-                {"timestamp": "Actual", "equity": round(initial_capital + pnl, 2), "drawdown_pct": 0.5}
-            ]
-            ind_curves = [{"name": sm["name"], "symbol": sm["symbol"], "timeframe": sm["timeframe"], "weight": sm["weight"], "data": [initial_capital, round(initial_capital + pnl * sm["weight"], 2)]} for sm in strat_meta]
-            return {"combined_curve": combined, "individual_curves": ind_curves}
+            return {"combined_curve": [], "individual_curves": [],
+                    "data_status": "unavailable", "message": "No hay equity histórica disponible; no se generó una curva estimada."}
 
         base_curve = max(valid_curves, key=lambda x: len(x[1]))[1]
         n_points = min(len(base_curve), 80)

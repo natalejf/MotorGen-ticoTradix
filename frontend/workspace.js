@@ -27,9 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
     @media(max-width:800px){#candidates-grid.workspace-list .candidate-card{display:block}}
   `;
   document.head.appendChild(style);
-  const tools = document.createElement('details');
+  const tools = document.createElement('div');
   tools.id = 'workspace-tools';
-  tools.innerHTML = `<summary>Espacio de trabajo · Sesiones · IDE · Riesgo de portafolios</summary>
+  tools.innerHTML = `<header><h1 style="font-size:22px;font-weight:600">IDE y herramientas</h1>
+    <p>Editor de borradores y versiones. Guardar código aquí no modifica ni ejecuta los algoritmos del motor.</p></header>
     <div id="workspace-message" role="status" aria-live="polite"></div>
     <fieldset><legend>Sesiones de exploración</legend>
       <input id="workspace-session-name" placeholder="Nombre de sesión" maxlength="150" aria-label="Nombre de sesión">
@@ -45,14 +46,25 @@ document.addEventListener('DOMContentLoaded', () => {
       <button id="workspace-save-version">Guardar versión</button>
       <select id="workspace-versions" aria-label="Historial de versiones"></select><button id="workspace-restore-version">Ver versión</button>
       <div id="workspace-editor"><textarea aria-label="Editor de estrategia" spellcheck="false"></textarea></div>
-      <p id="workspace-editor-status">Editor de texto disponible. Cargando Monaco…</p></fieldset>
+      <p id="workspace-editor-status">Editor de texto disponible. Cargando Monaco…</p>
+      <p>Sirve para revisar el JSON de una estrategia, tomar notas técnicas y conservar versiones. No es necesario para crear portafolios ni para usar copy trading.</p></fieldset>
     <fieldset><legend>Correlación y Monte Carlo del portafolio</legend>
       <select id="workspace-portfolios" aria-label="Portafolio"></select><button id="workspace-refresh-portfolios">Actualizar portafolios</button>
       <label>Simulaciones <input id="workspace-simulations" type="number" min="100" max="10000" value="1000"></label>
       <label>Ruina: DD % <input id="workspace-ruin" type="number" min="1" max="100" value="30"></label>
       <label>Bloque (días) <input id="workspace-block" type="number" min="1" max="60" value="5"></label>
       <button id="workspace-risk">Calcular matriz y Monte Carlo</button><div id="workspace-risk-result"></div></fieldset>`;
-  document.getElementById('section-engine').before(tools);
+  const workspaceSection = document.createElement('section');
+  workspaceSection.id = 'section-workspace';
+  workspaceSection.className = 'app-section hidden';
+  workspaceSection.appendChild(tools);
+  document.getElementById('section-engine').before(workspaceSection);
+  const workspaceNav = document.createElement('button');
+  workspaceNav.className = 'sidebar-item';
+  workspaceNav.dataset.section = 'workspace';
+  workspaceNav.innerHTML = '<span class="sidebar-item-icon">⌨</span><span class="flex-1">IDE y herramientas</span>';
+  workspaceNav.addEventListener('click', () => showSection('workspace'));
+  document.querySelector('#app-sidebar nav').appendChild(workspaceNav);
   const $ = id => document.getElementById(id);
   const message = text => { $('workspace-message').textContent = text; };
   const api = async (url, method='GET', body) => {

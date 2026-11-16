@@ -1566,7 +1566,7 @@ class GeneticEngine:
                                     initial_deposit=initial_deposit, **bt_kwargs)
                                 _hm = _hres.metrics
                                 m["holdout"] = {
-                                    "net_profit": round(float(_hm.get("net_profit", 0.0) or 0.0), 2),
+                                    "net_profit": round(float(_hm.get("total_return_usd", 0.0) or 0.0), 2),
                                     "sharpe_ratio": round(float(_hm.get("sharpe_ratio", 0.0) or 0.0), 3),
                                     "win_rate_pct": round(float(_hm.get("win_rate_pct", 0.0) or 0.0), 1),
                                     "trades": int(_hm.get("total_trades", len(_hres.trades)) or 0),
