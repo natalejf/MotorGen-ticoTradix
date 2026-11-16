@@ -4,11 +4,12 @@ Provides REST API endpoints and background task management.
 """
 
 import os
+import json
 from typing import Dict, List, Any, Optional
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import PlainTextResponse
 from pathlib import Path
 from pydantic import BaseModel
 
@@ -38,23 +39,52 @@ app.add_middleware(
 class ExplorationConfigRequest(BaseModel):
     symbol: str = "EURUSD"
     timeframe: str = "1h"
-    search_mode: str = "genetic"
+    # Multi-symbol / multi-timeframe (fallback to symbol/timeframe if omitted)
+    symbols: Optional[List[str]] = None
+    timeframes: Optional[List[str]] = None
+    # Exploration date range (inclusive; None = full history)
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    # K: % final de datos reservado como "examen sorpresa" (holdout), 0 = off
+    holdout_pct: float = 0.0
+    # F: modo multi-timeframe — "separate" (un algo por TF) | "combined" (TF bajo + confirmación TF alto)
+    mtf_mode: str = "separate"
+    # G: Averaging config (TN averagingConfig)
+    averaging_config: Optional[Dict[str, Any]] = None
+    # Macro FRED context filters
+    use_macro: bool = False
+    macro_series: List[str] = []
+    search_mode: str = "genetic"  # "genetic" | "random"
     initial_deposit: float = 10000.0
     objective: str = "tn_score"
     infinite_mode: bool = True
     generations: int = 0
     population_size: int = 30
+    num_combinations: int = 10000  # budget for random mode
     enabled_indicators: List[str] = list(ALL_28_INDICATORS.keys())
     enabled_entry_types: List[str] = ALL_ENTRY_TYPES
     enabled_exit_modes: List[str] = ALL_EXIT_MODES
-    min_win_rate: float = 35.0
+    # User-edited per-parameter sweep ranges {IND: {param: {from, step, to}}}
+    indicator_ranges: Optional[Dict[str, Any]] = None
+    # User-edited exit/risk sweep ranges {param: {from, step, to}}
+    exit_ranges: Optional[Dict[str, Any]] = None
+    min_win_rate: float = 50.0
     min_trades: int = 8
-    max_drawdown: float = 20.0
+    max_drawdown: float = 15.0
     min_net_profit_usd: float = 0.0
-    min_sharpe: float = 0.8
+    min_sharpe: float = 1.2
     min_profit_factor: float = 1.1
-    min_dsr: float = 0.2
+    min_dsr: float = 0.3
     max_candidates: Optional[int] = None
+
+    # Backtest modeling & costs
+    modeling_mode: str = "ohlc"  # "ohlc" | "open_prices" | "ohlc_m1" | "tick"
+    spread_pips: Optional[float] = None
+    slippage_pips: Optional[float] = None
+    commission_per_lot: Optional[float] = None
+    swap_long: Optional[float] = None
+    swap_short: Optional[float] = None
+    parallel_workers: int = 0  # 0 = serial
 
     # Risk management & Position sizing
     sizing_mode: str = "FIXED_RISK"  # "FIXED_RISK", "FIXED_LOT", "FIXED_CASH", "MARTINGALE", "ANTI_MARTINGALE"
@@ -62,6 +92,30 @@ class ExplorationConfigRequest(BaseModel):
     fixed_lot: float = 0.01
     fixed_cash_risk: float = 100.0
     martingale_mult: float = 1.5
+    risk_multiplier: float = 1.0
+    fixed_rr: float = 0.0
+    reward_risk_ratio: float = 0.0
+
+    # Full risk rules (0 / defaults = free to vary in generation)
+    max_daily_loss_pct: float = 3.0
+    max_weekly_loss_pct: float = 6.0
+    max_monthly_loss_pct: float = 12.0
+    max_account_loss_pct: float = 8.0
+    max_daily_gain_pct: float = 0.0
+    max_weekly_gain_pct: float = 0.0
+    max_monthly_gain_pct: float = 0.0
+    max_account_gain_pct: float = 0.0
+    max_consecutive_wins: int = 0
+    max_consecutive_losses: int = 0
+    max_daily_trades: int = 4
+    max_open_trades: int = 1
+
+    # Time rules
+    no_new_trades_friday: bool = False
+    no_monday_open: bool = False
+    avoid_rollover: bool = False
+    close_before_ny_close: bool = False
+    close_before_weekend: bool = True
 
     # Multi-indicator synergy
     min_indicators_per_strategy: int = 1
@@ -73,8 +127,29 @@ class ExplorationConfigRequest(BaseModel):
     prop_firm_total_dd_pct: float = 8.0
     prop_firm_target_pct: float = 8.0
 
+    # Challenge simulation during exploration (runs when prop_firm_filter on or objective=pass_rate)
+    challenge_capital: float = 10000.0
+    challenge_min_trading_days: int = 5
+    challenge_simulations: int = 10
+    challenge_min_pass_rate: float = 0.0  # 0 = never rejects on pass rate
+
     # Direction filter (BOTH, LONG_ONLY, SHORT_ONLY)
     direction: str = "BOTH"
+
+    # Additional validators during exploration (TN: "ejecutar validadores adicionales")
+    validate_during_exploration: bool = True
+    wf_top_n: int = 10            # 1..50: WF sobre los N mejores aceptados
+    mv_top_n: int = 5             # 1..10: Multiverso sobre los N mejores aceptados
+    wf_mode: str = "validation"   # "validation" | "reoptimization"
+    wf_reopt_depth: str = "standard"
+    wf_windows: int = 4
+    wf_test_ratio: float = 0.25
+    wf_min_wfe: float = 0.5
+    wf_min_pass_rate: float = 60.0
+    wf_min_oos_sharpe: float = 0.5
+    mv_universes: int = 25        # ligero para exploración (80 en retest manual)
+    mv_preset: str = "balanced"
+    mv_regimes: int = 3
 
 class UpdateDataRequest(BaseModel):
     symbol: Optional[str] = None
@@ -107,7 +182,6 @@ def update_data(req: UpdateDataRequest):
 # ---------------------------------------------------------------------
 from backend.portfolio import StrategyRecord, Portfolio, STRATEGY_DIR, PORTFOLIO_DIR
 from backend.portfolio_engine import portfolio_engine
-from pydantic import conint, confloat
 from typing import List
 
 class PortfolioEngineConfigRequest(BaseModel):
@@ -388,7 +462,7 @@ def run_batch_retest(req: BatchRetestRequest):
                 rec.save(folder=rec.data.get("folder", "General"))
             except Exception:
                 pass
-        except Exception as e:
+        except Exception:
             continue
 
     # Save cache file
@@ -542,6 +616,9 @@ def clear_all_portfolios(req: Optional[Dict[str, Any]] = None):
 
 @app.post("/api/start-exploration")
 def start_exploration(req: ExplorationConfigRequest):
+    if req.start_date and req.end_date and req.start_date > req.end_date:
+        raise HTTPException(status_code=400,
+                            detail="start_date debe ser anterior a end_date")
     if genetic_engine.is_running:
         genetic_engine.stop_exploration()
         import time
@@ -626,15 +703,28 @@ def get_candidate_detail(candidate_id: str):
             "folder": rec.data.get("folder", "General"),
             "saved_at": rec.data.get("saved_at", "")
         }
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
 
     raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
 
+class ValidateCandidateRequest(BaseModel):
+    wf_mode: str = "validation"       # "validation" | "reoptimization"
+    wf_reopt_depth: str = "standard"  # "fast" | "standard" | "deep"
+    wf_windows: int = 4
+    wf_test_ratio: float = 0.25
+    wf_min_wfe: float = 0.5
+    wf_min_pass_rate: float = 60.0
+    wf_min_oos_sharpe: float = 0.5
+    mv_universes: int = 80
+    mv_preset: str = "balanced"       # "balanced" | "conservative" | "aggressive"
+    mv_regimes: int = 3
+
 @app.post("/api/candidate/{candidate_id}/validate")
-def validate_candidate(candidate_id: str):
-    """Runs full Walk-Forward and Multiverse Monte Carlo simulations on the candidate."""
+def validate_candidate(candidate_id: str, req: Optional[ValidateCandidateRequest] = None):
+    """Runs full Walk-Forward (validation/reoptimization), Multiverse (score+regimes) and Prop Firm sims."""
+    options = req or ValidateCandidateRequest()
     candidates = genetic_engine.get_candidates()
     target_c = next((c for c in candidates if c["strategy"]["id"] == candidate_id), None)
     is_from_disk = False
@@ -654,11 +744,25 @@ def validate_candidate(candidate_id: str):
     strat = Strategy.from_dict(target_c.get("strategy", target_c))
     df = data_manager.load_data(strat.symbol, strat.timeframe)
 
-    # 1. Run Walk-Forward
-    wf_res = validation_suite.run_walk_forward(strat, df, n_windows=4, test_ratio=0.25)
+    # 1. Walk-Forward (con modo reoptimización y umbrales configurables)
+    wf_res = validation_suite.run_walk_forward(
+        strat, df,
+        n_windows=options.wf_windows,
+        test_ratio=options.wf_test_ratio,
+        mode=options.wf_mode,
+        reopt_depth=options.wf_reopt_depth,
+        min_wfe=options.wf_min_wfe,
+        min_pass_rate=options.wf_min_pass_rate,
+        min_sharpe_oos=options.wf_min_oos_sharpe
+    )
 
-    # 2. Run Multiverse (80 synthetic universes)
-    mv_res = validation_suite.run_multiverse(strat, df, n_universes=80)
+    # 2. Multiverse con Score 0-100, presets y regímenes
+    mv_res = validation_suite.run_multiverse(
+        strat, df,
+        n_universes=options.mv_universes,
+        engine_preset=options.mv_preset,
+        n_regimes=options.mv_regimes
+    )
 
     # 3. Prop firm challenge evaluation
     pf_res = validation_suite.evaluate_prop_firm(strat, df)
@@ -673,7 +777,6 @@ def validate_candidate(candidate_id: str):
         rec.data["validation"] = validation_data
         rec.save(folder=rec.data.get("folder", "General"))
     else:
-        # Cache validation result on live candidate
         with genetic_engine.lock:
             for c in genetic_engine.candidates_passed:
                 if c["strategy"]["id"] == candidate_id:
@@ -719,15 +822,23 @@ def get_neural_tree():
 
 @app.get("/api/config-defaults")
 def get_config_defaults():
-    """Returns metadata, all 28 indicators, entry and exit modes and default parameters."""
+    """Returns metadata, all 32 indicators, entry and exit modes and default parameters."""
+    from backend.genetic_engine import OPTIMIZATION_OBJECTIVES
     return {
         "symbols": list(SUPPORTED_SYMBOLS.keys()),
-        "timeframes": ["1h", "4h", "1d"],
+        "timeframes": ["1h", "30m", "4h", "1d"],
         "all_indicators": ALL_28_INDICATORS,
         "entry_types": ALL_ENTRY_TYPES,
         "exit_modes": ALL_EXIT_MODES,
         "session_filters": SESSION_FILTERS,
         "sizing_modes": SIZING_MODES,
+        "modeling_modes": ["ohlc", "open_prices", "ohlc_m1", "tick"],
+        "search_modes": ["genetic", "random"],
+        "wf_modes": ["validation", "reoptimization"],
+        "wf_depths": ["fast", "standard", "deep"],
+        "mv_presets": ["balanced", "conservative", "aggressive"],
+        "macro_available": True,
+        "classification_defaults": {"min_sharpe": 1.2, "max_drawdown": 15.0, "min_win_rate": 50.0, "min_dsr": 0.3},
         "optimization_objectives": [
             {"id": "tn_score", "name": "Score balanceado (default TN Score)"},
             {"id": "sharpe", "name": "Mayor Sharpe Ratio"},
@@ -738,9 +849,43 @@ def get_config_defaults():
             {"id": "profit_factor", "name": "Mayor Profit Factor"},
             {"id": "expectancy", "name": "Mayor Expectancy"},
             {"id": "win_rate", "name": "Mayor Win Rate"},
-            {"id": "recovery_factor", "name": "Mayor Recovery Factor"}
-        ]
+            {"id": "recovery_factor", "name": "Mayor Recovery Factor"},
+            {"id": "pass_rate", "name": "Mayor pass rate de fondeo"}
+        ],
+        "objective_ids": OPTIMIZATION_OBJECTIVES
     }
+
+class CombinationCountRequest(BaseModel):
+    enabled_indicators: List[str] = list(ALL_28_INDICATORS.keys())
+    indicator_ranges: Optional[Dict[str, Any]] = None
+    exit_ranges: Optional[Dict[str, Any]] = None
+
+@app.post("/api/combinations-count")
+def combinations_count(req: CombinationCountRequest):
+    """TN-style counter: product of all parameter range points for enabled indicators."""
+    from backend.genetic_engine import count_combinations
+    total = count_combinations(req.enabled_indicators, req.indicator_ranges, req.exit_ranges)
+    return {"combinations": total, "indicators": len(req.enabled_indicators)}
+
+@app.get("/api/macro-series")
+def get_macro_series():
+    """FRED macro indicator catalog (11 TN categories) + cache status."""
+    from backend.macro_manager import macro_manager
+    catalog = macro_manager.get_catalog()
+    return {"series": catalog, "categories": sorted({s['category'] for s in catalog})}
+
+class MacroUpdateRequest(BaseModel):
+    series: Optional[List[str]] = None
+
+@app.post("/api/macro-update")
+def update_macro(req: Optional[MacroUpdateRequest] = None):
+    """Force re-download of FRED series (public CSV, no API key)."""
+    from backend.macro_manager import macro_manager
+    series = (req.series if req else None)
+    return {"status": "updated", "results": macro_manager.update_all(series)}
+
+from backend.workspace_features import install_routes
+install_routes(app, genetic_engine, ExplorationConfigRequest)
 
 # Mount static frontend files if folder exists
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

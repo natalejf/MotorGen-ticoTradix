@@ -174,7 +174,7 @@
               <span>⚙️</span> Configuración
             </button>
             <button class="tab-btn" data-tab="indicators">
-              <span>📊</span> Indicadores (28 Checks)
+              <span>📊</span> Indicadores (<span id="ind-count-badge">32</span> Checks)
             </button>
             <button class="tab-btn" data-tab="orders">
               <span>⚡</span> Entradas y Salidas
@@ -197,7 +197,13 @@
           <!-- TAB 1: CONFIGURACIÓN -->
           <div id="panel-config" class="tab-panel space-y-6">
             <div class="tn-card">
-              <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab] mb-4">Instrumento y Datos Históricos</h2>
+              <div class="flex items-center justify-between mb-4 pb-3 border-b border-[#202028]">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-[#a0a0ab]">Instrumento y Datos Históricos</h2>
+                  <p class="text-xs text-[#71717a] mt-0.5">Multi-selección: clic para añadir/quitar símbolos y timeframes a explorar en simultáneo.</p>
+                </div>
+                <span class="tn-badge tn-badge-white">MULTI-SÍMBOLO</span>
+              </div>
               <div class="mb-4">
                 <label class="block text-xs text-[#a0a0ab] mb-2">Selecciona el Activo Principal</label>
                 <div id="symbol-pills-container" class="flex flex-wrap gap-2"></div>
@@ -208,9 +214,39 @@
                   <label class="block text-xs text-[#a0a0ab] mb-1">Timeframe (Temporalidad de Velas)</label>
                   <select id="select-timeframe" class="tn-select">
                     <option value="1h" selected>H1 (1 Hora - Granularidad Alta ~17.000 barras)</option>
+                    <option value="30m">M30 (30 Minutos - Intradía, ~60 días)</option>
                     <option value="4h">H4 (4 Horas - Swing Trading ~4.400 barras)</option>
                     <option value="1d">D1 (1 Día - Posicional 5 Años)</option>
                   </select>
+                  <div class="mt-2">
+                    <label class="block text-[10px] text-[#71717a] mb-1">Timeframes a EXPLORAR (multi-selección)</label>
+                    <div id="tf-pills-container" class="flex flex-wrap gap-1.5"></div>
+                  </div>
+                  <div class="mt-2">
+                    <label class="block text-[10px] text-[#71717a] mb-1">Multi-timeframe (requiere 2+ TFs marcados)</label>
+                    <select id="select-mtf-mode" class="tn-select text-xs">
+                      <option value="separate" selected>Separado — un algoritmo por temporalidad</option>
+                      <option value="combined">Combinado — entrada en TF bajo + confirmación en TF superior</option>
+                    </select>
+                  </div>
+                  <div class="mt-3">
+                    <label class="block text-xs text-[#a0a0ab] mb-1">Rango de Fechas de la Exploración</label>
+                    <div class="flex items-center gap-2">
+                      <input type="date" id="input-start-date" class="tn-input text-xs flex-1 min-w-0" aria-label="Fecha de inicio">
+                      <span class="text-[#71717a] text-xs">→</span>
+                      <input type="date" id="input-end-date" class="tn-input text-xs flex-1 min-w-0" aria-label="Fecha final">
+                    </div>
+                    <div class="mt-1 flex items-center justify-between gap-2">
+                      <span id="date-range-avail" class="text-[10px] text-[#71717a]">Disponible: —</span>
+                      <button type="button" id="btn-clear-dates" class="text-[10px] text-[#a0a0ab] hover:text-white underline">Usar todo el histórico</button>
+                    </div>
+                    <span class="text-[10px] text-[#71717a] block mt-0.5">Se actualiza al cambiar símbolo o temporalidad. Vacío = histórico completo.</span>
+                  </div>
+                  <div class="mt-3">
+                    <label class="block text-xs text-[#a0a0ab] mb-1">Examen Sorpresa — Holdout (% final reservado)</label>
+                    <input type="number" id="input-holdout-pct" class="tn-input num-tabular" value="0" step="5" min="0" max="50">
+                    <span class="text-[10px] text-[#71717a] block mt-0.5">Ej.: 10 reserva el 10% final de datos, invisible para la generación. Las estrategias aprobadas se evalúan aparte en ese tramo. 0 = desactivado.</span>
+                  </div>
                 </div>
                 <div>
                   <label class="block text-xs text-[#a0a0ab] mb-1">Capital Inicial (USD)</label>
@@ -288,6 +324,51 @@
                 </div>
               </div>
 
+              <!-- Modelado, Costos, Aleatorio y Paralelismo -->
+              <div class="mt-4 pt-4 border-t border-[#22222a] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Modelado del Backtest</label>
+                  <select id="select-modeling-mode" class="tn-select">
+                    <option value="ohlc" selected>OHLC completo (precise)</option>
+                    <option value="open_prices">Precios de apertura (rápido)</option>
+                    <option value="ohlc_m1">OHLC M1 (sub-velas sintéticas)</option>
+                    <option value="tick">Tick (trayectoria intra-barra)</option>
+                  </select>
+                  <span class="text-[10px] text-[#71717a]">open_prices acelera; ohlc_m1/tick afinan entradas/salidas</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Workers en Paralelo (0 = serial)</label>
+                  <input type="number" id="input-parallel-workers" class="tn-input num-tabular" value="0" min="0" max="16" step="1">
+                  <span class="text-[10px] text-[#71717a]">Procesos paralelos para evaluar población</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Presupuesto Aleatorio (combinaciones)</label>
+                  <input type="number" id="input-num-combinations" class="tn-input num-tabular" value="10000" min="100" max="10000000" step="1000">
+                  <span class="text-[10px] text-[#71717a]">Se usa solo en modo Búsqueda Aleatoria</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] text-[#a0a0ab] mb-1">Spread (pips)</label>
+                    <input type="number" id="input-spread-pips" class="tn-input num-tabular text-xs" placeholder="auto" step="0.1" min="0">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-[#a0a0ab] mb-1">Slippage (pips)</label>
+                    <input type="number" id="input-slippage-pips" class="tn-input num-tabular text-xs" placeholder="0.5" step="0.1" min="0">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-[#a0a0ab] mb-1">Comisión ($/lote)</label>
+                    <input type="number" id="input-commission" class="tn-input num-tabular text-xs" placeholder="auto" step="0.1" min="0">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-[#a0a0ab] mb-1">Swap L / S</label>
+                    <div class="flex gap-1">
+                      <input type="number" id="input-swap-long" class="tn-input num-tabular text-xs w-1/2" placeholder="L" step="0.1">
+                      <input type="number" id="input-swap-short" class="tn-input num-tabular text-xs w-1/2" placeholder="S" step="0.1">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Sinergia Multi-Indicador -->
               <div class="mt-4 pt-4 border-t border-[#22222a] grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="p-3 bg-[#0d0d12] border border-[#20202a] rounded-lg flex items-center justify-between">
@@ -308,9 +389,65 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Macro FRED (contexto macroeconómico) -->
+              <div class="mt-4 pt-4 border-t border-[#22222a]">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <input type="checkbox" id="check-use-macro" class="w-4 h-4 accent-white cursor-pointer">
+                    <div>
+                      <span class="text-xs font-bold text-white block">Indicadores Macro (FRED)</span>
+                      <span class="text-[11px] text-[#a0a0ab]">Series de la Reserva Federal como filtro de contexto (anti-lookahead)</span>
+                    </div>
+                  </div>
+                  <span class="tn-badge tn-badge-white text-[10px]">MACRO FRED</span>
+                </div>
+                <div id="macro-series-box" class="opacity-50 pointer-events-none transition">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] text-[#71717a]">Selecciona las series que el motor podrá usar como condición (ej. VIX &lt; 25, Curva 10Y-2Y &gt; 0).</span>
+                    <div class="flex gap-1.5">
+                      <button id="btn-macro-all" class="btn-secondary text-[10px] py-0.5 px-2">Todas</button>
+                      <button id="btn-macro-none" class="btn-secondary text-[10px] py-0.5 px-2">Ninguna</button>
+                    </div>
+                  </div>
+                  <div id="macro-series-container" class="max-h-44 overflow-y-auto pr-1"></div>
+                </div>
+              </div>
+
+              <!-- Validadores Adicionales (Walk-Forward + Multiverso durante la exploración) -->
+              <div class="mt-4 pt-4 border-t border-[#22222a]">
+                <div class="flex items-center justify-between mb-3">
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="check-validate-during" checked class="w-4 h-4 accent-white">
+                    <div>
+                      <span class="text-xs font-bold text-white block">Ejecutar Validadores Adicionales</span>
+                      <span class="text-[11px] text-[#a0a0ab]">Walk-Forward y Multiverso sobre los N mejores candidatos durante la exploración (anti-sobreajuste)</span>
+                    </div>
+                  </label>
+                  <span class="tn-badge tn-badge-white text-[10px]">OOS + MULTIVERSO</span>
+                </div>
+                <div id="validators-box" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label class="block text-[11px] text-[#a0a0ab] mb-1">WF: Top N a validar (1-50)</label>
+                    <input type="number" id="input-wf-top-n" class="tn-input num-tabular text-xs" value="10" min="1" max="50">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-[#a0a0ab] mb-1">Multiverso: Top N (1-10)</label>
+                    <input type="number" id="input-mv-top-n" class="tn-input num-tabular text-xs" value="5" min="1" max="10">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-[#a0a0ab] mb-1">Universos MV (10-500)</label>
+                    <input type="number" id="input-explore-mv-universes" class="tn-input num-tabular text-xs" value="25" min="10" max="500">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-[#a0a0ab] mb-1">Ventanas WF (2-12)</label>
+                    <input type="number" id="input-explore-wf-windows" class="tn-input num-tabular text-xs" value="4" min="2" max="12">
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="flex justify-end gap-3">
-              <button onclick="switchTab('indicators')" class="btn-primary">Continuar a Indicadores (28 Checks) →</button>
+              <button onclick="switchTab('indicators')" class="btn-primary">Continuar a Indicadores (32 Checks) →</button>
             </div>
           </div>
 
@@ -319,11 +456,11 @@
             <div class="tn-card">
               <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-[#202028]">
                 <div>
-                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Los 28 Indicadores Técnicos de TradingNote</h2>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Los 32 Indicadores Técnicos de TradingNote</h2>
                   <p class="text-xs text-[#a0a0ab] mt-0.5">Activa o desactiva con checks los indicadores que quieres combinar. Sus parámetros cuantitativos ya vienen preconfigurados por defecto.</p>
                 </div>
                 <div class="flex items-center gap-2">
-                  <button id="btn-select-all-ind" class="btn-secondary text-xs py-1 px-3">Marcar Todos (28)</button>
+                  <button id="btn-select-all-ind" class="btn-secondary text-xs py-1 px-3">Marcar Todos (32)</button>
                   <button id="btn-deselect-all-ind" class="btn-secondary text-xs py-1 px-3">Desmarcar Todos</button>
                   <button id="btn-random-ind" class="btn-primary text-xs py-1 px-3 font-semibold">🎲 Aleatorio</button>
                 </div>
@@ -425,6 +562,159 @@
                     <p class="text-[11px] text-[#a0a0ab] mt-0.5">Asegura 50% de la posición en TP1 y deja correr el resto hacia TP2 con Breakeven.</p>
                   </div>
                 </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-pips" value="PIPS_FIXED" class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-pips" class="text-xs font-bold text-white block cursor-pointer">Pips Fijos (SL/TP en pips)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">Stop Loss y Take Profit en distancia fija de pips (SL 10–50, TP 20–100).</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-pct" value="PCT_EXIT" class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-pct" class="text-xs font-bold text-white block cursor-pointer">Porcentaje de Precio (%)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">SL y TP como % del precio de entrada (SL 0.2–2%, TP 0.5–4%).</p>
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a] flex items-start gap-3">
+                  <input type="checkbox" id="exit-atr-smooth" value="ATR_SMOOTHED" checked class="w-4 h-4 accent-white mt-1">
+                  <div>
+                    <label for="exit-atr-smooth" class="text-xs font-bold text-white block cursor-pointer">ATR Suavizado (EMA del ATR)</label>
+                    <p class="text-[11px] text-[#a0a0ab] mt-0.5">SL/TP sobre ATR suavizado(14,50) para filtrar picos de volatilidad.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Barrido de Salidas y Riesgo -->
+            <div class="tn-card" id="exit-ranges-card">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-[#202028]">
+                <div>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Barrido de Salidas y Riesgo</h2>
+                  <p class="text-xs text-[#a0a0ab] mt-0.5">Rangos Desde/Paso/Hasta por parámetro (TN: slAtr, tpAtr, trailAtr...). Déjalos vacíos para usar los valores fijos del motor.</p>
+                </div>
+                <span class="tn-badge tn-badge-white">SWEEP SALIDAS</span>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" id="exit-ranges-grid">
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="sl_atr">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">SL ATR</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="sl_atr desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="sl_atr paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="sl_atr hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="tp_atr">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">TP ATR</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="tp_atr desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="tp_atr paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="tp_atr hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="sl_pips">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">SL Pips</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="sl_pips desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="sl_pips paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="sl_pips hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="tp_pips">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">TP Pips</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="tp_pips desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="tp_pips paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="tp_pips hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="sl_pct">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">SL %</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="sl_pct desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="sl_pct paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="sl_pct hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="tp_pct">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">TP %</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="tp_pct desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="tp_pct paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="tp_pct hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="sl_smooth_mult">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">SL ATR Suavizado</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="sl_smooth_mult desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="sl_smooth_mult paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="sl_smooth_mult hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="tp_smooth_mult">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">TP ATR Suavizado</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="tp_smooth_mult desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="tp_smooth_mult paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="tp_smooth_mult hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="trail_atr">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">Trail ATR</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="trail_atr desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="trail_atr paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="trail_atr hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="be_atr">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">Breakeven ATR</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="be_atr desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="be_atr paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="be_atr hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="swing_bars">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">Swing Barras</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="swing_bars desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="swing_bars paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="swing_bars hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="max_bars">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">Max Barras</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="max_bars desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="max_bars paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="max_bars hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="partial_tp1_atr">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">TP1 ATR (Parcial)</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="partial_tp1_atr desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="partial_tp1_atr paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="partial_tp1_atr hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="partial_tp2_atr">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">TP2 ATR (Parcial)</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="partial_tp2_atr desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="partial_tp2_atr paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="partial_tp2_atr hasta">
+                  </div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]" data-exit-param="partial_pct">
+                  <label class="block text-[11px] font-semibold text-white mb-1.5">Partial %</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Desde" step="any" aria-label="partial_pct desde">
+                    <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Paso" step="any" aria-label="partial_pct paso">
+                    <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-1 text-[10px] text-white focus:border-white focus:outline-none" placeholder="Hasta" step="any" aria-label="partial_pct hasta">
+                  </div>
+                </div>
               </div>
             </div>
             <div class="flex justify-end">
@@ -447,7 +737,7 @@
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
                   <label class="block text-xs font-semibold text-white mb-1">Win Rate Mínimo (%)</label>
-                  <input type="number" id="input-min-wr" class="tn-input num-tabular" value="35.0" step="1.0" min="0" max="100">
+                  <input type="number" id="input-min-wr" class="tn-input num-tabular" value="50.0" step="1.0" min="0" max="100">
                   <span class="text-[10px] text-[#71717a]">Porcentaje mínimo de operaciones ganadoras</span>
                 </div>
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
@@ -457,7 +747,7 @@
                 </div>
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
                   <label class="block text-xs font-semibold text-white mb-1">Max Drawdown Permitido (%)</label>
-                  <input type="number" id="input-max-dd" class="tn-input num-tabular" value="20.0" step="1.0" min="1" max="100">
+                  <input type="number" id="input-max-dd" class="tn-input num-tabular" value="15.0" step="1.0" min="1" max="100">
                   <span class="text-[10px] text-[#71717a]">Caída máxima tolerada desde el pico</span>
                 </div>
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
@@ -467,7 +757,7 @@
                 </div>
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
                   <label class="block text-xs font-semibold text-white mb-1">Sharpe Ratio Mínimo</label>
-                  <input type="number" id="input-min-sharpe" class="tn-input num-tabular" value="0.8" step="0.1">
+                  <input type="number" id="input-min-sharpe" class="tn-input num-tabular" value="1.2" step="0.1">
                   <span class="text-[10px] text-[#71717a]">Retorno ajustado por volatilidad</span>
                 </div>
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
@@ -477,7 +767,7 @@
                 </div>
                 <div class="p-4 rounded-lg bg-[#0e0e12] border border-[#22222a]">
                   <label class="block text-xs font-semibold text-white mb-1">DSR Mínimo (Deflated Sharpe)</label>
-                  <input type="number" id="input-min-dsr" class="tn-input num-tabular" value="0.20" step="0.05">
+                  <input type="number" id="input-min-dsr" class="tn-input num-tabular" value="0.30" step="0.05">
                   <span class="text-[10px] text-[#71717a]">Penalización matemática por azar</span>
                 </div>
                 <div class="p-4 rounded-lg bg-[#14141a] border border-[#2a2a34] flex flex-col justify-center">
@@ -538,6 +828,84 @@
                   <input type="number" id="input-max-daily-trades" class="tn-input num-tabular" value="4" min="1" max="20">
                   <span class="text-[10px] text-[#71717a]">Control de sobreoperación por sesión</span>
                 </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Máx. Posiciones Abiertas</label>
+                  <input type="number" id="input-max-open-trades" class="tn-input num-tabular" value="1" min="1" max="20">
+                  <span class="text-[10px] text-[#71717a]">Exposición concurrente máxima</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Multiplicador de Riesgo</label>
+                  <input type="number" id="input-risk-mult" class="tn-input num-tabular" value="1.0" step="0.05" min="0.5" max="2">
+                  <span class="text-[10px] text-[#71717a]">Escala el tamaño final del lote</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Reward:Risk Mínimo</label>
+                  <input type="number" id="input-min-rr" class="tn-input num-tabular" value="0" step="0.5" min="0" max="10">
+                  <span class="text-[10px] text-[#71717a]">0 = sin restricción (varía en generación)</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Fixed R:R (0 = auto)</label>
+                  <input type="number" id="input-fixed-rr" class="tn-input num-tabular" value="0" step="0.5" min="0" max="10">
+                  <span class="text-[10px] text-[#71717a]">Fija ratio SL/TP en todos los trades</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Máx. Racha Ganadora (0 = free)</label>
+                  <input type="number" id="input-max-consec-wins" class="tn-input num-tabular" value="0" min="0" max="50">
+                  <span class="text-[10px] text-[#71717a]">Cierra ciclo tras N wins seguidas</span>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#a0a0ab] mb-1">Máx. Racha Perdedora (0 = free)</label>
+                  <input type="number" id="input-max-consec-losses" class="tn-input num-tabular" value="0" min="0" max="50">
+                  <span class="text-[10px] text-[#71717a]">Pausa tras N losses seguidas</span>
+                </div>
+              </div>
+
+              <!-- Card G: AVERAGING / PIRAMIDADO -->
+              <div class="tn-card">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Averaging (DCA / Piramidado)</h2>
+                    <p class="text-xs text-[#a0a0ab] mt-0.5">Añade unidades a una posición abierta en contra (DCA) o a favor (piramidado). Se exploran variantes automáticamente; activa “Forzar” para aplicarlo.</p>
+                  </div>
+                  <label class="flex items-center gap-2 text-xs text-white cursor-pointer"><input type="checkbox" id="chk-avg-enabled" class="w-4 h-4 accent-white"> Forzar</label>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                  <div><label class="block text-xs text-[#a0a0ab] mb-1">Modo</label>
+                    <select id="select-avg-mode" class="tn-select"><option value="dca">DCA (en contra)</option><option value="pyramiding">Piramidado (a favor)</option><option value="both">Ambos</option></select></div>
+                  <div><label class="block text-xs text-[#a0a0ab] mb-1">Niveles máx.</label>
+                    <input type="number" id="input-avg-levels" class="tn-input num-tabular" value="2" min="1" max="8"></div>
+                  <div><label class="block text-xs text-[#a0a0ab] mb-1">Espaciado</label>
+                    <select id="select-avg-spacing" class="tn-select"><option value="atr">ATR</option><option value="pips">Pips</option><option value="percent">%</option></select></div>
+                  <div><label class="block text-xs text-[#a0a0ab] mb-1">Distancia</label>
+                    <input type="number" id="input-avg-spacing-val" class="tn-input num-tabular" value="1.0" step="0.1"></div>
+                  <div><label class="block text-xs text-[#a0a0ab] mb-1">Mult. lote</label>
+                    <input type="number" id="input-avg-mult" class="tn-input num-tabular" value="1.0" step="0.1"></div>
+                  <div class="col-span-2 flex items-end pb-2">
+                    <label class="flex items-center gap-2 text-xs text-[#e0e0e5] cursor-pointer"><input type="checkbox" id="chk-avg-recompute" class="w-4 h-4 accent-white"> Recalcular SL desde precio medio</label></div>
+                </div>
+              </div>
+
+              <!-- Límites de pérdida / ganancia por período -->
+              <div class="mt-4 pt-4 border-t border-[#22222a]">
+                <div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-3">Límites de Cuenta (Pérdida / Ganancia % — 0 en ganancia = free)</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. diaria %</label>
+                    <input type="number" id="input-max-daily-loss" class="tn-input num-tabular text-xs" value="3.0" step="0.5" min="0" max="20"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. semanal %</label>
+                    <input type="number" id="input-max-weekly-loss" class="tn-input num-tabular text-xs" value="6.0" step="0.5" min="0" max="40"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. mensual %</label>
+                    <input type="number" id="input-max-monthly-loss" class="tn-input num-tabular text-xs" value="12.0" step="1" min="0" max="80"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. cuenta %</label>
+                    <input type="number" id="input-max-account-loss" class="tn-input num-tabular text-xs" value="8.0" step="0.5" min="0" max="50"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. diaria %</label>
+                    <input type="number" id="input-max-daily-gain" class="tn-input num-tabular text-xs" value="0" step="0.5" min="0" max="50"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. semanal %</label>
+                    <input type="number" id="input-max-weekly-gain" class="tn-input num-tabular text-xs" value="0" step="0.5" min="0" max="100"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. mensual %</label>
+                    <input type="number" id="input-max-monthly-gain" class="tn-input num-tabular text-xs" value="0" step="1" min="0" max="200"></div>
+                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. cuenta %</label>
+                    <input type="number" id="input-max-account-gain" class="tn-input num-tabular text-xs" value="0" step="1" min="0" max="500"></div>
+                </div>
               </div>
             </div>
 
@@ -551,7 +919,7 @@
                       Activar Filtro Estricto Prop Firm (Cuentas de Fondeo)
                     </label>
                     <p class="text-xs text-[#a0a0ab] mt-0.5">
-                      Descarta automáticamente cualquier algoritmo que viole las reglas de pérdida máxima diaria o drawdown total de los Challenges de Fondeo.
+                      Descarta automáticamente algoritmos que viole las reglas de pérdida diaria/drawdown y simula el reto (capital, días mínimos) sobre múltiples fechas de inicio.
                     </p>
                   </div>
                 </div>
@@ -573,10 +941,25 @@
                   <input type="number" id="input-prop-target" class="tn-input num-tabular" value="8.0" step="0.5" min="1" max="30">
                   <span class="text-[10px] text-[#71717a]">Profit target del challenge (ej. 8% o 10%)</span>
                 </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Capital del Reto ($)</label>
+                  <input type="number" id="input-challenge-capital" class="tn-input num-tabular" value="10000" step="1000" min="1000">
+                  <span class="text-[10px] text-[#71717a]">Saldo inicial simulado del challenge</span>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Días de Operación Mínimos</label>
+                  <input type="number" id="input-challenge-days" class="tn-input num-tabular" value="5" step="1" min="1" max="30">
+                  <span class="text-[10px] text-[#71717a]">Días con operaciones requeridos para aprobar</span>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0e0e12] border border-[#22222a]">
+                  <label class="block text-xs font-semibold text-white mb-1">Simulaciones del Reto</label>
+                  <input type="number" id="input-challenge-sims" class="tn-input num-tabular" value="10" step="1" min="3" max="60">
+                  <span class="text-[10px] text-[#71717a]">Fechas de inicio simuladas durante la exploración</span>
+                </div>
               </div>
 
               <!-- Horarios y Sesiones -->
-              <div class="mt-4 pt-4 border-t border-[#22222a] flex flex-wrap gap-6 text-xs text-[#a0a0ab]">
+              <div class="mt-4 pt-4 border-t border-[#22222a] flex flex-wrap gap-x-6 gap-y-3 text-xs text-[#a0a0ab]">
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" id="check-close-weekend" checked class="accent-white">
                   <span>Cerrar posiciones antes del fin de semana (Viernes 20:00 UTC)</span>
@@ -584,6 +967,18 @@
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" id="check-close-ny" class="accent-white">
                   <span>Cerrar posiciones antes del cierre de NY</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="check-no-friday" class="accent-white">
+                  <span>Sin entradas nuevas el viernes</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="check-no-monday" class="accent-white">
+                  <span>Sin entradas al open del lunes</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="check-avoid-rollover" class="accent-white">
+                  <span>Evitar rollover (spread ampliado)</span>
                 </label>
               </div>
             </div>
@@ -1245,7 +1640,7 @@
         <button id="btn-close-modal" class="text-[#a0a0ab] hover:text-white text-lg p-2">✕</button>
       </div>
       <div class="p-6 space-y-6">
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
+        <div class="grid grid-cols-2 md:grid-cols-7 gap-3 text-center">
           <div class="p-3 rounded bg-[#16161c] border border-[#24242e]">
             <div class="text-[10px] text-[#71717a] uppercase font-bold">Capital Inicial</div>
             <div id="modal-metric-initial" class="text-xs font-mono font-bold text-white mt-1">$10,000</div>
@@ -1269,6 +1664,10 @@
           <div class="p-3 rounded bg-[#16161c] border border-[#24242e]">
             <div class="text-[10px] text-[#71717a] uppercase font-bold">Profit Factor</div>
             <div id="modal-metric-pf" class="text-xs font-mono font-bold text-white mt-1">0.00</div>
+          </div>
+          <div class="p-3 rounded bg-[#16161c] border border-[#24242e]" title="Examen sorpresa: rendimiento en el tramo de datos reservado (holdout)">
+            <div class="text-[10px] text-[#71717a] uppercase font-bold">Holdout</div>
+            <div id="modal-metric-holdout" class="text-xs font-mono font-bold text-white mt-1">—</div>
           </div>
         </div>
         <div class="p-4 rounded-lg bg-[#0c0c10] border border-[#22222a]">
@@ -1310,9 +1709,50 @@
           <div class="flex items-center justify-between">
             <div>
               <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Validación de Robustez Anti-Overfitting</h4>
-              <p class="text-[11px] text-[#71717a]">Someter al algoritmo a Walk-Forward temporal y cientos de universos sintéticos.</p>
+              <p class="text-[11px] text-[#71717a]">Someter al algoritmo a Walk-Forward temporal (validación o reoptimización) y multiverso con regímenes.</p>
             </div>
             <button id="btn-run-validation" class="btn-primary text-xs py-1.5 px-3">⚡ Ejecutar Walk-Forward y Multiverso</button>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-7 gap-2 text-[10px]">
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Modo WF</label>
+              <select id="select-wf-mode" class="tn-select text-xs">
+                <option value="validation" selected>Validación</option>
+                <option value="reoptimization">Reoptimización</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Profundidad</label>
+              <select id="select-wf-depth" class="tn-select text-xs">
+                <option value="fast">Fast</option>
+                <option value="standard" selected>Standard</option>
+                <option value="deep">Deep</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Ventanas</label>
+              <input type="number" id="input-wf-windows" class="tn-input num-tabular text-xs" value="4" min="2" max="12">
+            </div>
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Test ratio</label>
+              <input type="number" id="input-wf-test-ratio" class="tn-input num-tabular text-xs" value="0.25" step="0.05" min="0.1" max="0.5">
+            </div>
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Universos MV</label>
+              <input type="number" id="input-mv-universes" class="tn-input num-tabular text-xs" value="80" min="10" max="500">
+            </div>
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Preset MV</label>
+              <select id="select-mv-preset" class="tn-select text-xs">
+                <option value="balanced" selected>Balanced</option>
+                <option value="conservative">Conservative</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[#a0a0ab] mb-0.5">Regímenes</label>
+              <input type="number" id="input-mv-regimes" class="tn-input num-tabular text-xs" value="3" min="1" max="4">
+            </div>
           </div>
           <div id="validation-results-container" class="space-y-2 hidden pt-2">
             <div id="val-wf-status"></div>
@@ -1481,5 +1921,6 @@
 
   <!-- APPLICATION SCRIPT -->
   <script src="app.js"></script>
+  <script src="workspace.js"></script>
 </body>
 </html>

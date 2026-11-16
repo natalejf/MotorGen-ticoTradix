@@ -11,3 +11,7 @@ data/saved_strategies/*
 !data/saved_strategies/.gitkeep
 data/portfolios/*
 !data/portfolios/.gitkeep
+data/sessions/
+data/editor/
+data/macro/
+.pytest_cache/

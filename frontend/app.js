@@ -41,20 +41,40 @@ const ALL_28_INDICATORS_CONFIG = {
   ADX: { name: 'Average Directional Index (ADX)', family: 'Ciclo & Estructura', from: 10, step: 5, to: 25, unit: 'período' },
   PSAR: { name: 'Parabolic SAR (Aceleración)', family: 'Ciclo & Estructura', from: 0.01, step: 0.01, to: 0.04, unit: 'step' },
   ICHIMOKU: { name: 'Ichimoku Cloud (Kijun-sen)', family: 'Ciclo & Estructura', from: 9, step: 1, to: 26, unit: 'período' },
-  AROON: { name: 'Aroon Oscillator (Up - Down)', family: 'Ciclo & Estructura', from: 10, step: 4, to: 25, unit: 'período' }
+  AROON: { name: 'Aroon Oscillator (Up - Down)', family: 'Ciclo & Estructura', from: 10, step: 4, to: 25, unit: 'período' },
+
+  // Precio / Breakout (4) — TN parity
+  HIGHEST: { name: 'Máximo N períodos (Breakout)', family: 'Precio', from: 10, step: 5, to: 50, unit: 'período' },
+  LOWEST: { name: 'Mínimo N períodos (Breakdown)', family: 'Precio', from: 10, step: 5, to: 50, unit: 'período' },
+  PIVOT_POINTS: { name: 'Pivot Points Clásicos (PP/R/S)', family: 'Precio', from: 5, step: 1, to: 5, unit: 'sub niveles', discrete: 5 },
+  VWAP: { name: 'VWAP (ponderado por volumen)', family: 'Precio', from: 1, step: 1, to: 1, unit: 'acumulado', discrete: 1 }
 };
 
 // Global State
+const TIMEFRAMES = ['30m', '1h', '4h', '1d'];
 const state = {
   activeTab: 'config',
   symbolsMeta: [],
   selectedSymbol: 'EURUSD',
   selectedTimeframe: '1h',
+  // Multi-symbol / multi-timeframe exploration
+  selectedSymbols: new Set(['EURUSD']),
+  selectedTimeframes: new Set(['1h']),
+  // Macro FRED
+  macroCatalog: [],
+  selectedMacro: new Set(),
+  useMacro: false,
   searchMode: 'genetic',
   initialDeposit: 10000,
   
   // Enabled indicators map: { EMA: true, SMA: true, ... }
   enabledIndicators: {},
+
+  // Indicator parameter metadata (from /api/config-defaults) + user-edited sweep ranges
+  indicatorMeta: null,
+  indicatorRanges: {},
+  // User-edited exit/risk sweep ranges {param: {from, step, to}}
+  exitRanges: {},
 
   // Engine state
   isRunning: false,
@@ -102,13 +122,92 @@ Object.keys(ALL_28_INDICATORS_CONFIG).forEach(k => {
 // INITIALIZATION
 // ============================================================================
 
+// Delegated listener for exit/risk sweep From/Step/To inputs (barrido de salidas)
+document.addEventListener('change', (e) => {
+  const inp = e.target;
+  if (!inp || !inp.classList || !inp.classList.contains('rng-input')) return;
+  const row = inp.closest('[data-exit-param]');
+  if (!row) return;
+  const param = row.dataset.exitParam;
+  const from = parseFloat(row.querySelector('.rng-from')?.value);
+  const step = parseFloat(row.querySelector('.rng-step')?.value);
+  const to = parseFloat(row.querySelector('.rng-to')?.value);
+  if (isNaN(from) || isNaN(step) || isNaN(to)) {
+    delete state.exitRanges[param];
+  } else {
+    state.exitRanges[param] = { from, step, to };
+  }
+  updateCombinationsCounter();
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
+  const indCountBadge = document.getElementById('ind-count-badge');
+  if (indCountBadge) indCountBadge.textContent = Object.keys(ALL_28_INDICATORS_CONFIG).length;
   render28IndicatorsGrid();
   await loadSymbols();
   await loadConfigDefaults();
+  renderTfPills();
+  await loadMacroCatalog();
   updateCombinationsCounter();
   initNeuralExplorer();
+
+  // Keep multi-TF pills in sync with the primary timeframe select
+  const tfSel = document.getElementById('select-timeframe');
+  if (tfSel) {
+    tfSel.addEventListener('change', () => {
+      state.selectedTimeframe = tfSel.value;
+      state.selectedTimeframes = new Set([tfSel.value]);
+      renderTfPills();
+      updateDataSummaryInfo();
+    });
+  }
+
+  // Date range controls
+  document.getElementById('btn-clear-dates')?.addEventListener('click', () => {
+    const s = document.getElementById('input-start-date');
+    const e = document.getElementById('input-end-date');
+    if (s) s.value = '';
+    if (e) e.value = '';
+  });
+
+  // Validators-during-exploration toggle
+  const valToggle = document.getElementById('check-validate-during');
+  if (valToggle) {
+    valToggle.addEventListener('change', () => {
+      const box = document.getElementById('validators-box');
+      if (box) {
+        box.classList.toggle('opacity-50', !valToggle.checked);
+        box.classList.toggle('pointer-events-none', !valToggle.checked);
+      }
+    });
+  }
+
+  // Macro master toggle
+  const macroToggle = document.getElementById('check-use-macro');
+  if (macroToggle) {
+    macroToggle.addEventListener('change', () => {
+      state.useMacro = macroToggle.checked;
+      const box = document.getElementById('macro-series-box');
+      if (box) {
+        box.classList.toggle('opacity-50', !state.useMacro);
+        box.classList.toggle('pointer-events-none', !state.useMacro);
+      }
+      updateCombinationsCounter();
+    });
+  }
+
+  // Macro select all / none
+  document.getElementById('btn-macro-all')?.addEventListener('click', () => {
+    state.selectedMacro = new Set(state.macroCatalog.map(s => s.series_id));
+    renderMacroSeries();
+    updateCombinationsCounter();
+  });
+  document.getElementById('btn-macro-none')?.addEventListener('click', () => {
+    state.selectedMacro = new Set();
+    renderMacroSeries();
+    updateCombinationsCounter();
+  });
   
   // Check engine status
   await pollStatus();
@@ -227,13 +326,58 @@ function render28IndicatorsGrid() {
     let html = `
       <div class="flex items-center justify-between mb-3 border-b border-[#1c1c24] pb-2">
         <span class="text-xs font-bold text-white uppercase tracking-wider">${familyName} (${items.length})</span>
-        <span class="text-[10px] text-[#71717a]">Parámetros genéricos preconfigurados</span>
+        <span class="text-[10px] text-[#71717a]">Rangos editables: Desde / Paso / Hasta</span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
     `;
 
     items.forEach(item => {
       const isChecked = state.enabledIndicators[item.key] !== false;
+      const meta = state.indicatorMeta && state.indicatorMeta[item.key];
+      const params = (meta && meta.params) || {};
+      const paramNames = Object.keys(params);
+      let paramsHtml = '';
+
+      if (paramNames.length) {
+        const hasNumeric = paramNames.some(pn => params[pn] && !params[pn].values);
+        paramsHtml = '<div class="mt-2.5 pt-2 border-t border-[#1a1a22]">';
+        if (hasNumeric) {
+          paramsHtml += `
+            <div class="flex items-center gap-1 text-[8px] text-[#55555f] uppercase tracking-wider mb-1.5">
+              <span class="w-[56px] shrink-0"></span>
+              <span class="flex-1 text-center">Desde</span>
+              <span class="flex-1 text-center">Paso</span>
+              <span class="flex-1 text-center">Hasta</span>
+            </div>`;
+        }
+        paramNames.forEach(pname => {
+          const defaultCfg = params[pname] || {};
+          const rng = (state.indicatorRanges[item.key] && state.indicatorRanges[item.key][pname]) || defaultCfg;
+          if (defaultCfg.values) {
+            paramsHtml += `
+              <div class="flex items-center gap-1 text-[9px] mb-1" title="${pname}: valores fijos">
+                <span class="w-[56px] shrink-0 truncate text-[#a0a0ab]">${pname}</span>
+                <span class="flex-1 truncate text-[#71717a] font-mono">${defaultCfg.values.join(' / ')}</span>
+              </div>`;
+          } else {
+            paramsHtml += `
+              <div class="flex items-center gap-1 mb-1" data-ind="${item.key}" data-param="${pname}">
+                <span class="w-[56px] shrink-0 truncate text-[9px] text-[#a0a0ab]" title="${pname}">${pname}</span>
+                <input type="number" class="rng-input rng-from flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-0.5 text-[10px] text-white focus:border-white focus:outline-none transition-colors" value="${rng.from}" step="any" aria-label="${item.key} ${pname} desde">
+                <input type="number" class="rng-input rng-step flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-0.5 text-[10px] text-white focus:border-white focus:outline-none transition-colors" value="${rng.step}" step="any" aria-label="${item.key} ${pname} paso">
+                <input type="number" class="rng-input rng-to flex-1 min-w-0 bg-[#0e0e12] border border-[#27272f] rounded px-1 py-0.5 text-[10px] text-white focus:border-white focus:outline-none transition-colors" value="${rng.to}" step="any" aria-label="${item.key} ${pname} hasta">
+              </div>`;
+          }
+        });
+        paramsHtml += '</div>';
+      } else {
+        paramsHtml = `
+          <div class="mt-2.5 pt-2 border-t border-[#1a1a22] flex items-center justify-between text-[10px] font-mono text-[#71717a]">
+            <span>[${item.from} → ${item.step} → ${item.to}]</span>
+            <span class="text-[#a0a0ab]">${item.unit}</span>
+          </div>`;
+      }
+
       html += `
         <div class="p-3 rounded bg-[#131318] border border-[#1e1e26] flex flex-col justify-between hover:border-[#383844] transition-colors">
           <div class="flex items-start gap-2.5">
@@ -246,11 +390,7 @@ function render28IndicatorsGrid() {
               <span class="text-[10px] text-[#a0a0ab] leading-tight block">${item.name}</span>
             </div>
           </div>
-          
-          <div class="mt-2.5 pt-2 border-t border-[#1a1a22] flex items-center justify-between text-[10px] font-mono text-[#71717a]">
-            <span>[${item.from} → ${item.step} → ${item.to}]</span>
-            <span class="text-[#a0a0ab]">${item.unit}</span>
-          </div>
+          ${paramsHtml}
         </div>
       `;
     });
@@ -267,6 +407,26 @@ function render28IndicatorsGrid() {
       updateCombinationsCounter();
     });
   });
+
+  // Delegated listener for editable From/Step/To range inputs (bound once on the container)
+  if (!container._rangeListenerBound) {
+    container._rangeListenerBound = true;
+    container.addEventListener('change', (e) => {
+      const inp = e.target;
+      if (!inp || !inp.classList || !inp.classList.contains('rng-input')) return;
+      const row = inp.closest('[data-ind]');
+      if (!row) return;
+      const ind = row.dataset.ind;
+      const param = row.dataset.param;
+      const from = parseFloat(row.querySelector('.rng-from')?.value);
+      const step = parseFloat(row.querySelector('.rng-step')?.value);
+      const to = parseFloat(row.querySelector('.rng-to')?.value);
+      if (isNaN(from) || isNaN(step) || isNaN(to)) return;
+      if (!state.indicatorRanges[ind]) state.indicatorRanges[ind] = {};
+      state.indicatorRanges[ind][param] = { from, step, to };
+      updateCombinationsCounter();
+    });
+  }
 }
 
 function selectRandomIndicators() {
@@ -305,7 +465,7 @@ function selectRandomOrders() {
   }
 
   // Random exit types
-  const exits = ['exit-atr', 'exit-trailing', 'exit-breakeven', 'exit-swing', 'exit-time', 'exit-partial'];
+  const exits = ['exit-atr', 'exit-pips', 'exit-pct', 'exit-trailing', 'exit-breakeven', 'exit-swing', 'exit-time', 'exit-partial', 'exit-atr-smooth'];
   exits.forEach(id => {
     const cb = document.getElementById(id);
     if (cb) cb.checked = Math.random() > 0.4;
@@ -315,23 +475,67 @@ function selectRandomOrders() {
   }
 }
 
+function rangePoints(cfg) {
+  if (!cfg) return 1;
+  if (Array.isArray(cfg.values) && cfg.values.length) return cfg.values.length;
+  const from = parseFloat(cfg.from), step = parseFloat(cfg.step), to = parseFloat(cfg.to);
+  if (isNaN(from) || isNaN(step) || isNaN(to) || step <= 0 || to < from) return 1;
+  return Math.floor((to - from) / step) + 1;
+}
+
 function updateCombinationsCounter() {
   let totalCombos = 1;
   let activeCount = 0;
+  const meta = state.indicatorMeta;
 
   Object.entries(ALL_28_INDICATORS_CONFIG).forEach(([key, conf]) => {
     if (state.enabledIndicators[key]) {
       activeCount++;
-      const steps = Math.max(1, Math.floor((conf.to - conf.from) / conf.step) + 1);
-      totalCombos *= Math.min(steps, 6); // cap representation per indicator
+      const indMeta = meta && meta[key];
+      if (indMeta && indMeta.params && Object.keys(indMeta.params).length) {
+        // Usar la metadata real (32 indicadores) + rangos editados por el usuario
+        const override = state.indicatorRanges[key] || {};
+        Object.entries(indMeta.params).forEach(([pname, cfg]) => {
+          totalCombos *= rangePoints(override[pname] || cfg);
+        });
+      } else if (indMeta) {
+        // Indicador sin parámetros (p.ej. VWAP) → 1 punto
+      } else {
+        // Fallback: config estática
+        const steps = conf.discrete
+          ? conf.discrete
+          : Math.max(1, Math.floor((conf.to - conf.from) / conf.step) + 1);
+        totalCombos *= steps;
+      }
     }
   });
 
-  const fullSpace = totalCombos * 3 * 6; // x3 entry types x6 exits
+  // Exit/risk sweep factor (TN: barrido de salidas/riesgo)
+  Object.values(state.exitRanges || {}).forEach(cfg => { totalCombos *= rangePoints(cfg); });
+
+  const fullSpace = totalCombos * 3 * 9; // x3 entry types x9 exits
+
+  // Macro FRED factor: each selected series adds (threshold steps x 2 ops)
+  let macroFactor = 1;
+  if (state.useMacro && state.selectedMacro.size > 0) {
+    state.selectedMacro.forEach(sid => {
+      const entry = state.macroCatalog.find(s => s.series_id === sid);
+      const r = entry && entry.range;
+      if (r && r.step > 0 && r.to >= r.from) {
+        const steps = Math.max(1, Math.floor((r.to - r.from) / r.step) + 1);
+        macroFactor *= steps * 2;
+      } else {
+        macroFactor *= 50; // fallback estimate when range unknown
+      }
+    });
+  }
+  const grandTotal = fullSpace * macroFactor;
 
   const countEl = document.getElementById('combinations-counter');
   if (countEl) {
-    countEl.textContent = activeCount > 0 ? (fullSpace > 1e12 ? '∞ Millones' : fullSpace.toLocaleString()) : '0';
+    countEl.textContent = activeCount > 0
+      ? (grandTotal >= 1e15 ? grandTotal.toExponential(2) : grandTotal.toLocaleString())
+      : '0';
   }
 }
 
@@ -386,6 +590,11 @@ async function loadConfigDefaults() {
   try {
     const res = await fetch('/api/config-defaults');
     const data = await res.json();
+    if (data.all_indicators) {
+      state.indicatorMeta = data.all_indicators;
+      initIndicatorRangesFromMeta();
+      render28IndicatorsGrid();
+    }
     const objSelect = document.getElementById('opt-objective');
     if (objSelect && data.optimization_objectives) {
       objSelect.innerHTML = '';
@@ -401,22 +610,61 @@ async function loadConfigDefaults() {
   }
 }
 
+function initIndicatorRangesFromMeta() {
+  if (!state.indicatorMeta) return;
+  Object.entries(state.indicatorMeta).forEach(([ind, meta]) => {
+    const params = (meta && meta.params) || {};
+    if (!state.indicatorRanges[ind]) state.indicatorRanges[ind] = {};
+    Object.entries(params).forEach(([pname, cfg]) => {
+      if (state.indicatorRanges[ind][pname]) return;
+      if (cfg && cfg.values) {
+        state.indicatorRanges[ind][pname] = { values: [...cfg.values] };
+      } else if (cfg && cfg.from !== undefined) {
+        state.indicatorRanges[ind][pname] = { from: cfg.from, step: cfg.step, to: cfg.to };
+      }
+    });
+  });
+}
+
 function renderSymbolPills() {
   const container = document.getElementById('symbol-pills-container');
   if (!container) return;
   container.innerHTML = '';
 
+  // Master toggles
+  const allBtn = document.createElement('button');
+  allBtn.className = 'px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wider transition-all border ' +
+    (state.selectedSymbols.size === state.symbolsMeta.length && state.symbolsMeta.length > 0
+      ? 'bg-white text-black border-white shadow-md' : 'bg-[#141418] text-[#a0a0ab] border-[#27272f] hover:border-[#444450] hover:text-white');
+  allBtn.textContent = 'TODOS';
+  allBtn.addEventListener('click', () => {
+    state.selectedSymbols = new Set(state.symbolsMeta.map(s => s.symbol));
+    if (state.symbolsMeta.length) state.selectedSymbol = state.symbolsMeta[0].symbol;
+    renderSymbolPills();
+    updateDataSummaryInfo();
+  });
+  container.appendChild(allBtn);
+
   state.symbolsMeta.forEach(sym => {
-    const isSelected = sym.symbol === state.selectedSymbol;
+    const isSelected = state.selectedSymbols.has(sym.symbol);
     const btn = document.createElement('button');
     btn.className = `px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wider transition-all border ${
-      isSelected 
-        ? 'bg-white text-black border-white shadow-md' 
+      isSelected
+        ? 'bg-white text-black border-white shadow-md'
         : 'bg-[#141418] text-[#a0a0ab] border-[#27272f] hover:border-[#444450] hover:text-white'
     }`;
     btn.textContent = sym.symbol;
+    btn.title = `${sym.name} — clic para ${isSelected ? 'quitar' : 'añadir'}`;
     btn.addEventListener('click', () => {
-      state.selectedSymbol = sym.symbol;
+      if (state.selectedSymbols.has(sym.symbol)) {
+        // never allow empty set
+        if (state.selectedSymbols.size > 1) state.selectedSymbols.delete(sym.symbol);
+      } else {
+        state.selectedSymbols.add(sym.symbol);
+      }
+      // primary symbol = first selected (stable order)
+      const order = state.symbolsMeta.map(s => s.symbol).filter(s => state.selectedSymbols.has(s));
+      state.selectedSymbol = order[0] || 'EURUSD';
       renderSymbolPills();
       updateDataSummaryInfo();
     });
@@ -424,28 +672,162 @@ function renderSymbolPills() {
   });
 }
 
+function renderTfPills() {
+  const container = document.getElementById('tf-pills-container');
+  if (!container) return;
+  container.innerHTML = '';
+  const tfs = TIMEFRAMES;
+  tfs.forEach(tf => {
+    const isSelected = state.selectedTimeframes.has(tf);
+    const btn = document.createElement('button');
+    btn.className = `px-2.5 py-1 rounded text-[11px] font-semibold uppercase tracking-wider transition-all border ${
+      isSelected
+        ? 'bg-white text-black border-white shadow-md'
+        : 'bg-[#141418] text-[#a0a0ab] border-[#27272f] hover:border-[#444450] hover:text-white'
+    }`;
+    btn.textContent = tf;
+    btn.title = `Timeframe ${tf} — explorar en este timeframe`;
+    btn.addEventListener('click', () => {
+      if (state.selectedTimeframes.has(tf)) {
+        if (state.selectedTimeframes.size > 1) state.selectedTimeframes.delete(tf);
+      } else {
+        state.selectedTimeframes.add(tf);
+      }
+      // Primary TF preference: keep current if still selected, else 1h → 30m → 4h → 1d
+      const selEl = document.getElementById('select-timeframe');
+      let primary = (selEl && state.selectedTimeframes.has(selEl.value)) ? selEl.value : null;
+      if (!primary) primary = ['1h', '30m', '4h', '1d'].find(t => state.selectedTimeframes.has(t));
+      state.selectedTimeframe = primary || '1h';
+      const sel = document.getElementById('select-timeframe');
+      if (sel) sel.value = state.selectedTimeframe;
+      renderTfPills();
+      updateDataSummaryInfo();
+    });
+    container.appendChild(btn);
+  });
+}
+
+async function loadMacroCatalog() {
+  try {
+    const res = await fetch('/api/macro-series');
+    const data = await res.json();
+    state.macroCatalog = data.series || [];
+    renderMacroSeries();
+  } catch (err) {
+    console.error('Error loading macro catalog:', err);
+  }
+}
+
+function renderMacroSeries() {
+  const container = document.getElementById('macro-series-container');
+  if (!container) return;
+  if (!state.macroCatalog.length) {
+    container.innerHTML = '<div class="text-[11px] text-[#71717a]">No hay series macro disponibles.</div>';
+    return;
+  }
+  // group by category
+  const cats = {};
+  state.macroCatalog.forEach(s => {
+    if (!cats[s.category]) cats[s.category] = [];
+    cats[s.category].push(s);
+  });
+  let html = '';
+  Object.entries(cats).forEach(([cat, items]) => {
+    html += `<div class="mb-2"><div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-1">${cat}</div><div class="flex flex-wrap gap-1.5">`;
+    items.forEach(s => {
+      const checked = state.selectedMacro.has(s.series_id);
+      html += `<label class="flex items-center gap-1 cursor-pointer px-2 py-1 rounded bg-[#0e0e12] border ${checked ? 'border-white' : 'border-[#22222a]'} hover:border-[#444450] transition text-[11px]">
+        <input type="checkbox" class="macro-cb accent-white" value="${s.series_id}" ${checked ? 'checked' : ''} data-name="${s.name}">
+        <span class="${checked ? 'text-white' : 'text-[#a0a0ab]'}">${s.name}</span>
+      </label>`;
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('.macro-cb').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      if (e.target.checked) state.selectedMacro.add(e.target.value);
+      else state.selectedMacro.delete(e.target.value);
+      renderMacroSeries();
+      updateCombinationsCounter();
+    });
+  });
+}
+
 function updateDataSummaryInfo() {
   const infoEl = document.getElementById('symbol-data-info');
-  if (!infoEl) return;
-  const sym = state.symbolsMeta.find(s => s.symbol === state.selectedSymbol);
-  if (!sym) return;
+  if (infoEl) {
+    const sym = state.symbolsMeta.find(s => s.symbol === state.selectedSymbol);
+    if (sym) {
+      const tfInfo = sym.timeframes[state.selectedTimeframe] || {};
+      const nSym = state.selectedSymbols.size;
+      const nTf = state.selectedTimeframes.size;
+      const scopeLabel = (nSym > 1 || nTf > 1)
+        ? `<div><span class="text-white font-medium">Alcance:</span> ${nSym} activo${nSym > 1 ? 's' : ''} × ${nTf} timeframe${nTf > 1 ? 's' : ''} (${[...state.selectedSymbols].join(', ')})</div>`
+        : '';
+      infoEl.innerHTML = `
+        <div class="flex items-center gap-4 text-xs text-[#a0a0ab]">
+          <div><span class="text-white font-medium">Activo:</span> ${sym.name} (${sym.category})</div>
+          ${scopeLabel}
+          <div><span class="text-white font-medium">Velas descargadas:</span> ${tfInfo.bars ? tfInfo.bars.toLocaleString() : 'Listo'}</div>
+          <div><span class="text-white font-medium">Rango:</span> ${tfInfo.start ? tfInfo.start.split(' ')[0] : '2024'} al presente</div>
+          <div><span class="text-white font-medium">Fuente:</span> Interbank Feeds & Futures continuos (Caché Parquet Local)</div>
+        </div>
+      `;
+    }
+  }
+  updateDateRangeAvailability();
+}
 
-  const tfInfo = sym.timeframes[state.selectedTimeframe] || {};
-  infoEl.innerHTML = `
-    <div class="flex items-center gap-4 text-xs text-[#a0a0ab]">
-      <div><span class="text-white font-medium">Activo:</span> ${sym.name} (${sym.category})</div>
-      <div><span class="text-white font-medium">Velas descargadas:</span> ${tfInfo.bars ? tfInfo.bars.toLocaleString() : 'Listo'}</div>
-      <div><span class="text-white font-medium">Rango:</span> ${tfInfo.start ? tfInfo.start.split(' ')[0] : '2024'} al presente</div>
-      <div><span class="text-white font-medium">Fuente:</span> Interbank Feeds & Futures continuos (Caché Parquet Local)</div>
-    </div>
-  `;
+function updateDateRangeAvailability() {
+  const availEl = document.getElementById('date-range-avail');
+  const startInput = document.getElementById('input-start-date');
+  const endInput = document.getElementById('input-end-date');
+  if (!availEl || !startInput || !endInput) return;
+
+  let commonStart = '';
+  let commonEnd = '';
+  const missing = [];
+  state.selectedSymbols.forEach(symName => {
+    const sym = state.symbolsMeta.find(s => s.symbol === symName);
+    state.selectedTimeframes.forEach(tf => {
+      const info = sym && sym.timeframes ? sym.timeframes[tf] : null;
+      if (!info || !info.start) {
+        missing.push(`${symName}/${tf}`);
+        return;
+      }
+      const s = String(info.start).slice(0, 10);
+      const e = String(info.end).slice(0, 10);
+      if (!commonStart || s > commonStart) commonStart = s;
+      if (!commonEnd || e < commonEnd) commonEnd = e;
+    });
+  });
+
+  if (!commonStart) {
+    availEl.textContent = missing.length
+      ? `Sin datos locales: ${missing[0]} (descarga automática al iniciar)`
+      : 'Disponible: —';
+    startInput.min = ''; startInput.max = '';
+    endInput.min = ''; endInput.max = '';
+    return;
+  }
+
+  availEl.textContent = `Disponible: ${commonStart} → ${commonEnd}`;
+  availEl.title = missing.length ? `Pares sin datos aún: ${missing.join(', ')}` : '';
+  startInput.min = commonStart; startInput.max = commonEnd;
+  endInput.min = commonStart; endInput.max = commonEnd;
+  // Clamp previously chosen values to the newly available range
+  if (startInput.value && startInput.value > commonEnd) startInput.value = '';
+  if (startInput.value && startInput.value < commonStart) startInput.value = commonStart;
+  if (endInput.value && endInput.value > commonEnd) endInput.value = commonEnd;
+  if (endInput.value && endInput.value < commonStart) endInput.value = '';
 }
 
 // ============================================================================
 // EXPLORATION CONTROLS (INFINITE GENERATION & CLASSIFICATION)
 // ============================================================================
 
-async function startExploration() {
+function buildExplorationConfig() {
   // Collect enabled indicators
   const enabledInds = Object.keys(state.enabledIndicators).filter(k => state.enabledIndicators[k]);
   if (enabledInds.length === 0) {
@@ -463,37 +845,89 @@ async function startExploration() {
   // Collect enabled exit modes
   const enabledExits = [];
   if (document.getElementById('exit-atr')?.checked) enabledExits.push('ATR_CLASSIC');
+  if (document.getElementById('exit-pips')?.checked) enabledExits.push('PIPS_FIXED');
+  if (document.getElementById('exit-pct')?.checked) enabledExits.push('PCT_EXIT');
   if (document.getElementById('exit-trailing')?.checked) enabledExits.push('TRAILING_ATR');
   if (document.getElementById('exit-breakeven')?.checked) enabledExits.push('BREAKEVEN');
   if (document.getElementById('exit-swing')?.checked) enabledExits.push('STRUCTURE_SWING');
   if (document.getElementById('exit-time')?.checked) enabledExits.push('TIME_EXIT');
   if (document.getElementById('exit-partial')?.checked) enabledExits.push('PARTIAL_TP');
+  if (document.getElementById('exit-atr-smooth')?.checked) enabledExits.push('ATR_SMOOTHED');
   if (enabledExits.length === 0) enabledExits.push('ATR_CLASSIC');
+
+  const maxCandRaw = parseInt(document.getElementById('input-max-candidates')?.value) || 0;
+  const maxCandResults = parseInt(document.getElementById('input-max-candidates-results')?.value) || 0;
+  const numCombos = parseInt(document.getElementById('input-num-combinations')?.value) || 10000;
 
   const config = {
     symbol: state.selectedSymbol,
     timeframe: document.getElementById('select-timeframe').value,
+    // Multi-symbol / multi-timeframe exploration
+    symbols: [...state.selectedSymbols],
+    timeframes: [...state.selectedTimeframes],
+    mtf_mode: document.getElementById('select-mtf-mode')?.value || 'separate',
+    // Date range (inclusive; empty = full history)
+    start_date: document.getElementById('input-start-date')?.value || null,
+    end_date: document.getElementById('input-end-date')?.value || null,
+    holdout_pct: parseFloat(document.getElementById('input-holdout-pct')?.value) || 0,
+    averaging_config: (document.getElementById('chk-avg-enabled')?.checked ? {
+      enabled: true,
+      mode: document.getElementById('select-avg-mode')?.value || 'dca',
+      maxLevels: parseInt(document.getElementById('input-avg-levels')?.value) || 2,
+      spacingUnit: document.getElementById('select-avg-spacing')?.value || 'atr',
+      spacingValue: parseFloat(document.getElementById('input-avg-spacing-val')?.value) || 1.0,
+      sizeMultiplier: parseFloat(document.getElementById('input-avg-mult')?.value) || 1.0,
+      recomputeStopFromAvg: !!document.getElementById('chk-avg-recompute')?.checked
+    } : { enabled: false }),
+    // Macro FRED
+    use_macro: state.useMacro && state.selectedMacro.size > 0,
+    macro_series: [...state.selectedMacro],
     search_mode: document.getElementById('select-search-mode').value,
     initial_deposit: parseFloat(document.getElementById('input-deposit').value) || 10000,
     objective: document.getElementById('opt-objective').value,
     infinite_mode: document.getElementById('check-infinite-mode').checked,
     generations: 0,
     population_size: parseInt(document.getElementById('input-pop-size').value) || 30,
+    num_combinations: numCombos,
     enabled_indicators: enabledInds,
     enabled_entry_types: enabledEntries,
     enabled_exit_modes: enabledExits,
-    
+    // Rangos de parámetros editados manualmente (Desde/Paso/Hasta)
+    indicator_ranges: state.indicatorRanges,
+    // Rangos de salidas/riesgo editados manualmente (barrido TN)
+    exit_ranges: state.exitRanges,
+    // Validadores adicionales durante la exploración (WF + Multiverso top-N)
+    validate_during_exploration: document.getElementById('check-validate-during')?.checked ?? true,
+    wf_top_n: parseInt(document.getElementById('input-wf-top-n')?.value) || 10,
+    mv_top_n: parseInt(document.getElementById('input-mv-top-n')?.value) || 5,
+    mv_universes: parseInt(document.getElementById('input-explore-mv-universes')?.value) || 25,
+    wf_windows: parseInt(document.getElementById('input-explore-wf-windows')?.value) || 4,
+
     // Classification criteria
-    min_win_rate: parseFloat(document.getElementById('input-min-wr').value) || 35.0,
+    min_win_rate: Number(document.getElementById('input-min-wr').value || 50.0),
     min_trades: parseInt(document.getElementById('input-min-trades').value) || 8,
-    max_drawdown: parseFloat(document.getElementById('input-max-dd').value) || 20.0,
+    max_drawdown: Number(document.getElementById('input-max-dd').value || 15.0),
     min_net_profit_usd: parseFloat(document.getElementById('input-min-profit').value) || 0.0,
-    min_sharpe: parseFloat(document.getElementById('input-min-sharpe').value) || 0.8,
+    min_sharpe: Number(document.getElementById('input-min-sharpe').value || 1.2),
     min_profit_factor: parseFloat(document.getElementById('input-min-pf').value) || 1.1,
-    min_dsr: parseFloat(document.getElementById('input-min-dsr').value) || 0.20,
-    max_candidates: parseInt(document.getElementById('input-max-candidates')?.value) || parseInt(document.getElementById('input-max-candidates-results')?.value) || 0,
+    min_dsr: Number(document.getElementById('input-min-dsr').value || 0.30),
+    max_candidates: maxCandRaw || maxCandResults || 0,
     min_indicators_per_strategy: parseInt(document.getElementById('input-min-indicators')?.value) || 1,
     max_indicators_per_strategy: parseInt(document.getElementById('input-max-indicators')?.value) || 3,
+
+    // Backtest modeling, costs & parallelism
+    modeling_mode: document.getElementById('select-modeling-mode')?.value || 'ohlc',
+    parallel_workers: parseInt(document.getElementById('input-parallel-workers')?.value) || 0,
+    spread_pips: document.getElementById('input-spread-pips')?.value !== '' && document.getElementById('input-spread-pips')?.value != null
+      ? parseFloat(document.getElementById('input-spread-pips').value) : null,
+    slippage_pips: document.getElementById('input-slippage-pips')?.value !== '' && document.getElementById('input-slippage-pips')?.value != null
+      ? parseFloat(document.getElementById('input-slippage-pips').value) : null,
+    commission_per_lot: document.getElementById('input-commission')?.value !== '' && document.getElementById('input-commission')?.value != null
+      ? parseFloat(document.getElementById('input-commission').value) : null,
+    swap_long: document.getElementById('input-swap-long')?.value !== '' && document.getElementById('input-swap-long')?.value != null
+      ? parseFloat(document.getElementById('input-swap-long').value) : null,
+    swap_short: document.getElementById('input-swap-short')?.value !== '' && document.getElementById('input-swap-short')?.value != null
+      ? parseFloat(document.getElementById('input-swap-short').value) : null,
 
     // Risk & Sizing Mode
     sizing_mode: document.getElementById('select-sizing-mode')?.value || 'FIXED_RISK',
@@ -501,17 +935,52 @@ async function startExploration() {
     fixed_lot: parseFloat(document.getElementById('input-fixed-lot')?.value) || 0.01,
     fixed_cash_risk: parseFloat(document.getElementById('input-fixed-cash')?.value) || 100.0,
     martingale_mult: parseFloat(document.getElementById('input-martingale-mult')?.value) || 1.5,
+    risk_multiplier: parseFloat(document.getElementById('input-risk-mult')?.value) || 1.0,
+    fixed_rr: parseFloat(document.getElementById('input-fixed-rr')?.value) || 0.0,
+    reward_risk_ratio: parseFloat(document.getElementById('input-min-rr')?.value) || 0.0,
+    max_daily_trades: parseInt(document.getElementById('input-max-daily-trades')?.value) || 4,
+    max_open_trades: parseInt(document.getElementById('input-max-open-trades')?.value) || 1,
+
+    // Risk loss/gain caps (0 = free to vary in generation)
+    max_daily_loss_pct: parseFloat(document.getElementById('input-max-daily-loss')?.value) || 3.0,
+    max_weekly_loss_pct: parseFloat(document.getElementById('input-max-weekly-loss')?.value) || 6.0,
+    max_monthly_loss_pct: parseFloat(document.getElementById('input-max-monthly-loss')?.value) || 12.0,
+    max_account_loss_pct: parseFloat(document.getElementById('input-max-account-loss')?.value) || 8.0,
+    max_daily_gain_pct: parseFloat(document.getElementById('input-max-daily-gain')?.value) || 0.0,
+    max_weekly_gain_pct: parseFloat(document.getElementById('input-max-weekly-gain')?.value) || 0.0,
+    max_monthly_gain_pct: parseFloat(document.getElementById('input-max-monthly-gain')?.value) || 0.0,
+    max_account_gain_pct: parseFloat(document.getElementById('input-max-account-gain')?.value) || 0.0,
+    max_consecutive_wins: parseInt(document.getElementById('input-max-consec-wins')?.value) || 0,
+    max_consecutive_losses: parseInt(document.getElementById('input-max-consec-losses')?.value) || 0,
+
+    // Time rules
+    close_before_weekend: document.getElementById('check-close-weekend')?.checked ?? true,
+    close_before_ny_close: document.getElementById('check-close-ny')?.checked || false,
+    no_new_trades_friday: document.getElementById('check-no-friday')?.checked || false,
+    no_monday_open: document.getElementById('check-no-monday')?.checked || false,
+    avoid_rollover: document.getElementById('check-avoid-rollover')?.checked || false,
 
     // Prop Firm Challenge
     prop_firm_filter: document.getElementById('check-prop-firm-filter')?.checked || false,
     prop_firm_daily_loss_pct: parseFloat(document.getElementById('input-prop-daily-loss')?.value) || 4.0,
     prop_firm_total_dd_pct: parseFloat(document.getElementById('input-prop-total-dd')?.value) || 8.0,
     prop_firm_target_pct: parseFloat(document.getElementById('input-prop-target')?.value) || 8.0,
+    challenge_capital: parseFloat(document.getElementById('input-challenge-capital')?.value) || 10000.0,
+    challenge_min_trading_days: parseInt(document.getElementById('input-challenge-days')?.value) || 5,
+    challenge_simulations: parseInt(document.getElementById('input-challenge-sims')?.value) || 10,
 
     // Direction Filter (BOTH, LONG_ONLY, SHORT_ONLY)
     direction: document.querySelector('input[name="direction"]:checked')?.value || 'BOTH'
   };
 
+  return config;
+}
+
+async function startExploration() {
+  const config = buildExplorationConfig();
+  if (!config) return;
+  const error = window.explorationConfigError?.(config);
+  if (error) { alert(error); return; }
   try {
     const res = await fetch('/api/start-exploration', {
       method: 'POST',
@@ -732,7 +1201,7 @@ function renderCandidates() {
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <span class="tn-badge ${isLead ? 'tn-badge-white' : ''}">#${rank}</span>
-            <span class="text-xs font-semibold text-white tracking-wide">${s.name}</span>
+            <span class="text-xs font-semibold text-white tracking-wide" data-rename-kind="strategy" data-rename-id="${s.id}">${escapeWorkspaceText(s.name)}</span>
           </div>
           <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
             TN ${m.tn_score}
@@ -842,6 +1311,15 @@ async function openCandidateModal(candidateId) {
     document.getElementById('modal-metric-drawdown').textContent = `${m.max_drawdown_pct.toFixed(1)}% ($${m.max_drawdown_usd.toLocaleString()})`;
     document.getElementById('modal-metric-winrate').textContent = `${m.win_rate_pct.toFixed(1)}% (${m.total_trades} trades)`;
     document.getElementById('modal-metric-pf').textContent = m.profit_factor.toFixed(2);
+    const hoEl = document.getElementById('modal-metric-holdout');
+    if (hoEl) {
+      const ho = m.holdout;
+      hoEl.textContent = ho
+        ? `${ho.net_profit >= 0 ? '+' : ''}$${Number(ho.net_profit).toLocaleString(undefined, {minimumFractionDigits: 2})} · Sh ${ho.sharpe_ratio}`
+        : '—';
+      hoEl.classList.toggle('text-emerald-400', !!(ho && ho.net_profit >= 0));
+      hoEl.classList.toggle('text-rose-400', !!(ho && ho.net_profit < 0));
+    }
 
     // Populate Rules (ocultar columna de la dirección que nunca opera)
     const rulesDesc = cand.rules_desc;
@@ -984,31 +1462,50 @@ async function runDeepValidation(candidateId) {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`/api/candidate/${candidateId}/validate`, { method: 'POST' });
+    const body = {
+      wf_mode: document.getElementById('select-wf-mode')?.value || 'validation',
+      wf_reopt_depth: document.getElementById('select-wf-depth')?.value || 'standard',
+      wf_windows: parseInt(document.getElementById('input-wf-windows')?.value) || 4,
+      wf_test_ratio: parseFloat(document.getElementById('input-wf-test-ratio')?.value) || 0.25,
+      mv_universes: parseInt(document.getElementById('input-mv-universes')?.value) || 80,
+      mv_preset: document.getElementById('select-mv-preset')?.value || 'balanced',
+      mv_regimes: parseInt(document.getElementById('input-mv-regimes')?.value) || 3
+    };
+    const res = await fetch(`/api/candidate/${candidateId}/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
     const val = await res.json();
 
     const container = document.getElementById('validation-results-container');
     container.classList.remove('hidden');
 
     const wf = val.walk_forward;
+    const passRate = wf.pass_rate_pct != null ? wf.pass_rate_pct : '--';
+    const wfe = wf.overall_wfe != null ? wf.overall_wfe : '--';
+    const paramStab = wf.param_stability ? ` · Estabilidad params: ${wf.param_stability.score}` : '';
     document.getElementById('val-wf-status').innerHTML = `
       <div class="flex items-center justify-between p-3 rounded bg-[#16161c] border border-[#2a2a34]">
         <div>
-          <div class="text-xs font-semibold text-white">Walk-Forward Temporal (WFE: ${wf.overall_wfe})</div>
-          <div class="text-[11px] text-[#a0a0ab]">Ventanas evaluadas: ${wf.windows.length} tramos fuera de muestra</div>
+          <div class="text-xs font-semibold text-white">Walk-Forward ${wf.mode || 'validation'} (WFE: ${wfe} · Pass: ${passRate}%)</div>
+          <div class="text-[11px] text-[#a0a0ab]">${(wf.windows || []).length} ventanas fuera de muestra · Sharpe OOS medio: ${wf.sharpe_oos_mean ?? '--'}${paramStab}</div>
         </div>
         <span class="tn-badge ${wf.passed ? 'tn-badge-white' : ''}">${wf.passed ? 'SUPERADO (ROBUSTO)' : 'SOBREAJUSTADO'}</span>
       </div>
     `;
 
     const mv = val.multiverse;
+    const regimes = mv.regimes
+      ? Object.entries(mv.regimes).map(([k, v]) => `${k}: ${v.profitable_pct}%`).join(' · ')
+      : '';
     document.getElementById('val-mv-status').innerHTML = `
       <div class="flex items-center justify-between p-3 rounded bg-[#16161c] border border-[#2a2a34]">
-        <div>
-          <div class="text-xs font-semibold text-white">Multiverso Sintético (${mv.profitable_pct}% rentables)</div>
-          <div class="text-[11px] text-[#a0a0ab]">${mv.total_universes} universos sintéticos simulados · Sharpe mediano: ${mv.median_sharpe}</div>
-        </div>
-        <span class="tn-badge ${mv.passed ? 'tn-badge-white' : ''}">${mv.passed ? 'SUPERADO (ALTA VENTAJA)' : 'FRÁGIL'}</span>
+            <div>
+              <div class="text-xs font-semibold text-white">Multiverso Score: ${mv.score ?? mv.profitable_pct}${mv.score != null ? '/100' : '%'} · ${mv.verdict || (mv.passed ? 'SUPERADO' : 'FRÁGIL')}</div>
+              <div class="text-[11px] text-[#a0a0ab]">${mv.total_universes} universos · ${mv.profitable_pct}% rentables · Preset: ${mv.engine_preset || 'balanced'}${regimes ? ' · ' + regimes : ''}</div>
+            </div>
+        <span class="tn-badge ${mv.passed ? 'tn-badge-white' : ''}">${mv.passed ? 'SUPERADO (ALTA VENTAJA)' : (mv.verdict || 'FRÁGIL')}</span>
       </div>
     `;
 
@@ -1637,7 +2134,7 @@ function renderSavedStrategiesGrid() {
     return `
       <div class="candidate-card group">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[180px]">${s.name || s.id}</span>
+          <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[180px]" data-rename-kind="strategy" data-rename-id="${s.id}">${escapeWorkspaceText(s.name || s.id)}</span>
           <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
             ${m.tn_score ? 'TN ' + m.tn_score : 'GUARDADA'}
           </span>
@@ -2292,8 +2789,8 @@ function renderPortfolioEngineCards(items) {
               <span class="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-[#1c1c24] border border-[#33333f]">
                 ${rankBadge}
               </span>
-              <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[170px]" title="${p.name}">
-                ${p.name}
+              <span class="text-xs font-semibold text-white tracking-wide truncate max-w-[170px]" data-rename-kind="portfolio" data-rename-id="${p.id}">
+                ${escapeWorkspaceText(p.name)}
               </span>
             </div>
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Descorrelación según escala StrategyQuant (0.00 a 1.00)">

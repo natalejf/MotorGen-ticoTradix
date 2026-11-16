@@ -22,7 +22,32 @@ SUPPORTED_SYMBOLS = {
     "GBPUSD": {"ticker": "GBPUSD=X", "name": "British Pound / USD", "category": "Forex", "pip_size": 0.0001, "point_value": 100000.0, "default_spread": 0.00020, "digits": 5},
     "US30": {"ticker": "YM=F", "name": "Dow Jones 30 E-mini", "category": "Indices", "pip_size": 1.0, "point_value": 5.0, "default_spread": 2.0, "digits": 1},
     "BTCUSD": {"ticker": "BTC-USD", "name": "Bitcoin / US Dollar", "category": "Crypto", "pip_size": 1.0, "point_value": 1.0, "default_spread": 10.0, "digits": 2},
+    # --- TN universe expansion (21 adicionales → 29 activos) ---
+    "USDCHF": {"ticker": "USDCHF=X", "name": "US Dollar / Swiss Franc", "category": "Forex", "pip_size": 0.0001, "point_value": 100000.0, "default_spread": 0.00020, "digits": 5},
+    "USDCAD": {"ticker": "USDCAD=X", "name": "US Dollar / Canadian Dollar", "category": "Forex", "pip_size": 0.0001, "point_value": 100000.0, "default_spread": 0.00020, "digits": 5},
+    "NZDUSD": {"ticker": "NZDUSD=X", "name": "New Zealand Dollar / USD", "category": "Forex", "pip_size": 0.0001, "point_value": 100000.0, "default_spread": 0.00022, "digits": 5},
+    "EURJPY": {"ticker": "EURJPY=X", "name": "Euro / Japanese Yen", "category": "Forex", "pip_size": 0.01, "point_value": 1000.0, "default_spread": 0.020, "digits": 3},
+    "GBPJPY": {"ticker": "GBPJPY=X", "name": "British Pound / Japanese Yen", "category": "Forex", "pip_size": 0.01, "point_value": 1000.0, "default_spread": 0.030, "digits": 3},
+    "AUDJPY": {"ticker": "AUDJPY=X", "name": "Australian Dollar / Japanese Yen", "category": "Forex", "pip_size": 0.01, "point_value": 1000.0, "default_spread": 0.025, "digits": 3},
+    "EURGBP": {"ticker": "EURGBP=X", "name": "Euro / British Pound", "category": "Forex", "pip_size": 0.0001, "point_value": 100000.0, "default_spread": 0.00020, "digits": 5},
+    "XAGUSD": {"ticker": "SI=F", "name": "Silver / US Dollar", "category": "Commodities", "pip_size": 0.01, "point_value": 5000.0, "default_spread": 0.02, "digits": 3},
+    "XPTUSD": {"ticker": "PL=F", "name": "Platinum / US Dollar", "category": "Commodities", "pip_size": 0.01, "point_value": 50.0, "default_spread": 0.30, "digits": 2},
+    "USOIL": {"ticker": "CL=F", "name": "WTI Crude Oil", "category": "Commodities", "pip_size": 0.01, "point_value": 1000.0, "default_spread": 0.03, "digits": 2},
+    "NGAS": {"ticker": "NG=F", "name": "Natural Gas", "category": "Commodities", "pip_size": 0.001, "point_value": 10000.0, "default_spread": 0.005, "digits": 3},
+    "USTEC": {"ticker": "^NDX", "name": "Nasdaq 100 Cash", "category": "Indices", "pip_size": 1.0, "point_value": 20.0, "default_spread": 2.0, "digits": 1},
+    "SPXUSD": {"ticker": "^GSPC", "name": "S&P 500 Cash", "category": "Indices", "pip_size": 1.0, "point_value": 50.0, "default_spread": 1.0, "digits": 1},
+    "GER40": {"ticker": "^GDAXI", "name": "DAX 40 Cash", "category": "Indices", "pip_size": 1.0, "point_value": 25.0, "default_spread": 1.5, "digits": 1},
+    "UK100": {"ticker": "^FTSE", "name": "FTSE 100 Cash", "category": "Indices", "pip_size": 1.0, "point_value": 10.0, "default_spread": 1.5, "digits": 1},
+    "JPN225": {"ticker": "^N225", "name": "Nikkei 225 Cash", "category": "Indices", "pip_size": 1.0, "point_value": 5.0, "default_spread": 2.0, "digits": 1},
+    "AUS200": {"ticker": "^AXJO", "name": "ASX 200 Cash", "category": "Indices", "pip_size": 1.0, "point_value": 25.0, "default_spread": 1.5, "digits": 1},
+    "ETHUSD": {"ticker": "ETH-USD", "name": "Ethereum / US Dollar", "category": "Crypto", "pip_size": 0.1, "point_value": 1.0, "default_spread": 0.5, "digits": 2},
+    "XRPUSD": {"ticker": "XRP-USD", "name": "Ripple / US Dollar", "category": "Crypto", "pip_size": 0.0001, "point_value": 1.0, "default_spread": 0.0002, "digits": 4},
+    "SOLUSD": {"ticker": "SOL-USD", "name": "Solana / US Dollar", "category": "Crypto", "pip_size": 0.01, "point_value": 1.0, "default_spread": 0.05, "digits": 2},
+    "LTCUSD": {"ticker": "LTC-USD", "name": "Litecoin / US Dollar", "category": "Crypto", "pip_size": 0.01, "point_value": 1.0, "default_spread": 0.05, "digits": 2},
 }
+
+# Timeframes served by this data layer (M30 = intraday 60d from yfinance)
+SUPPORTED_TIMEFRAMES = ["1h", "30m", "4h", "1d"]
 
 class DataManager:
     def __init__(self, data_dir: str = DATA_DIR):
@@ -63,6 +88,18 @@ class DataManager:
         p1h = self.get_file_path(symbol, "1h")
         df_1h.to_parquet(p1h)
         results["1h"] = len(df_1h)
+
+        # 1b. M30 intraday (yfinance limita intervalos <1h a 60 días)
+        try:
+            df_30m = yf.download(ticker, period="60d", interval="30m", progress=False)
+            if isinstance(df_30m.columns, pd.MultiIndex):
+                df_30m.columns = [col[0] for col in df_30m.columns]
+            df_30m = df_30m[["Open", "High", "Low", "Close", "Volume"]].dropna()
+            df_30m.index = pd.to_datetime(df_30m.index)
+            df_30m.to_parquet(self.get_file_path(symbol, "30m"))
+            results["30m"] = len(df_30m)
+        except Exception:
+            results["30m"] = 0
 
         # 2. Resample to 4h
         df_4h = self.resample_ohlcv(df_1h, "4h")
@@ -122,6 +159,21 @@ class DataManager:
         combined_4h = self.resample_ohlcv(combined_1h, "4h")
         combined_4h.to_parquet(self.get_file_path(symbol, "4h"))
 
+        # Refresh 30m (rolling 60d window — cheap full refresh)
+        results_30m = 0
+        try:
+            df_30m = yf.download(ticker, period="60d", interval="30m", progress=False)
+            if isinstance(df_30m.columns, pd.MultiIndex):
+                df_30m.columns = [col[0] for col in df_30m.columns]
+            df_30m = df_30m[["Open", "High", "Low", "Close", "Volume"]].dropna()
+            df_30m.index = pd.to_datetime(df_30m.index)
+            df_30m.to_parquet(self.get_file_path(symbol, "30m"))
+            results_30m = len(df_30m)
+        except Exception:
+            p30 = self.get_file_path(symbol, "30m")
+            if os.path.exists(p30):
+                results_30m = len(pd.read_parquet(p30))
+
         # Update 1d
         p1d = self.get_file_path(symbol, "1d")
         if os.path.exists(p1d):
@@ -144,6 +196,7 @@ class DataManager:
 
         return {
             "1h": len(combined_1h),
+            "30m": results_30m,
             "4h": len(combined_4h),
             "1d": len(combined_1d) if not combined_1d.empty else 0
         }
@@ -182,12 +235,17 @@ class DataManager:
             raise FileNotFoundError(f"Data not found for {symbol} ({timeframe})")
 
         df = pd.read_parquet(fpath)
-        
-        # Date filtering
-        if start_date:
-            df = df[df.index >= pd.to_datetime(start_date, utc=True)]
-        if end_date:
-            df = df[df.index <= pd.to_datetime(end_date, utc=True)]
+
+        # Date filtering (end_date inclusive: whole day)
+        if start_date or end_date:
+            if df.index.tz is None:
+                df.index = df.index.tz_localize("UTC")
+            else:
+                df.index = df.index.tz_convert("UTC")
+            if start_date:
+                df = df[df.index >= pd.to_datetime(start_date, utc=True)]
+            if end_date:
+                df = df[df.index < pd.to_datetime(end_date, utc=True) + pd.Timedelta(days=1)]
 
         self.memory_cache[cache_key] = df
         return df
@@ -206,7 +264,7 @@ class DataManager:
                 "digits": meta["digits"],
                 "timeframes": {}
             }
-            for tf in ["1h", "4h", "1d"]:
+            for tf in SUPPORTED_TIMEFRAMES:
                 p = self.get_file_path(sym, tf)
                 if os.path.exists(p):
                     try:
