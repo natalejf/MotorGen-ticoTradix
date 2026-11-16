@@ -15,3 +15,5 @@ data/sessions/
 data/editor/
 data/macro/
 .pytest_cache/
+data/copy_trading.sqlite3*
+data/copy_logs/

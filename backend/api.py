@@ -21,8 +21,8 @@ from backend.validation import validation_suite
 from backend.code_generator import code_generator
 
 app = FastAPI(
-    title="TradingNote Genetic Engine API",
-    description="Replica del motor genético y creador de algoritmos de TradingNote",
+    title="Stratix API",
+    description="Motor de algoritmos, portafolios y copy trading MT5 demo",
     version="1.0.0"
 )
 
@@ -787,6 +787,8 @@ def validate_candidate(candidate_id: str, req: Optional[ValidateCandidateRequest
 
 @app.get("/api/candidate/{candidate_id}/export/{export_format}")
 def export_candidate(candidate_id: str, export_format: str):
+    if export_format in ('mq5','python'):
+        raise HTTPException(501,'Exportación ejecutable no implementada. Usa Copy Master para asignar estrategias compatibles a MT5 demo.')
     candidates = genetic_engine.get_candidates()
     target_c = next((c for c in candidates if c["strategy"]["id"] == candidate_id), None)
     if not target_c:
@@ -886,6 +888,8 @@ def update_macro(req: Optional[MacroUpdateRequest] = None):
 
 from backend.workspace_features import install_routes
 install_routes(app, genetic_engine, ExplorationConfigRequest)
+from backend.copy_trading import install_copy_routes
+install_copy_routes(app)
 
 # Mount static frontend files if folder exists
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

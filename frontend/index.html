@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradingNote · Motor Genético & Portafolios</title>
+  <title>Stratix · Algoritmos, Portafolios & Copy Trading</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js for High-Precision Financial Equity Curves -->
@@ -25,10 +25,10 @@
       <!-- Logo Header -->
       <div class="sidebar-header">
         <div class="sidebar-logo-box">
-          <div class="sidebar-logo-icon">TN</div>
+          <div class="sidebar-logo-icon" style="font-size:12px">STX</div>
           <div>
             <div class="flex items-center gap-1.5">
-              <span class="text-xs font-bold text-white uppercase tracking-widest">TradingNote</span>
+              <span class="text-xs font-bold text-white uppercase tracking-widest">Stratix</span>
               <span class="text-[9px] px-1.5 py-0.2 rounded bg-white/10 text-white font-mono font-semibold">LAB</span>
             </div>
             <div class="text-[10px] text-[#8e8e9c] mt-0.5">Motor Genético & Portafolio</div>
@@ -456,7 +456,7 @@
             <div class="tn-card">
               <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-[#202028]">
                 <div>
-                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Los 32 Indicadores Técnicos de TradingNote</h2>
+                  <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Los 32 Indicadores Técnicos de Stratix</h2>
                   <p class="text-xs text-[#a0a0ab] mt-0.5">Activa o desactiva con checks los indicadores que quieres combinar. Sus parámetros cuantitativos ya vienen preconfigurados por defecto.</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -1150,7 +1150,7 @@
               <div class="flex items-center gap-2 text-xs text-[#a0a0ab]">
                 <span>Validación & Robustez</span>
                 <span>/</span>
-                <span class="text-white font-medium">Bucle de Robustez TradingNote</span>
+                <span class="text-white font-medium">Bucle de Robustez Stratix</span>
               </div>
               <h1 class="text-sm font-bold text-white tracking-wide mt-0.5">Retest Anti-Sobreajuste: Walk-Forward OOS & Monte Carlo</h1>
             </div>
@@ -1213,7 +1213,7 @@
             <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-[#202028]">
               <div>
                 <h2 class="text-sm font-semibold uppercase tracking-wider text-white">Configuración del Retest de Robustez</h2>
-                <p class="text-xs text-[#a0a0ab] mt-0.5">Somete tus algoritmos al bucle de 4 capas de TradingNote para desenmascarar el sobreajuste antes de combinarlos.</p>
+                <p class="text-xs text-[#a0a0ab] mt-0.5">Somete tus algoritmos al bucle de 4 capas de Stratix para evaluar el sobreajuste antes de combinarlos.</p>
               </div>
               <div class="flex items-center gap-2">
                 <button id="btn-run-batch-retest" class="btn-primary text-xs py-2 px-5 font-bold flex items-center gap-2" onclick="runBatchRetest()">
@@ -1234,7 +1234,7 @@
 
               <!-- Capas Activas (Col span 2) -->
               <div class="col-span-2 space-y-1">
-                <label class="text-xs font-semibold text-white">Capas de Validación TradingNote:</label>
+                <label class="text-xs font-semibold text-white">Capas de Validación Stratix:</label>
                 <div class="grid grid-cols-3 gap-2 mt-1">
                   <label class="flex items-center gap-1.5 p-2 rounded bg-[#0a0a0e] border border-[#22222c] text-xs text-white cursor-pointer">
                     <input type="checkbox" id="chk-retest-wf" checked class="accent-white">
@@ -1473,7 +1473,7 @@
                     <option value="diversification_score" selected>Maximizar Descorrelación / Diversificación</option>
                     <option value="combined_sharpe">Maximizar Sharpe Combinado</option>
                     <option value="combined_net_profit_usd">Maximizar Ganancia Neta Total ($)</option>
-                    <option value="tn_score">Score Holístico TradingNote</option>
+                    <option value="tn_score">Score Holístico Stratix</option>
                   </select>
                   <span class="text-[10px] text-[#71717a]">Criterio para posicionar en el TOP</span>
                 </div>
@@ -1782,11 +1782,11 @@
         </div>
       </div>
       <div class="p-6 border-t border-[#22222a] flex items-center justify-between bg-[#0e0e12]">
-        <div class="text-xs text-[#71717a]">Exportación de código listo para producción:</div>
+        <div class="text-xs text-[#71717a]">Guarda esta estrategia y asígnala desde Copy Master → Algoritmos y portafolios.</div>
         <div class="flex items-center gap-2">
           <button id="btn-save-strategy" class="btn-primary text-xs">💾 Guardar Estrategia</button>
-          <button id="btn-export-mql5" class="btn-secondary text-xs">💾 Exportar MT5 (.mq5)</button>
-          <button id="btn-export-python" class="btn-secondary text-xs">🐍 Exportar Python (.py)</button>
+          <button id="btn-export-mql5" class="hidden" disabled title="Exportador no disponible">Exportar MT5</button>
+          <button id="btn-export-python" class="hidden" disabled title="Exportador no disponible">Exportar Python</button>
           <button id="btn-export-json" class="btn-secondary text-xs">📋 Exportar JSON</button>
         </div>
       </div>
@@ -1922,5 +1922,6 @@
   <!-- APPLICATION SCRIPT -->
   <script src="app.js"></script>
   <script src="workspace.js"></script>
+  <script src="copy-trading.js"></script>
 </body>
 </html>

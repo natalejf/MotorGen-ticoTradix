@@ -11,7 +11,7 @@ import time
 
 def main():
     print("=" * 65)
-    print("   TRADINGNOTE · MOTOR GENÉTICO & CREADOR DE ALGORITMOS (REPLICA)   ")
+    print("   STRATIX · ALGORITMOS, PORTAFOLIOS & COPY TRADING MT5   ")
     print("=" * 65)
     print("Iniciando servidor local en http://127.0.0.1:8000 ...")
 
