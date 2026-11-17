@@ -1,0 +1,201 @@
+{
+  "platform": "NinjaTrader 8",
+  "mode": "SIM_ACCOUNTS_ONLY",
+  "copy_execution_enabled": false,
+  "connections": [
+    {
+      "id": "38f7b4403b0c42dbbfef643ea6dea5ad",
+      "name": "Candle Controller \u00b7 Sim101",
+      "account": "Sim101",
+      "connected": true,
+      "snapshot": {
+        "kind": "candle_service_v1",
+        "account": "Sim101",
+        "instance": "3bebc9a004f24384bcddd1e04f1add17",
+        "realtime": true,
+        "account_available": true,
+        "master_enabled": false,
+        "symbol": "",
+        "timeframe_minutes": 1,
+        "data_ready": false,
+        "closed_bars": 0,
+        "position_quantity": 0,
+        "accounts": [
+          {
+            "name": "Sim101",
+            "enabled": false,
+            "position_quantity": 0,
+            "direction": "Flat",
+            "balance": 50000,
+            "unrealized": 0,
+            "status": "SIN CONFIGURAR",
+            "daily_status": "",
+            "lots": 1,
+            "tp_usd": 100,
+            "sl_usd": 100
+          },
+          {
+            "name": "SimAccount2",
+            "enabled": false,
+            "position_quantity": 0,
+            "direction": "Flat",
+            "balance": 50000,
+            "unrealized": 0,
+            "status": "SIN CONFIGURAR",
+            "daily_status": "",
+            "lots": 1,
+            "tp_usd": 100,
+            "sl_usd": 100
+          },
+          {
+            "name": "SimAccount3",
+            "enabled": false,
+            "position_quantity": 0,
+            "direction": "Flat",
+            "balance": 50000,
+            "unrealized": 0,
+            "status": "SIN CONFIGURAR",
+            "daily_status": "",
+            "lots": 1,
+            "tp_usd": 100,
+            "sl_usd": 100
+          },
+          {
+            "name": "SimAccount4",
+            "enabled": false,
+            "position_quantity": 0,
+            "direction": "Flat",
+            "balance": 50000,
+            "unrealized": 0,
+            "status": "SIN CONFIGURAR",
+            "daily_status": "",
+            "lots": 1,
+            "tp_usd": 100,
+            "sl_usd": 100
+          },
+          {
+            "name": "SimAccount5",
+            "enabled": false,
+            "position_quantity": 0,
+            "direction": "Flat",
+            "balance": 50000,
+            "unrealized": 0,
+            "status": "SIN CONFIGURAR",
+            "daily_status": "",
+            "lots": 1,
+            "tp_usd": 100,
+            "sl_usd": 100
+          }
+        ],
+        "events": [
+          "15:07:19 \u00b7 Servicio iniciado sin interfaz nativa. Configuraci\u00f3n y grupos se gestionan desde la web."
+        ],
+        "last_ack": "",
+        "ack_status": "",
+        "ack_detail": "",
+        "at": 1794929307.294199
+      },
+      "active_group_id": null,
+      "commands": [
+        {
+          "id": "9fe1042e1fae48eab42a9205f25b9336",
+          "connection": "38f7b4403b0c42dbbfef643ea6dea5ad",
+          "instance": "533b2eca8413430396954776e41e546b",
+          "action": "pause",
+          "settings": {},
+          "state": "APPLIED",
+          "created": 1794924905.4015577,
+          "expires": 1794924925.4015577,
+          "detail": "pause",
+          "acked": 1794924909.325823
+        },
+        {
+          "id": "54c601c06aa14ffeb787b48f1fe5db0f",
+          "connection": "38f7b4403b0c42dbbfef643ea6dea5ad",
+          "instance": "533b2eca8413430396954776e41e546b",
+          "action": "start",
+          "settings": {},
+          "state": "APPLIED",
+          "created": 1794924629.4457564,
+          "expires": 1794924649.4457564,
+          "detail": "start",
+          "acked": 1794924634.2160866
+        },
+        {
+          "id": "4adea122a9524ccc9aee398b2a8b523b",
+          "connection": "38f7b4403b0c42dbbfef643ea6dea5ad",
+          "instance": "533b2eca8413430396954776e41e546b",
+          "action": "configure",
+          "settings": {
+            "lots": 1,
+            "tp_usd": 100.0,
+            "sl_usd": 100.0,
+            "target": 500.0,
+            "max_loss": 500.0,
+            "daily_profit_limit": 200.0,
+            "daily_loss_limit": 200.0,
+            "start_balance": 50020.0,
+            "exit_only_profit": false,
+            "time_filter": false,
+            "start_time": "09:30",
+            "end_time": "16:00"
+          },
+          "state": "APPLIED",
+          "created": 1794924624.9912684,
+          "expires": 1794924644.9912684,
+          "detail": "configure",
+          "acked": 1794924629.217666
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "80836ffb61c64c10b5e9b013388ded77",
+      "name": "Candle \u00b7 Grupo demo 2 cuentas",
+      "settings": {
+        "accounts": [
+          "SimAccount2",
+          "SimAccount3"
+        ],
+        "symbol": "GC DEC26",
+        "timeframe_minutes": 1,
+        "lots": 1,
+        "tp_usd": 100.0,
+        "sl_usd": 100.0,
+        "target": 500.0,
+        "max_loss": 500.0,
+        "daily_profit_limit": 200.0,
+        "daily_loss_limit": 200.0,
+        "start_balance": 50000.0,
+        "exit_only_profit": false,
+        "time_filter": false,
+        "start_time": "09:30",
+        "end_time": "16:00"
+      }
+    },
+    {
+      "id": "ff8a85481e2947e694f74a74070722ab",
+      "name": "Candle \u00b7 Demo individual",
+      "settings": {
+        "accounts": [
+          "Sim101"
+        ],
+        "symbol": "GC DEC26",
+        "timeframe_minutes": 1,
+        "lots": 1,
+        "tp_usd": 100.0,
+        "sl_usd": 100.0,
+        "target": 500.0,
+        "max_loss": 500.0,
+        "daily_profit_limit": 200.0,
+        "daily_loss_limit": 200.0,
+        "start_balance": 50000.0,
+        "exit_only_profit": false,
+        "time_filter": false,
+        "start_time": "09:30",
+        "end_time": "16:00"
+      }
+    }
+  ]
+}

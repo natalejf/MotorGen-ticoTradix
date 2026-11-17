@@ -232,7 +232,8 @@ def test_api_creation_is_paused_and_rejects_unsupported_rules(tmp_path,monkeypat
     response=client.post('/api/copy/accounts',json=dict(name='Demo',terminal_path=str(terminal),login=123,server='Broker-Demo'))
     assert response.status_code==200,response.text
     key=response.json()['id']
-    strategy=Strategy(strategy_id='test_strategy',buy_conditions=[Condition('RSI',{},'LESS_THAN',target_value=30)])
+    strategy=Strategy(strategy_id='test_strategy',max_weekly_loss_pct=0,max_monthly_loss_pct=0,
+        buy_conditions=[Condition('RSI',{},'LESS_THAN',target_value=30)])
     monkeypatch.setattr(StrategyRecord,'load',lambda key:NS(data={'strategy':strategy.to_dict()}))
     body=dict(name='Copy',account_id=key,source_type='strategy',source_id='test_strategy')
     response=client.post('/api/copy/deployments',json=body)

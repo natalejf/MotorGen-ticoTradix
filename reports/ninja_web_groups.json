@@ -1,0 +1,20 @@
+{
+  "created": [
+    {
+      "id": "ff8a85481e2947e694f74a74070722ab",
+      "name": "Candle · Demo individual",
+      "accounts": [
+        "Sim101"
+      ]
+    },
+    {
+      "id": "80836ffb61c64c10b5e9b013388ded77",
+      "name": "Candle · Grupo demo 2 cuentas",
+      "accounts": [
+        "SimAccount2",
+        "SimAccount3"
+      ]
+    }
+  ],
+  "state": "SAVED_NOT_ACTIVATED"
+}

@@ -12,6 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- Custom Monochrome Design System -->
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="proppass.css">
 </head>
 <body class="bg-[#08080a] text-white min-h-screen antialiased selection:bg-white selection:text-black">
 
@@ -106,7 +107,7 @@
             <div id="engine-status-badge" class="tn-badge text-[#a0a0ab] flex items-center">
               <span class="inline-block w-2 h-2 rounded-full bg-[#71717a] mr-2"></span> LISTO
             </div>
-            <button id="btn-random-mix-all" class="btn-secondary text-xs py-1.5 px-3 hover:border-white" title="Selecciona aleatoriamente indicadores, entradas y salidas">
+            <button id="btn-random-mix-all" class="btn-secondary text-xs py-1.5 px-3 hover:border-white" title="Mezcla compacta: 3–5 indicadores compatibles, una entrada y 1–2 salidas">
               <span>🎲</span> Mezcla Aleatoria
             </button>
             <button id="btn-update-data" class="btn-secondary text-xs py-1.5 px-3">
@@ -144,6 +145,7 @@
             <div class="border-l border-[#24242d] pl-6">
               <div class="text-[10px] text-[#71717a] uppercase font-semibold">Descartadas (Filtro)</div>
               <div id="kpi-discarded" class="text-base font-mono font-bold text-[#888894]">0</div>
+              <div id="kpi-rejection-detail" class="text-[10px] text-[#71717a]" title="Un candidato puede incumplir varios filtros"></div>
             </div>
             <div class="border-l border-[#24242d] pl-6">
               <div class="text-[10px] text-white uppercase font-bold flex items-center gap-1.5">
@@ -385,32 +387,8 @@
                   </div>
                   <div class="flex-1">
                     <label class="block text-[11px] text-[#a0a0ab] mb-1">Máx. Indicadores Combinados</label>
-                    <input type="number" id="input-max-indicators" class="tn-input num-tabular text-xs font-bold text-white" value="3" min="1" max="4">
+                    <input type="number" id="input-max-indicators" class="tn-input num-tabular text-xs font-bold text-white" value="2" min="1" max="4">
                   </div>
-                </div>
-              </div>
-
-              <!-- Macro FRED (contexto macroeconómico) -->
-              <div class="mt-4 pt-4 border-t border-[#22222a]">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-3">
-                    <input type="checkbox" id="check-use-macro" class="w-4 h-4 accent-white cursor-pointer">
-                    <div>
-                      <span class="text-xs font-bold text-white block">Indicadores Macro (FRED)</span>
-                      <span class="text-[11px] text-[#a0a0ab]">Series de la Reserva Federal como filtro de contexto (anti-lookahead)</span>
-                    </div>
-                  </div>
-                  <span class="tn-badge tn-badge-white text-[10px]">MACRO FRED</span>
-                </div>
-                <div id="macro-series-box" class="opacity-50 pointer-events-none transition">
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-[10px] text-[#71717a]">Selecciona las series que el motor podrá usar como condición (ej. VIX &lt; 25, Curva 10Y-2Y &gt; 0).</span>
-                    <div class="flex gap-1.5">
-                      <button id="btn-macro-all" class="btn-secondary text-[10px] py-0.5 px-2">Todas</button>
-                      <button id="btn-macro-none" class="btn-secondary text-[10px] py-0.5 px-2">Ninguna</button>
-                    </div>
-                  </div>
-                  <div id="macro-series-container" class="max-h-44 overflow-y-auto pr-1"></div>
                 </div>
               </div>
 
@@ -465,13 +443,21 @@
                   <button id="btn-random-ind" class="btn-primary text-xs py-1 px-3 font-semibold">🎲 Aleatorio</button>
                 </div>
               </div>
-              <div id="indicators-container" class="space-y-6"></div>
+              <div class="p-4 mb-5 rounded-lg bg-[#14141a] border border-[#262632]">
+  <h3 class="text-xs font-bold text-white mb-2">Operadores de las reglas</h3>
+  <p class="text-xs text-[#a0a0ab] mb-3">El motor combina los operadores marcados con indicadores compatibles. Sin selección personalizada conserva la lógica original.</p>
+  <label class="text-xs text-white"><input type="checkbox" id="custom-operators"> Elegir operadores para esta exploración</label>
+  <div id="rule-operators" class="flex flex-wrap gap-3 mt-3"></div><p class="text-xs text-[#71717a] mt-2">Usar solo igualdad suele producir pocas señales. La mezcla aleatoria respeta los operadores elegidos.</p>
+  <button type="button" id="audit-indicators" class="btn-secondary text-xs mt-4">Comprobar indicadores y reglas</button>
+  <div id="indicator-audit-result" class="text-xs text-[#a0a0ab] mt-3" role="status"></div>
+</div>
+<div id="indicators-container" class="space-y-6"></div>
               <div class="mt-6 p-4 rounded-lg bg-[#14141a] border border-[#262632] flex items-center justify-between">
                 <div>
                   <div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider">Espacio de Combinaciones con Indicadores Marcados</div>
                   <div class="flex items-baseline gap-2">
                     <span id="combinations-counter" class="text-2xl font-mono font-bold text-white">--</span>
-                    <span class="text-xs text-[#a0a0ab]">combinaciones potenciales</span>
+                    <span class="text-xs text-[#a0a0ab]">espacio teórico; no son tareas pendientes</span>
                   </div>
                   <div class="text-xs text-[#a0a0ab] mt-1">
                     Los parámetros <span class="text-white font-mono">[Desde / Pasos / Hasta]</span> están calibrados con estándares cuantitativos para no requerir configuración manual.
@@ -885,28 +871,6 @@
                 </div>
               </div>
 
-              <!-- Límites de pérdida / ganancia por período -->
-              <div class="mt-4 pt-4 border-t border-[#22222a]">
-                <div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-3">Límites de Cuenta (Pérdida / Ganancia % — 0 en ganancia = free)</div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. diaria %</label>
-                    <input type="number" id="input-max-daily-loss" class="tn-input num-tabular text-xs" value="3.0" step="0.5" min="0" max="20"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. semanal %</label>
-                    <input type="number" id="input-max-weekly-loss" class="tn-input num-tabular text-xs" value="6.0" step="0.5" min="0" max="40"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. mensual %</label>
-                    <input type="number" id="input-max-monthly-loss" class="tn-input num-tabular text-xs" value="12.0" step="1" min="0" max="80"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Pérdida máx. cuenta %</label>
-                    <input type="number" id="input-max-account-loss" class="tn-input num-tabular text-xs" value="8.0" step="0.5" min="0" max="50"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. diaria %</label>
-                    <input type="number" id="input-max-daily-gain" class="tn-input num-tabular text-xs" value="0" step="0.5" min="0" max="50"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. semanal %</label>
-                    <input type="number" id="input-max-weekly-gain" class="tn-input num-tabular text-xs" value="0" step="0.5" min="0" max="100"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. mensual %</label>
-                    <input type="number" id="input-max-monthly-gain" class="tn-input num-tabular text-xs" value="0" step="1" min="0" max="200"></div>
-                  <div><label class="block text-[11px] text-[#a0a0ab] mb-1">Ganancia máx. cuenta %</label>
-                    <input type="number" id="input-max-account-gain" class="tn-input num-tabular text-xs" value="0" step="1" min="0" max="500"></div>
-                </div>
-              </div>
             </div>
 
             <!-- Prop Firm Challenge Card -->
@@ -916,10 +880,10 @@
                   <input type="checkbox" id="check-prop-firm-filter" class="w-4 h-4 accent-white cursor-pointer" onchange="togglePropFirmInputs()">
                   <div>
                     <label for="check-prop-firm-filter" class="text-sm font-semibold uppercase tracking-wider text-white cursor-pointer">
-                      Activar Filtro Estricto Prop Firm (Cuentas de Fondeo)
+                      Activar Modo Prop Firm
                     </label>
                     <p class="text-xs text-[#a0a0ab] mt-0.5">
-                      Descarta automáticamente algoritmos que viole las reglas de pérdida diaria/drawdown y simula el reto (capital, días mínimos) sobre múltiples fechas de inicio.
+                      Activado: aplica los límites de cuenta y valida el reto con estos mismos valores. Desactivado: no se añaden topes de pérdida o ganancia de cuenta a los algoritmos.
                     </p>
                   </div>
                 </div>
@@ -1920,8 +1884,11 @@
   </div>
 
   <!-- APPLICATION SCRIPT -->
+  <script src="random-mix.js"></script>
   <script src="app.js"></script>
   <script src="workspace.js"></script>
   <script src="copy-trading.js"></script>
+  <script src="proppass-view.js"></script>
+  <script src="ninja-trader.js"></script>
 </body>
 </html>

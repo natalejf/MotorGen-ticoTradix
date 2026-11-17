@@ -1,0 +1,174 @@
+{
+  "deployment": "a882fd38687442c3b0b288ae4fdab29a",
+  "status": "STOPPED",
+  "index": 20,
+  "phase": "OPEN",
+  "results": [
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "CLOSE",
+      "outcome": "PASS",
+      "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+      "at": 1794920122.3994424
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "PARTIAL",
+      "outcome": "PASS",
+      "detail": "Reducción de volumen confirmada en MT5",
+      "at": 1794920146.9752543
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "MODIFY",
+      "outcome": "PASS",
+      "detail": "Modificación de SL confirmada en MT5",
+      "at": 1794920172.1207068
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "TIME",
+      "outcome": "PASS",
+      "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+      "at": 1794920194.2307453
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "SL",
+      "outcome": "INCONCLUSIVE",
+      "detail": "Tiempo agotado sin condición de precio confirmada; se limpia el caso",
+      "at": 1794920252.9584308
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "TP",
+      "outcome": "INCONCLUSIVE",
+      "detail": "Tiempo agotado sin condición de precio confirmada; se limpia el caso",
+      "at": 1794920313.8695252
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "BREAKEVEN",
+      "outcome": "INCONCLUSIVE",
+      "detail": "Posición cerrada sin motivo esperado confirmado en historial MT5",
+      "at": 1794920375.6678896
+    },
+    {
+      "direction": "BUY",
+      "entry": "MARKET",
+      "exit": "TRAILING",
+      "outcome": "PASS",
+      "detail": "Modificación de SL confirmada en MT5",
+      "at": 1794920399.618189
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "CLOSE",
+      "outcome": "PASS",
+      "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+      "at": 1794920417.7092886
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "PARTIAL",
+      "outcome": "PASS",
+      "detail": "Reducción de volumen confirmada en MT5",
+      "at": 1794920441.171196
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "MODIFY",
+      "outcome": "PASS",
+      "detail": "Modificación de SL confirmada en MT5",
+      "at": 1794920466.5600767
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "TIME",
+      "outcome": "PASS",
+      "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+      "at": 1794920487.765435
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "SL",
+      "outcome": "INCONCLUSIVE",
+      "detail": "Tiempo agotado sin condición de precio confirmada; se limpia el caso",
+      "at": 1794920547.611384
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "TP",
+      "outcome": "INCONCLUSIVE",
+      "detail": "Tiempo agotado sin condición de precio confirmada; se limpia el caso",
+      "at": 1794920607.4325209
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "BREAKEVEN",
+      "outcome": "PASS",
+      "detail": "Modificación de SL confirmada en MT5",
+      "at": 1794920660.3502088
+    },
+    {
+      "direction": "SELL",
+      "entry": "MARKET",
+      "exit": "TRAILING",
+      "outcome": "PASS",
+      "detail": "Modificación de SL confirmada en MT5",
+      "at": 1794920683.4591503
+    },
+    {
+      "direction": "BUY",
+      "entry": "LIMIT",
+      "exit": "MODIFY_CANCEL",
+      "outcome": "PASS",
+      "detail": "Pendiente colocada y modificada; cancelación se verifica en limpieza",
+      "at": 1794920705.6148431
+    },
+    {
+      "direction": "SELL",
+      "entry": "LIMIT",
+      "exit": "MODIFY_CANCEL",
+      "outcome": "PASS",
+      "detail": "Pendiente colocada y modificada; cancelación se verifica en limpieza",
+      "at": 1794920727.780439
+    },
+    {
+      "direction": "BUY",
+      "entry": "STOP",
+      "exit": "MODIFY_CANCEL",
+      "outcome": "PASS",
+      "detail": "Pendiente colocada y modificada; cancelación se verifica en limpieza",
+      "at": 1794920770.1837678
+    },
+    {
+      "direction": "SELL",
+      "entry": "STOP",
+      "exit": "MODIFY_CANCEL",
+      "outcome": "PASS",
+      "detail": "Pendiente colocada y modificada; cancelación se verifica en limpieza",
+      "at": 1794920793.12902
+    }
+  ],
+  "audit_complete": true,
+  "cleanup": {
+    "positions": 0,
+    "orders": 0,
+    "equity": 4989.44
+  }
+}

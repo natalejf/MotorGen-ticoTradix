@@ -1,0 +1,26 @@
+{
+  "video": "C:\\Users\\yo\\Downloads\\20261109-0101-43.7725012.mp4",
+  "duration_seconds": 12.9,
+  "frames": [
+    {
+      "time": 0.5,
+      "path": "reports\\rambo_reference\\frame_0.png"
+    },
+    {
+      "time": 3,
+      "path": "reports\\rambo_reference\\frame_1.png"
+    },
+    {
+      "time": 6,
+      "path": "reports\\rambo_reference\\frame_2.png"
+    },
+    {
+      "time": 9,
+      "path": "reports\\rambo_reference\\frame_3.png"
+    },
+    {
+      "time": 12,
+      "path": "reports\\rambo_reference\\frame_4.png"
+    }
+  ]
+}

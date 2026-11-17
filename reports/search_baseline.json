@@ -1,0 +1,26 @@
+[
+  {
+    "mix": "compact",
+    "bars": 4000,
+    "candidates": 12,
+    "seconds": 2.9864342999644578,
+    "per_second": 4.018169761893913,
+    "with_trades": 8
+  },
+  {
+    "mix": "broad",
+    "bars": 4000,
+    "candidates": 12,
+    "seconds": 3.1214026999659836,
+    "per_second": 3.844425456584238,
+    "with_trades": 9
+  },
+  {
+    "mix": "structural",
+    "bars": 4000,
+    "candidates": 12,
+    "seconds": 7.682281099958345,
+    "per_second": 1.5620360468279488,
+    "with_trades": 11
+  }
+]

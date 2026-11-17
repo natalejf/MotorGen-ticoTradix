@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const snapshotUI = () => ({
     fields: Array.from(document.querySelectorAll('input[id],select[id]')).filter(e=>!e.id.startsWith('workspace-')).map(e=>({id:e.id,value:e.value,checked:e.checked})),
     symbols:[...state.selectedSymbols],timeframes:[...state.selectedTimeframes],
-    indicators:state.enabledIndicators, macro:[...state.selectedMacro],useMacro:state.useMacro,
+    indicators:state.enabledIndicators,
     ranges:state.indicatorRanges,exitRanges:state.exitRanges
   });
   const restoreUI = saved => {
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saved.fields.forEach(field=>{const el=$(field.id);if(el){el.value=field.value;if('checked' in el)el.checked=field.checked;}});
     state.selectedSymbols=new Set(saved.symbols);state.selectedSymbol=saved.symbols[0];
     state.selectedTimeframes=new Set(saved.timeframes);state.selectedTimeframe=saved.timeframes[0];
-    state.enabledIndicators=saved.indicators;state.selectedMacro=new Set(saved.macro);state.useMacro=saved.useMacro;
+    state.enabledIndicators=saved.indicators;
     state.indicatorRanges=saved.ranges;state.exitRanges=saved.exitRanges;
     renderSymbolPills();renderTfPills();renderMacroSeries();updateCombinationsCounter();
     document.querySelectorAll('.ind-checkbox').forEach(e=>{e.checked=!!state.enabledIndicators[e.value];});
@@ -196,13 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const speedLabel=document.createElement('span');speedLabel.textContent='1×';
   slider.oninput=()=>{state.neuralSpeed=Number(slider.value);speedLabel.textContent=`${slider.value}×`;};
   speed.append(slider,speedLabel);$('neural-pause').before(speed);
-  // Select a whole macro category while retaining individual-series choices.
-  const category=document.createElement('select');category.setAttribute('aria-label','Seleccionar categoría macro');
-  category.append(new Option('Añadir categoría macro…',''));
-  const categoryButton=document.createElement('button');categoryButton.textContent='Añadir categoría';categoryButton.className='btn-secondary';
-  categoryButton.onclick=()=>{state.macroCatalog.filter(x=>x.category===category.value).forEach(x=>state.selectedMacro.add(x.series_id));renderMacroSeries();updateCombinationsCounter();};
-  $('macro-series-container').before(category,categoryButton);
-  let categoryCount=0;
   setInterval(()=>{
     const status=state.status||{},pct=Math.max(0,Math.min(100,Number(status.progress_pct)||0));
     $('workspace-progress').value=pct;$('workspace-percent').textContent=`${pct.toFixed(1)}%${$('check-infinite-mode').checked?' · ronda actual':''}`;
@@ -212,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else if(!Object.values(state.enabledIndicators).some(Boolean))error='Selecciona un indicador.';
     else if($('input-start-date').value && $('input-end-date').value && $('input-start-date').value>$('input-end-date').value)error='Rango de fechas inválido.';
     start.disabled=!!error||!!state.isRunning;$('workspace-config-error').textContent=error;
-    if(categoryCount!==state.macroCatalog.length){categoryCount=state.macroCatalog.length;category.replaceChildren(new Option('Añadir categoría macro…',''),...[...new Set(state.macroCatalog.map(x=>x.category))].map(x=>new Option(x,x)));}
   },500);
   document.addEventListener('dblclick',async event=>{
     const target=event.target.closest('[data-rename-kind]');if(!target)return;

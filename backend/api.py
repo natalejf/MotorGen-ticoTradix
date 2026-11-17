@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import PlainTextResponse
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.data_manager import data_manager, SUPPORTED_SYMBOLS
 from backend.strategy import Strategy
@@ -51,9 +51,6 @@ class ExplorationConfigRequest(BaseModel):
     mtf_mode: str = "separate"
     # G: Averaging config (TN averagingConfig)
     averaging_config: Optional[Dict[str, Any]] = None
-    # Macro FRED context filters
-    use_macro: bool = False
-    macro_series: List[str] = []
     search_mode: str = "genetic"  # "genetic" | "random"
     initial_deposit: float = 10000.0
     objective: str = "tn_score"
@@ -62,6 +59,7 @@ class ExplorationConfigRequest(BaseModel):
     population_size: int = 30
     num_combinations: int = 10000  # budget for random mode
     enabled_indicators: List[str] = list(ALL_28_INDICATORS.keys())
+    enabled_operators: Optional[List[str]] = None
     enabled_entry_types: List[str] = ALL_ENTRY_TYPES
     enabled_exit_modes: List[str] = ALL_EXIT_MODES
     # User-edited per-parameter sweep ranges {IND: {param: {from, step, to}}}
@@ -97,10 +95,10 @@ class ExplorationConfigRequest(BaseModel):
     reward_risk_ratio: float = 0.0
 
     # Full risk rules (0 / defaults = free to vary in generation)
-    max_daily_loss_pct: float = 3.0
-    max_weekly_loss_pct: float = 6.0
-    max_monthly_loss_pct: float = 12.0
-    max_account_loss_pct: float = 8.0
+    max_daily_loss_pct: float = 0.0
+    max_weekly_loss_pct: float = 0.0
+    max_monthly_loss_pct: float = 0.0
+    max_account_loss_pct: float = 0.0
     max_daily_gain_pct: float = 0.0
     max_weekly_gain_pct: float = 0.0
     max_monthly_gain_pct: float = 0.0
@@ -119,13 +117,13 @@ class ExplorationConfigRequest(BaseModel):
 
     # Multi-indicator synergy
     min_indicators_per_strategy: int = 1
-    max_indicators_per_strategy: int = 3
+    max_indicators_per_strategy: int = 2
 
     # Prop Firm Challenge Filter
     prop_firm_filter: bool = False
-    prop_firm_daily_loss_pct: float = 4.0
-    prop_firm_total_dd_pct: float = 8.0
-    prop_firm_target_pct: float = 8.0
+    prop_firm_daily_loss_pct: float = Field(default=4.0,gt=0,le=100)
+    prop_firm_total_dd_pct: float = Field(default=8.0,gt=0,le=100)
+    prop_firm_target_pct: float = Field(default=8.0,gt=0,le=100)
 
     # Challenge simulation during exploration (runs when prop_firm_filter on or objective=pass_rate)
     challenge_capital: float = 10000.0
@@ -616,6 +614,13 @@ def clear_all_portfolios(req: Optional[Dict[str, Any]] = None):
 
 @app.post("/api/start-exploration")
 def start_exploration(req: ExplorationConfigRequest):
+    from backend.operators import validate_selection
+    from backend.exploration_policy import normalize_config
+    try:
+        config=normalize_config(req.model_dump())
+        validate_selection(req.enabled_indicators,req.enabled_operators)
+    except ValueError as error:
+        raise HTTPException(422,str(error))
     if req.start_date and req.end_date and req.start_date > req.end_date:
         raise HTTPException(status_code=400,
                             detail="start_date debe ser anterior a end_date")
@@ -624,8 +629,8 @@ def start_exploration(req: ExplorationConfigRequest):
         import time
         time.sleep(0.5)
     
-    genetic_engine.start_exploration(req.dict())
-    return {"status": "started", "config": req.dict()}
+    genetic_engine.start_exploration(config)
+    return {"status": "started", "config": config}
 
 @app.post("/api/stop-exploration")
 def stop_exploration():
@@ -839,7 +844,7 @@ def get_config_defaults():
         "wf_modes": ["validation", "reoptimization"],
         "wf_depths": ["fast", "standard", "deep"],
         "mv_presets": ["balanced", "conservative", "aggressive"],
-        "macro_available": True,
+        "macro_available": False,
         "classification_defaults": {"min_sharpe": 1.2, "max_drawdown": 15.0, "min_win_rate": 50.0, "min_dsr": 0.3},
         "optimization_objectives": [
             {"id": "tn_score", "name": "Score balanceado (default TN Score)"},
@@ -869,27 +874,18 @@ def combinations_count(req: CombinationCountRequest):
     total = count_combinations(req.enabled_indicators, req.indicator_ranges, req.exit_ranges)
     return {"combinations": total, "indicators": len(req.enabled_indicators)}
 
-@app.get("/api/macro-series")
-def get_macro_series():
-    """FRED macro indicator catalog (11 TN categories) + cache status."""
-    from backend.macro_manager import macro_manager
-    catalog = macro_manager.get_catalog()
-    return {"series": catalog, "categories": sorted({s['category'] for s in catalog})}
-
-class MacroUpdateRequest(BaseModel):
-    series: Optional[List[str]] = None
-
-@app.post("/api/macro-update")
-def update_macro(req: Optional[MacroUpdateRequest] = None):
-    """Force re-download of FRED series (public CSV, no API key)."""
-    from backend.macro_manager import macro_manager
-    series = (req.series if req else None)
-    return {"status": "updated", "results": macro_manager.update_all(series)}
-
 from backend.workspace_features import install_routes
 install_routes(app, genetic_engine, ExplorationConfigRequest)
 from backend.copy_trading import install_copy_routes
 install_copy_routes(app)
+from backend.ea_bridge import install_routes as install_ea_routes
+install_ea_routes(app)
+from backend.mt5_diagnostic import install_routes as install_diagnostic_routes
+install_diagnostic_routes(app)
+from backend.indicator_audit import install_routes as install_audit_routes
+install_audit_routes(app)
+from backend.ninja_bridge import install_routes as install_ninja_routes
+install_ninja_routes(app)
 
 # Mount static frontend files if folder exists
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

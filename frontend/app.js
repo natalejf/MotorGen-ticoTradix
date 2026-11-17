@@ -60,10 +60,6 @@ const state = {
   // Multi-symbol / multi-timeframe exploration
   selectedSymbols: new Set(['EURUSD']),
   selectedTimeframes: new Set(['1h']),
-  // Macro FRED
-  macroCatalog: [],
-  selectedMacro: new Set(),
-  useMacro: false,
   searchMode: 'genetic',
   initialDeposit: 10000,
   
@@ -148,7 +144,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSymbols();
   await loadConfigDefaults();
   renderTfPills();
-  await loadMacroCatalog();
   updateCombinationsCounter();
   initNeuralExplorer();
 
@@ -183,32 +178,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Macro master toggle
-  const macroToggle = document.getElementById('check-use-macro');
-  if (macroToggle) {
-    macroToggle.addEventListener('change', () => {
-      state.useMacro = macroToggle.checked;
-      const box = document.getElementById('macro-series-box');
-      if (box) {
-        box.classList.toggle('opacity-50', !state.useMacro);
-        box.classList.toggle('pointer-events-none', !state.useMacro);
-      }
-      updateCombinationsCounter();
-    });
-  }
-
-  // Macro select all / none
-  document.getElementById('btn-macro-all')?.addEventListener('click', () => {
-    state.selectedMacro = new Set(state.macroCatalog.map(s => s.series_id));
-    renderMacroSeries();
-    updateCombinationsCounter();
-  });
-  document.getElementById('btn-macro-none')?.addEventListener('click', () => {
-    state.selectedMacro = new Set();
-    renderMacroSeries();
-    updateCombinationsCounter();
-  });
-  
   // Check engine status
   await pollStatus();
   refreshSidebarBadges();
@@ -293,7 +262,12 @@ window.updateSizingModeUI = updateSizingModeUI;
 function togglePropFirmInputs() {
   const checked = document.getElementById('check-prop-firm-filter')?.checked || false;
   const container = document.getElementById('prop-firm-inputs-container');
+  const objective=document.getElementById('opt-objective');
+  const passRate=objective?.querySelector('option[value=pass_rate]');
+  if(passRate)passRate.disabled=!checked;
+  if(!checked&&objective?.value==='pass_rate')objective.value='tn_score';
   if (container) {
+    container.querySelectorAll('input,select').forEach(input=>input.disabled=!checked);
     if (checked) {
       container.classList.remove('opacity-50', 'pointer-events-none');
     } else {
@@ -430,49 +404,28 @@ function render28IndicatorsGrid() {
 }
 
 function selectRandomIndicators() {
-  // Mezcla por clasificación: elige 1 o 2 indicadores de cada familia para asegurar variedad
-  const families = {};
-  Object.entries(ALL_28_INDICATORS_CONFIG).forEach(([key, conf]) => {
-    if (!families[conf.family]) families[conf.family] = [];
-    families[conf.family].push(key);
+  let catalog=ALL_28_INDICATORS_CONFIG;
+  if(document.getElementById('custom-operators')?.checked){
+    const selectedOps=[...document.querySelectorAll('#rule-operators input:checked')].map(input=>input.value);
+    if(!selectedOps.length){document.getElementById('indicator-audit-result').textContent='Marca al menos un operador antes de mezclar.';return;}
+    const compatibility=state.operatorCompatibility||{};
+    catalog=Object.fromEntries(Object.entries(catalog).filter(([name])=>(compatibility[name]||[]).some(op=>selectedOps.includes(op))));
+  }
+  const selected=new Set(StratixMix.indicators(catalog));
+  Object.keys(ALL_28_INDICATORS_CONFIG).forEach(key=>{
+    state.enabledIndicators[key]=selected.has(key);
+    const checkbox=document.getElementById(`ind-${key}`);if(checkbox)checkbox.checked=selected.has(key);
   });
-
-  const selected = new Set();
-  Object.values(families).forEach(keys => {
-    const shuffled = [...keys].sort(() => 0.5 - Math.random());
-    const take = Math.min(shuffled.length, Math.random() < 0.5 ? 1 : 2);
-    shuffled.slice(0, take).forEach(k => selected.add(k));
-  });
-
-  Object.keys(ALL_28_INDICATORS_CONFIG).forEach(k => {
-    state.enabledIndicators[k] = selected.has(k);
-    const cb = document.getElementById(`ind-${k}`);
-    if (cb) cb.checked = selected.has(k);
-  });
+  document.getElementById('input-min-indicators').value='1';
+  document.getElementById('input-max-indicators').value='2';
   updateCombinationsCounter();
 }
 
 function selectRandomOrders() {
-  // Random entry types
-  const entries = ['entry-market', 'entry-limit', 'entry-stop'];
-  entries.forEach(id => {
-    const cb = document.getElementById(id);
-    if (cb) cb.checked = Math.random() > 0.4;
-  });
-  // Ensure at least one entry type is checked
-  if (!entries.some(id => document.getElementById(id).checked)) {
-    document.getElementById('entry-market').checked = true;
-  }
-
-  // Random exit types
-  const exits = ['exit-atr', 'exit-pips', 'exit-pct', 'exit-trailing', 'exit-breakeven', 'exit-swing', 'exit-time', 'exit-partial', 'exit-atr-smooth'];
-  exits.forEach(id => {
-    const cb = document.getElementById(id);
-    if (cb) cb.checked = Math.random() > 0.4;
-  });
-  if (!exits.some(id => document.getElementById(id).checked)) {
-    document.getElementById('exit-atr').checked = true;
-  }
+  const selected=StratixMix.orders();
+  const all=['entry-market','entry-limit','entry-stop','exit-atr','exit-pips','exit-pct','exit-trailing','exit-breakeven','exit-swing','exit-time','exit-partial','exit-atr-smooth'];
+  all.forEach(id=>{const checkbox=document.getElementById(id);if(checkbox)checkbox.checked=selected.entries.includes(id)||selected.exits.includes(id);});
+  updateCombinationsCounter();
 }
 
 function rangePoints(cfg) {
@@ -513,23 +466,11 @@ function updateCombinationsCounter() {
   // Exit/risk sweep factor (TN: barrido de salidas/riesgo)
   Object.values(state.exitRanges || {}).forEach(cfg => { totalCombos *= rangePoints(cfg); });
 
-  const fullSpace = totalCombos * 3 * 9; // x3 entry types x9 exits
+  const entries=['entry-market','entry-limit','entry-stop'].filter(id=>document.getElementById(id)?.checked).length;
+  const exits=['exit-atr','exit-pips','exit-pct','exit-trailing','exit-breakeven','exit-swing','exit-time','exit-partial','exit-atr-smooth'].filter(id=>document.getElementById(id)?.checked).length;
+  const fullSpace = totalCombos * entries * exits;
 
-  // Macro FRED factor: each selected series adds (threshold steps x 2 ops)
-  let macroFactor = 1;
-  if (state.useMacro && state.selectedMacro.size > 0) {
-    state.selectedMacro.forEach(sid => {
-      const entry = state.macroCatalog.find(s => s.series_id === sid);
-      const r = entry && entry.range;
-      if (r && r.step > 0 && r.to >= r.from) {
-        const steps = Math.max(1, Math.floor((r.to - r.from) / r.step) + 1);
-        macroFactor *= steps * 2;
-      } else {
-        macroFactor *= 50; // fallback estimate when range unknown
-      }
-    });
-  }
-  const grandTotal = fullSpace * macroFactor;
+  const grandTotal = fullSpace;
 
   const countEl = document.getElementById('combinations-counter');
   if (countEl) {
@@ -707,53 +648,6 @@ function renderTfPills() {
   });
 }
 
-async function loadMacroCatalog() {
-  try {
-    const res = await fetch('/api/macro-series');
-    const data = await res.json();
-    state.macroCatalog = data.series || [];
-    renderMacroSeries();
-  } catch (err) {
-    console.error('Error loading macro catalog:', err);
-  }
-}
-
-function renderMacroSeries() {
-  const container = document.getElementById('macro-series-container');
-  if (!container) return;
-  if (!state.macroCatalog.length) {
-    container.innerHTML = '<div class="text-[11px] text-[#71717a]">No hay series macro disponibles.</div>';
-    return;
-  }
-  // group by category
-  const cats = {};
-  state.macroCatalog.forEach(s => {
-    if (!cats[s.category]) cats[s.category] = [];
-    cats[s.category].push(s);
-  });
-  let html = '';
-  Object.entries(cats).forEach(([cat, items]) => {
-    html += `<div class="mb-2"><div class="text-[10px] text-[#71717a] uppercase font-bold tracking-wider mb-1">${cat}</div><div class="flex flex-wrap gap-1.5">`;
-    items.forEach(s => {
-      const checked = state.selectedMacro.has(s.series_id);
-      html += `<label class="flex items-center gap-1 cursor-pointer px-2 py-1 rounded bg-[#0e0e12] border ${checked ? 'border-white' : 'border-[#22222a]'} hover:border-[#444450] transition text-[11px]">
-        <input type="checkbox" class="macro-cb accent-white" value="${s.series_id}" ${checked ? 'checked' : ''} data-name="${s.name}">
-        <span class="${checked ? 'text-white' : 'text-[#a0a0ab]'}">${s.name}</span>
-      </label>`;
-    });
-    html += '</div></div>';
-  });
-  container.innerHTML = html;
-  container.querySelectorAll('.macro-cb').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      if (e.target.checked) state.selectedMacro.add(e.target.value);
-      else state.selectedMacro.delete(e.target.value);
-      renderMacroSeries();
-      updateCombinationsCounter();
-    });
-  });
-}
-
 function updateDataSummaryInfo() {
   const infoEl = document.getElementById('symbol-data-info');
   if (infoEl) {
@@ -879,9 +773,6 @@ function buildExplorationConfig() {
       sizeMultiplier: parseFloat(document.getElementById('input-avg-mult')?.value) || 1.0,
       recomputeStopFromAvg: !!document.getElementById('chk-avg-recompute')?.checked
     } : { enabled: false }),
-    // Macro FRED
-    use_macro: state.useMacro && state.selectedMacro.size > 0,
-    macro_series: [...state.selectedMacro],
     search_mode: document.getElementById('select-search-mode').value,
     initial_deposit: parseFloat(document.getElementById('input-deposit').value) || 10000,
     objective: document.getElementById('opt-objective').value,
@@ -890,6 +781,7 @@ function buildExplorationConfig() {
     population_size: parseInt(document.getElementById('input-pop-size').value) || 30,
     num_combinations: numCombos,
     enabled_indicators: enabledInds,
+    enabled_operators: document.getElementById('custom-operators')?.checked ? [...document.querySelectorAll('#rule-operators input:checked')].map(el=>el.value) : null,
     enabled_entry_types: enabledEntries,
     enabled_exit_modes: enabledExits,
     // Rangos de parámetros editados manualmente (Desde/Paso/Hasta)
@@ -913,7 +805,7 @@ function buildExplorationConfig() {
     min_dsr: Number(document.getElementById('input-min-dsr').value || 0.30),
     max_candidates: maxCandRaw || maxCandResults || 0,
     min_indicators_per_strategy: parseInt(document.getElementById('input-min-indicators')?.value) || 1,
-    max_indicators_per_strategy: parseInt(document.getElementById('input-max-indicators')?.value) || 3,
+    max_indicators_per_strategy: parseInt(document.getElementById('input-max-indicators')?.value) || 2,
 
     // Backtest modeling, costs & parallelism
     modeling_mode: document.getElementById('select-modeling-mode')?.value || 'ohlc',
@@ -941,15 +833,7 @@ function buildExplorationConfig() {
     max_daily_trades: parseInt(document.getElementById('input-max-daily-trades')?.value) || 4,
     max_open_trades: parseInt(document.getElementById('input-max-open-trades')?.value) || 1,
 
-    // Risk loss/gain caps (0 = free to vary in generation)
-    max_daily_loss_pct: parseFloat(document.getElementById('input-max-daily-loss')?.value) || 3.0,
-    max_weekly_loss_pct: parseFloat(document.getElementById('input-max-weekly-loss')?.value) || 6.0,
-    max_monthly_loss_pct: parseFloat(document.getElementById('input-max-monthly-loss')?.value) || 12.0,
-    max_account_loss_pct: parseFloat(document.getElementById('input-max-account-loss')?.value) || 8.0,
-    max_daily_gain_pct: parseFloat(document.getElementById('input-max-daily-gain')?.value) || 0.0,
-    max_weekly_gain_pct: parseFloat(document.getElementById('input-max-weekly-gain')?.value) || 0.0,
-    max_monthly_gain_pct: parseFloat(document.getElementById('input-max-monthly-gain')?.value) || 0.0,
-    max_account_gain_pct: parseFloat(document.getElementById('input-max-account-gain')?.value) || 0.0,
+    // Account limits are controlled only by the Prop Firm toggle; backend normalizes them.
     max_consecutive_wins: parseInt(document.getElementById('input-max-consec-wins')?.value) || 0,
     max_consecutive_losses: parseInt(document.getElementById('input-max-consec-losses')?.value) || 0,
 
@@ -1085,6 +969,8 @@ function renderCounters(data) {
   document.getElementById('kpi-generation').textContent = `Gen ${data.current_generation || 0}`;
   document.getElementById('kpi-tested').textContent = (data.tested_count || 0).toLocaleString();
   document.getElementById('kpi-discarded').textContent = (data.discarded_count || 0).toLocaleString();
+  const rejectionDetail=document.getElementById('kpi-rejection-detail');
+  if(rejectionDetail){const top=Object.entries(data.rejection_counts||{}).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([name,count])=>`${name}: ${count}`);rejectionDetail.textContent=[data.no_trade_count?`Sin operaciones: ${data.no_trade_count}`:'',...top].filter(Boolean).join(' · ');}
   document.getElementById('kpi-candidates').textContent = (data.accepted_count || data.candidates_count || 0).toLocaleString();
   document.getElementById('kpi-best-sharpe').textContent = (data.best_sharpe || 0).toFixed(2);
   document.getElementById('kpi-avg-winrate').textContent = `${(data.avg_win_rate || 0).toFixed(1)}%`;
@@ -2124,6 +2010,9 @@ function renderSavedStrategiesGrid() {
 
   container.innerHTML = items.map((cand) => {
     const s = cand.strategy || cand;
+    if (cand.execution_profile === 'stx_demo_diagnostic_v1') {
+      return `<div class="candidate-card"><div class="text-sm font-semibold text-white mb-3">${escapeWorkspaceText(s.name)}</div><span class="tn-badge">SOLO DEMO · TEST</span><p class="text-xs text-[#a0a0ab] my-3">20 casos de entradas y salidas + auditoría de indicadores. Se asigna a una cuenta como un algoritmo guardado. No tiene métricas de rentabilidad.</p><p class="text-xs text-[#a0a0ab] mb-3">Elige la cuenta, inicia y sigue los resultados y el log en esta misma ventana.</p><button onclick="window.dispatchEvent(new CustomEvent('stx-assign-saved',{detail:'${s.id}'}))" class="btn-primary text-xs">Ejecutar en cuenta</button></div>`;
+    }
     const m = cand.metrics || {};
     const netProfitFormatted = m.total_return_usd !== undefined
       ? `${m.total_return_usd >= 0 ? '+' : ''}$${m.total_return_usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`
@@ -2180,6 +2069,7 @@ function renderSavedStrategiesGrid() {
         </div>
 
         <div class="mt-3 pt-2.5 flex items-center justify-between border-t border-[#1e1e24] gap-2">
+          <button onclick="window.dispatchEvent(new CustomEvent('stx-assign-saved',{detail:{source_type:'strategy',source_id:'${s.id}'}}))" class="btn-primary text-[11px] py-1 px-2.5">Ejecutar en cuenta</button>
           <button onclick="openCandidateModal('${s.id}')" class="btn-secondary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo, backtest y reglas">
             📊 Ver Análisis
           </button>
@@ -3258,6 +3148,7 @@ async function loadSavedPortfolios(folderFilter = 'ALL') {
           </div>
 
           <div class="mt-4 pt-3 border-t border-[#1e1e24] flex items-center justify-between gap-2">
+            <button onclick="window.dispatchEvent(new CustomEvent('stx-assign-saved',{detail:{source_type:'portfolio',source_id:'${port.id}'}}))" class="btn-secondary text-[11px] py-1 px-2.5">Ejecutar en cuenta</button>
             <button onclick="openPortfolioModal('${port.id}')" class="btn-primary text-[11px] py-1 px-2.5 flex-1 flex items-center justify-center gap-1.5" title="Ver análisis completo de la cartera y curva combinada">
               📊 Ver Análisis
             </button>
@@ -3962,3 +3853,30 @@ async function clearAllPhases() {
   }
 }
 window.clearAllPhases = clearAllPhases;
+
+// Catálogo de operadores y auditoría funcional, sin enviar órdenes.
+document.addEventListener('DOMContentLoaded',async()=>{
+  const container=document.getElementById('rule-operators');
+  if(!container)return;
+  try {
+    const response=await fetch('/api/rule-operators');if(!response.ok)throw new Error('No se pudo cargar el catálogo');
+    const catalog=await response.json();
+    state.operatorCompatibility=catalog.compatibility;
+    for(const [value,label] of Object.entries(catalog.operators)){
+      const row=document.createElement('label');row.className='text-xs text-[#a0a0ab]';
+      const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=value;checkbox.checked=true;
+      row.append(checkbox,document.createTextNode(' '+label));container.append(row);
+    }
+  } catch(error){container.textContent=error.message;}
+  document.getElementById('audit-indicators').onclick=async event=>{
+    const button=event.currentTarget,result=document.getElementById('indicator-audit-result');button.disabled=true;
+    result.textContent='Comprobando cálculo, operadores y estabilidad al añadir velas futuras…';
+    try {
+      const response=await fetch('/api/indicator-audit',{method:'POST'});if(!response.ok)throw new Error('La auditoría falló');
+      const report=await response.json();
+      result.textContent=`${report.indicators} indicadores · ${report.passed}/${report.checks} comprobaciones aprobadas · ${report.failed} fallos; ${report.results.filter(r=>r.constant).length} reglas constantes en esta muestra (revisar cobertura). Datos sintéticos; no prueba rentabilidad ni equivalencia con el bróker.`;
+      const issues=report.results.filter(r=>r.status!=='PASS');
+      if(issues.length){const pre=document.createElement('pre');pre.textContent=issues.map(r=>`${r.indicator} / ${r.operator}: ${r.error||'Resultado inconsistente'}`).join('\n');result.append(pre);}
+    }catch(error){result.textContent=error.message;}finally{button.disabled=false;}
+  };
+});

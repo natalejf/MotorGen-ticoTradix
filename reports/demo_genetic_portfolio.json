@@ -1,0 +1,2421 @@
+{
+  "account_id": "a008976c4ca3444a851f23214f932902",
+  "started": 1794921379.3109047,
+  "batches": [
+    {
+      "folder": "Demo realista · Lote 1 Tendencia",
+      "config": {
+        "symbol": "EURUSD",
+        "timeframe": "30m",
+        "search_mode": "genetic",
+        "objective": "tn_score",
+        "enabled_indicators": [
+          "EMA",
+          "SMA",
+          "ADX"
+        ],
+        "enabled_operators": [
+          "GREATER_THAN",
+          "LESS_THAN",
+          "CROSS_ABOVE",
+          "CROSS_BELOW",
+          "PRICE_ABOVE",
+          "PRICE_BELOW"
+        ],
+        "enabled_entry_types": [
+          "MARKET"
+        ],
+        "enabled_exit_modes": [
+          "ATR_CLASSIC",
+          "TRAILING_ATR",
+          "BREAKEVEN"
+        ],
+        "min_indicators_per_strategy": 1,
+        "max_indicators_per_strategy": 2,
+        "infinite_mode": false,
+        "population_size": 40,
+        "generations": 4,
+        "parallel_workers": 0,
+        "holdout_pct": 20,
+        "initial_deposit": 4989.44,
+        "sizing_mode": "FIXED_RISK",
+        "risk_per_trade_pct": 0.1,
+        "averaging_config": {
+          "enabled": false
+        },
+        "max_consecutive_wins": 0,
+        "max_consecutive_losses": 0,
+        "max_daily_trades": 4,
+        "max_open_trades": 1,
+        "close_before_weekend": true,
+        "prop_firm_filter": false,
+        "validate_during_exploration": false,
+        "modeling_mode": "ohlc",
+        "spread_pips": 1,
+        "slippage_pips": 0.2,
+        "min_win_rate": 45,
+        "min_trades": 20,
+        "min_profit_factor": 1.15,
+        "min_sharpe": 0.5,
+        "min_dsr": 0,
+        "max_drawdown": 15,
+        "min_net_profit_usd": 0,
+        "max_candidates": 30
+      },
+      "tested": 160,
+      "accepted": 11,
+      "saved": [
+        {
+          "id": "strat_g4_9496",
+          "name": "STX Demo L1.1 Tendencia · EURUSD M30",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5124.17,
+            "total_return_usd": 134.73,
+            "total_return_pct": 2.7,
+            "cagr_pct": 16.15,
+            "sharpe_ratio": 15.13,
+            "sortino_ratio": 1.46,
+            "calmar_ratio": 54.14,
+            "max_drawdown_usd": 15.33,
+            "max_drawdown_pct": 0.3,
+            "total_trades": 20,
+            "win_rate_pct": 70.0,
+            "profit_factor": 4.98,
+            "expectancy_usd": 6.74,
+            "recovery_factor": 8.79,
+            "max_consecutive_wins": 8,
+            "max_consecutive_losses": 2,
+            "max_daily_loss_pct": 0.24,
+            "tn_score": 96.7,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": -9.89,
+              "sharpe_ratio": -2.72,
+              "win_rate_pct": 30.0,
+              "trades": 10,
+              "max_drawdown_pct": 0.38,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g4_9496",
+            "name": "STX Demo L1.1 Tendencia · EURUSD M30",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "EMA",
+                "params": {
+                  "period": 100
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "indicator",
+                "target_value": 0.0,
+                "target_indicator": "EMA",
+                "target_params": {
+                  "period": 150
+                }
+              },
+              {
+                "indicator": "ADX",
+                "params": {
+                  "period": 25,
+                  "sub": "adx"
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "value",
+                "target_value": 30.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "SMA",
+                "params": {
+                  "period": 180
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "indicator",
+                "target_value": 0.0,
+                "target_indicator": "SMA",
+                "target_params": {
+                  "period": 230
+                }
+              },
+              {
+                "indicator": "SMA",
+                "params": {
+                  "period": 180
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "indicator",
+                "target_value": 0.0,
+                "target_indicator": "SMA",
+                "target_params": {
+                  "period": 230
+                }
+              }
+            ],
+            "session_filter": "OVERLAP_TOKYO_LDN",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": false,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "TRAILING_ATR",
+            "sl_atr": 1.0,
+            "tp_atr": 6.0,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 2.5,
+            "be_atr": 1.2,
+            "swing_bars": 40,
+            "max_bars": 48,
+            "partial_tp1_atr": 0.5,
+            "partial_tp2_atr": 6.0,
+            "partial_pct": 30.0,
+            "modifier_breakeven": false,
+            "modifier_trailing": false,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 2.0,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 0.0,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_g3_5520",
+              "strat_g3_9821"
+            ],
+            "generation": 4,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 4979.55,
+              "total_return_usd": -9.89,
+              "total_return_pct": -0.2,
+              "cagr_pct": -1.97,
+              "sharpe_ratio": -2.72,
+              "sortino_ratio": -0.1,
+              "calmar_ratio": -5.22,
+              "max_drawdown_usd": 18.82,
+              "max_drawdown_pct": 0.38,
+              "total_trades": 10,
+              "win_rate_pct": 30.0,
+              "profit_factor": 0.74,
+              "expectancy_usd": -0.99,
+              "recovery_factor": -0.53,
+              "max_consecutive_wins": 1,
+              "max_consecutive_losses": 3,
+              "max_daily_loss_pct": 0.33,
+              "tn_score": 3.3
+            },
+            "fitness": 96.7
+          }
+        },
+        {
+          "id": "strat_g3_5520",
+          "name": "STX Demo L1.2 Tendencia · EURUSD M30",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5093.45,
+            "total_return_usd": 104.01,
+            "total_return_pct": 2.08,
+            "cagr_pct": 12.29,
+            "sharpe_ratio": 11.92,
+            "sortino_ratio": 1.46,
+            "calmar_ratio": 23.82,
+            "max_drawdown_usd": 25.87,
+            "max_drawdown_pct": 0.52,
+            "total_trades": 32,
+            "win_rate_pct": 59.4,
+            "profit_factor": 2.5,
+            "expectancy_usd": 3.25,
+            "recovery_factor": 4.02,
+            "max_consecutive_wins": 9,
+            "max_consecutive_losses": 4,
+            "max_daily_loss_pct": 0.23,
+            "tn_score": 95.4,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": 23.08,
+              "sharpe_ratio": 6.78,
+              "win_rate_pct": 50.0,
+              "trades": 12,
+              "max_drawdown_pct": 0.42,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g3_5520",
+            "name": "STX Demo L1.2 Tendencia · EURUSD M30",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "EMA",
+                "params": {
+                  "period": 100
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "indicator",
+                "target_value": 0.0,
+                "target_indicator": "EMA",
+                "target_params": {
+                  "period": 150
+                }
+              },
+              {
+                "indicator": "ADX",
+                "params": {
+                  "period": 25,
+                  "sub": "adx"
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "value",
+                "target_value": 30.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "SMA",
+                "params": {
+                  "period": 180
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "indicator",
+                "target_value": 0.0,
+                "target_indicator": "SMA",
+                "target_params": {
+                  "period": 230
+                }
+              },
+              {
+                "indicator": "SMA",
+                "params": {
+                  "period": 100
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "indicator",
+                "target_value": 0.0,
+                "target_indicator": "SMA",
+                "target_params": {
+                  "period": 150
+                }
+              }
+            ],
+            "session_filter": "LONDON",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": false,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "TRAILING_ATR",
+            "sl_atr": 1.0,
+            "tp_atr": 6.0,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 2.5,
+            "be_atr": 1.2,
+            "swing_bars": 40,
+            "max_bars": 48,
+            "partial_tp1_atr": 0.5,
+            "partial_tp2_atr": 6.0,
+            "partial_pct": 30.0,
+            "modifier_breakeven": false,
+            "modifier_trailing": false,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 2.0,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 0.0,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_g2_1944",
+              "strat_g2_3787"
+            ],
+            "generation": 3,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 5012.52,
+              "total_return_usd": 23.08,
+              "total_return_pct": 0.46,
+              "cagr_pct": 4.72,
+              "sharpe_ratio": 6.78,
+              "sortino_ratio": 0.48,
+              "calmar_ratio": 11.3,
+              "max_drawdown_usd": 21.05,
+              "max_drawdown_pct": 0.42,
+              "total_trades": 12,
+              "win_rate_pct": 50.0,
+              "profit_factor": 1.69,
+              "expectancy_usd": 1.92,
+              "recovery_factor": 1.1,
+              "max_consecutive_wins": 3,
+              "max_consecutive_losses": 3,
+              "max_daily_loss_pct": 0.15,
+              "tn_score": 74.6
+            },
+            "fitness": 95.4
+          }
+        }
+      ]
+    },
+    {
+      "folder": "Demo realista · Lote 2 Momentum",
+      "config": {
+        "symbol": "EURUSD",
+        "timeframe": "30m",
+        "search_mode": "genetic",
+        "objective": "tn_score",
+        "enabled_indicators": [
+          "RSI",
+          "MACD",
+          "STOCHASTIC"
+        ],
+        "enabled_operators": [
+          "GREATER_THAN",
+          "LESS_THAN",
+          "CROSS_ABOVE",
+          "CROSS_BELOW",
+          "PRICE_ABOVE",
+          "PRICE_BELOW"
+        ],
+        "enabled_entry_types": [
+          "MARKET"
+        ],
+        "enabled_exit_modes": [
+          "ATR_CLASSIC",
+          "TRAILING_ATR",
+          "BREAKEVEN"
+        ],
+        "min_indicators_per_strategy": 1,
+        "max_indicators_per_strategy": 2,
+        "infinite_mode": false,
+        "population_size": 40,
+        "generations": 4,
+        "parallel_workers": 0,
+        "holdout_pct": 20,
+        "initial_deposit": 4989.44,
+        "sizing_mode": "FIXED_RISK",
+        "risk_per_trade_pct": 0.1,
+        "averaging_config": {
+          "enabled": false
+        },
+        "max_consecutive_wins": 0,
+        "max_consecutive_losses": 0,
+        "max_daily_trades": 4,
+        "max_open_trades": 1,
+        "close_before_weekend": true,
+        "prop_firm_filter": false,
+        "validate_during_exploration": false,
+        "modeling_mode": "ohlc",
+        "spread_pips": 1,
+        "slippage_pips": 0.2,
+        "min_win_rate": 45,
+        "min_trades": 20,
+        "min_profit_factor": 1.15,
+        "min_sharpe": 0.5,
+        "min_dsr": 0,
+        "max_drawdown": 15,
+        "min_net_profit_usd": 0,
+        "max_candidates": 30
+      },
+      "tested": 160,
+      "accepted": 10,
+      "saved": [
+        {
+          "id": "strat_g2_8027",
+          "name": "STX Demo L2.1 Momentum · EURUSD M30",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5125.47,
+            "total_return_usd": 136.03,
+            "total_return_pct": 2.73,
+            "cagr_pct": 16.32,
+            "sharpe_ratio": 17.15,
+            "sortino_ratio": 4.89,
+            "calmar_ratio": 30.87,
+            "max_drawdown_usd": 26.5,
+            "max_drawdown_pct": 0.53,
+            "total_trades": 58,
+            "win_rate_pct": 62.1,
+            "profit_factor": 2.17,
+            "expectancy_usd": 2.35,
+            "recovery_factor": 5.13,
+            "max_consecutive_wins": 6,
+            "max_consecutive_losses": 3,
+            "max_daily_loss_pct": 0.24,
+            "tn_score": 92.2,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": 27.35,
+              "sharpe_ratio": 8.84,
+              "win_rate_pct": 63.6,
+              "trades": 11,
+              "max_drawdown_pct": 0.47,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g2_8027",
+            "name": "STX Demo L2.1 Momentum · EURUSD M30",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "MACD",
+                "params": {
+                  "fast": 8,
+                  "slow": 30,
+                  "signal": 13,
+                  "sub": "hist"
+                },
+                "operator": "CROSS_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "STOCHASTIC",
+                "params": {
+                  "k_period": 21,
+                  "d_period": 2,
+                  "sub": "k"
+                },
+                "operator": "CROSS_ABOVE",
+                "target_type": "value",
+                "target_value": 25.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "STOCHASTIC",
+                "params": {
+                  "k_period": 9,
+                  "d_period": 3,
+                  "sub": "k"
+                },
+                "operator": "LESS_THAN",
+                "target_type": "value",
+                "target_value": 85.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "MACD",
+                "params": {
+                  "fast": 14,
+                  "slow": 32,
+                  "signal": 5,
+                  "sub": "hist"
+                },
+                "operator": "LESS_THAN",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "session_filter": "ALL",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": true,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "ATR_CLASSIC",
+            "sl_atr": 3.0,
+            "tp_atr": 3.0,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 1.0,
+            "be_atr": 1.2,
+            "swing_bars": 30,
+            "max_bars": 24,
+            "partial_tp1_atr": 0.5,
+            "partial_tp2_atr": 3.0,
+            "partial_pct": 50.0,
+            "modifier_breakeven": false,
+            "modifier_trailing": false,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 0.0,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 1.5,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_9440f74b",
+              "strat_151e01a7"
+            ],
+            "generation": 2,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 5016.79,
+              "total_return_usd": 27.35,
+              "total_return_pct": 0.55,
+              "cagr_pct": 5.62,
+              "sharpe_ratio": 8.84,
+              "sortino_ratio": 1.86,
+              "calmar_ratio": 11.95,
+              "max_drawdown_usd": 23.5,
+              "max_drawdown_pct": 0.47,
+              "total_trades": 11,
+              "win_rate_pct": 63.6,
+              "profit_factor": 2.24,
+              "expectancy_usd": 2.49,
+              "recovery_factor": 1.16,
+              "max_consecutive_wins": 6,
+              "max_consecutive_losses": 3,
+              "max_daily_loss_pct": 0.23,
+              "tn_score": 87.5
+            },
+            "fitness": 92.2
+          }
+        },
+        {
+          "id": "strat_g4_9449",
+          "name": "STX Demo L2.2 Momentum · EURUSD M30",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5103.7,
+            "total_return_usd": 114.26,
+            "total_return_pct": 2.29,
+            "cagr_pct": 13.57,
+            "sharpe_ratio": 14.6,
+            "sortino_ratio": 2.61,
+            "calmar_ratio": 27.59,
+            "max_drawdown_usd": 24.95,
+            "max_drawdown_pct": 0.49,
+            "total_trades": 27,
+            "win_rate_pct": 48.1,
+            "profit_factor": 2.56,
+            "expectancy_usd": 4.23,
+            "recovery_factor": 4.58,
+            "max_consecutive_wins": 4,
+            "max_consecutive_losses": 4,
+            "max_daily_loss_pct": 0.2,
+            "tn_score": 89.6,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": 34.77,
+              "sharpe_ratio": 12.54,
+              "win_rate_pct": 66.7,
+              "trades": 6,
+              "max_drawdown_pct": 0.19,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g4_9449",
+            "name": "STX Demo L2.2 Momentum · EURUSD M30",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "MACD",
+                "params": {
+                  "fast": 16,
+                  "slow": 20,
+                  "signal": 13,
+                  "sub": "hist"
+                },
+                "operator": "CROSS_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "MACD",
+                "params": {
+                  "fast": 16,
+                  "slow": 20,
+                  "signal": 13,
+                  "sub": "hist"
+                },
+                "operator": "CROSS_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "STOCHASTIC",
+                "params": {
+                  "k_period": 15,
+                  "d_period": 5,
+                  "sub": "k"
+                },
+                "operator": "LESS_THAN",
+                "target_type": "value",
+                "target_value": 80.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "MACD",
+                "params": {
+                  "fast": 12,
+                  "slow": 20,
+                  "signal": 9,
+                  "sub": "hist"
+                },
+                "operator": "LESS_THAN",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "session_filter": "OVERLAP_TOKYO_LDN",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": false,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "ATR_CLASSIC",
+            "sl_atr": 2.5,
+            "tp_atr": 4.0,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 1.0,
+            "be_atr": 1.2,
+            "swing_bars": 40,
+            "max_bars": 36,
+            "partial_tp1_atr": 2.0,
+            "partial_tp2_atr": 3.0,
+            "partial_pct": 50.0,
+            "modifier_breakeven": false,
+            "modifier_trailing": false,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 1.5,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 3.0,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_g3_3864",
+              "strat_g3_6309"
+            ],
+            "generation": 4,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 5024.21,
+              "total_return_usd": 34.77,
+              "total_return_pct": 0.7,
+              "cagr_pct": 7.19,
+              "sharpe_ratio": 12.54,
+              "sortino_ratio": 1.86,
+              "calmar_ratio": 37.96,
+              "max_drawdown_usd": 9.46,
+              "max_drawdown_pct": 0.19,
+              "total_trades": 6,
+              "win_rate_pct": 66.7,
+              "profit_factor": 4.19,
+              "expectancy_usd": 5.8,
+              "recovery_factor": 3.68,
+              "max_consecutive_wins": 2,
+              "max_consecutive_losses": 1,
+              "max_daily_loss_pct": 0.13,
+              "tn_score": 90.6
+            },
+            "fitness": 89.6
+          }
+        }
+      ]
+    },
+    {
+      "folder": "Demo realista · Lote 3 Estructura",
+      "config": {
+        "symbol": "EURUSD",
+        "timeframe": "30m",
+        "search_mode": "genetic",
+        "objective": "tn_score",
+        "enabled_indicators": [
+          "HIGHEST",
+          "LOWEST",
+          "ATR",
+          "CCI"
+        ],
+        "enabled_operators": [
+          "GREATER_THAN",
+          "LESS_THAN",
+          "CROSS_ABOVE",
+          "CROSS_BELOW",
+          "PRICE_ABOVE",
+          "PRICE_BELOW"
+        ],
+        "enabled_entry_types": [
+          "MARKET"
+        ],
+        "enabled_exit_modes": [
+          "ATR_CLASSIC",
+          "TRAILING_ATR",
+          "BREAKEVEN"
+        ],
+        "min_indicators_per_strategy": 1,
+        "max_indicators_per_strategy": 2,
+        "infinite_mode": false,
+        "population_size": 40,
+        "generations": 4,
+        "parallel_workers": 0,
+        "holdout_pct": 20,
+        "initial_deposit": 4989.44,
+        "sizing_mode": "FIXED_RISK",
+        "risk_per_trade_pct": 0.1,
+        "averaging_config": {
+          "enabled": false
+        },
+        "max_consecutive_wins": 0,
+        "max_consecutive_losses": 0,
+        "max_daily_trades": 4,
+        "max_open_trades": 1,
+        "close_before_weekend": true,
+        "prop_firm_filter": false,
+        "validate_during_exploration": false,
+        "modeling_mode": "ohlc",
+        "spread_pips": 1,
+        "slippage_pips": 0.2,
+        "min_win_rate": 45,
+        "min_trades": 20,
+        "min_profit_factor": 1.15,
+        "min_sharpe": 0.5,
+        "min_dsr": 0,
+        "max_drawdown": 15,
+        "min_net_profit_usd": 0,
+        "max_candidates": 30
+      },
+      "tested": 160,
+      "accepted": 25,
+      "saved": [
+        {
+          "id": "strat_g4_4016",
+          "name": "STX Demo L3.1 Estructura · EURUSD M30",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5058.59,
+            "total_return_usd": 69.15,
+            "total_return_pct": 1.39,
+            "cagr_pct": 8.04,
+            "sharpe_ratio": 17.13,
+            "sortino_ratio": 1.43,
+            "calmar_ratio": 32.12,
+            "max_drawdown_usd": 12.61,
+            "max_drawdown_pct": 0.25,
+            "total_trades": 38,
+            "win_rate_pct": 63.2,
+            "profit_factor": 3.3,
+            "expectancy_usd": 1.82,
+            "recovery_factor": 5.48,
+            "max_consecutive_wins": 8,
+            "max_consecutive_losses": 4,
+            "max_daily_loss_pct": 0.14,
+            "tn_score": 97.1,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": -9.71,
+              "sharpe_ratio": -2.95,
+              "win_rate_pct": 38.9,
+              "trades": 18,
+              "max_drawdown_pct": 0.48,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g4_4016",
+            "name": "STX Demo L3.1 Estructura · EURUSD M30",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "ATR",
+                "params": {
+                  "period": 20
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "LOWEST",
+                "params": {
+                  "period": 50
+                },
+                "operator": "PRICE_BELOW",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "LOWEST",
+                "params": {
+                  "period": 35
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "HIGHEST",
+                "params": {
+                  "period": 30
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "session_filter": "OVERLAP_LDN_NY",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": false,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "ATR_CLASSIC",
+            "sl_atr": 1.0,
+            "tp_atr": 1.5,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 0.5,
+            "be_atr": 2.0,
+            "swing_bars": 20,
+            "max_bars": 5,
+            "partial_tp1_atr": 2.0,
+            "partial_tp2_atr": 2.0,
+            "partial_pct": 70.0,
+            "modifier_breakeven": true,
+            "modifier_trailing": true,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 0.0,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 0.0,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_g3_3043",
+              "strat_g3_2151"
+            ],
+            "generation": 4,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 4979.73,
+              "total_return_usd": -9.71,
+              "total_return_pct": -0.19,
+              "cagr_pct": -1.93,
+              "sharpe_ratio": -2.95,
+              "sortino_ratio": -0.15,
+              "calmar_ratio": -4.05,
+              "max_drawdown_usd": 23.83,
+              "max_drawdown_pct": 0.48,
+              "total_trades": 18,
+              "win_rate_pct": 38.9,
+              "profit_factor": 0.63,
+              "expectancy_usd": -0.54,
+              "recovery_factor": -0.41,
+              "max_consecutive_wins": 3,
+              "max_consecutive_losses": 6,
+              "max_daily_loss_pct": 0.19,
+              "tn_score": 7.7
+            },
+            "fitness": 97.1
+          }
+        },
+        {
+          "id": "strat_g4_7123",
+          "name": "STX Demo L3.2 Estructura · EURUSD M30",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5058.08,
+            "total_return_usd": 68.64,
+            "total_return_pct": 1.38,
+            "cagr_pct": 7.98,
+            "sharpe_ratio": 16.24,
+            "sortino_ratio": 1.75,
+            "calmar_ratio": 27.54,
+            "max_drawdown_usd": 14.5,
+            "max_drawdown_pct": 0.29,
+            "total_trades": 50,
+            "win_rate_pct": 58.0,
+            "profit_factor": 2.74,
+            "expectancy_usd": 1.37,
+            "recovery_factor": 4.73,
+            "max_consecutive_wins": 10,
+            "max_consecutive_losses": 4,
+            "max_daily_loss_pct": 0.15,
+            "tn_score": 94.9,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": -7.93,
+              "sharpe_ratio": -2.83,
+              "win_rate_pct": 40.0,
+              "trades": 15,
+              "max_drawdown_pct": 0.52,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g4_7123",
+            "name": "STX Demo L3.2 Estructura · EURUSD M30",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "ATR",
+                "params": {
+                  "period": 24
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "LOWEST",
+                "params": {
+                  "period": 55
+                },
+                "operator": "PRICE_BELOW",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "HIGHEST",
+                "params": {
+                  "period": 30
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "LOWEST",
+                "params": {
+                  "period": 50
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "session_filter": "NEW_YORK",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": true,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "ATR_CLASSIC",
+            "sl_atr": 1.0,
+            "tp_atr": 1.5,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 0.5,
+            "be_atr": 2.0,
+            "swing_bars": 30,
+            "max_bars": 12,
+            "partial_tp1_atr": 2.0,
+            "partial_tp2_atr": 4.0,
+            "partial_pct": 70.0,
+            "modifier_breakeven": true,
+            "modifier_trailing": true,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 2.0,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 0.0,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_g3_2993",
+              "strat_g3_2151"
+            ],
+            "generation": 4,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 4981.51,
+              "total_return_usd": -7.93,
+              "total_return_pct": -0.16,
+              "cagr_pct": -1.58,
+              "sharpe_ratio": -2.83,
+              "sortino_ratio": -0.12,
+              "calmar_ratio": -3.03,
+              "max_drawdown_usd": 26.05,
+              "max_drawdown_pct": 0.52,
+              "total_trades": 15,
+              "win_rate_pct": 40.0,
+              "profit_factor": 0.63,
+              "expectancy_usd": -0.53,
+              "recovery_factor": -0.3,
+              "max_consecutive_wins": 2,
+              "max_consecutive_losses": 5,
+              "max_daily_loss_pct": 0.17,
+              "tn_score": 7.1
+            },
+            "fitness": 94.9
+          }
+        },
+        {
+          "id": "strat_g4_2478",
+          "name": "STX Demo L3.3 Estructura · selección MT5",
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5140.61,
+            "total_return_usd": 151.17,
+            "total_return_pct": 3.03,
+            "cagr_pct": 18.26,
+            "sharpe_ratio": 20.27,
+            "sortino_ratio": 4.99,
+            "calmar_ratio": 43.18,
+            "max_drawdown_usd": 21.29,
+            "max_drawdown_pct": 0.42,
+            "total_trades": 188,
+            "win_rate_pct": 53.2,
+            "profit_factor": 2.5,
+            "expectancy_usd": 0.8,
+            "recovery_factor": 7.1,
+            "max_consecutive_wins": 9,
+            "max_consecutive_losses": 12,
+            "max_daily_loss_pct": 0.11,
+            "tn_score": 92.7,
+            "dsr": 0.0,
+            "filter_failures": [],
+            "holdout": {
+              "net_profit": 33.25,
+              "sharpe_ratio": 11.28,
+              "win_rate_pct": 47.9,
+              "trades": 48,
+              "max_drawdown_pct": 0.17,
+              "bars": 559
+            }
+          },
+          "strategy": {
+            "id": "strat_g4_2478",
+            "name": "STX Demo L3.3 Estructura · selección MT5",
+            "symbol": "EURUSD",
+            "timeframe": "30m",
+            "mtf_timeframe": null,
+            "direction": "BOTH",
+            "prop_firm_filter": false,
+            "entry_order_type": "MARKET",
+            "buy_conditions": [
+              {
+                "indicator": "LOWEST",
+                "params": {
+                  "period": 50
+                },
+                "operator": "PRICE_BELOW",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "ATR",
+                "params": {
+                  "period": 20
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "sell_conditions": [
+              {
+                "indicator": "ATR",
+                "params": {
+                  "period": 10
+                },
+                "operator": "GREATER_THAN",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              },
+              {
+                "indicator": "LOWEST",
+                "params": {
+                  "period": 35
+                },
+                "operator": "PRICE_ABOVE",
+                "target_type": "value",
+                "target_value": 0.0,
+                "target_indicator": null,
+                "target_params": {}
+              }
+            ],
+            "session_filter": "NEW_YORK",
+            "close_before_weekend": true,
+            "close_before_ny_close": false,
+            "no_new_trades_friday": false,
+            "no_monday_open": false,
+            "avoid_rollover": false,
+            "exit_mode": "TRAILING_ATR",
+            "sl_atr": 2.0,
+            "tp_atr": 1.5,
+            "sl_pips": 20.0,
+            "tp_pips": 40.0,
+            "sl_pct": 0.5,
+            "tp_pct": 1.0,
+            "sl_smooth_mult": 1.5,
+            "tp_smooth_mult": 3.0,
+            "trail_atr": 0.5,
+            "be_atr": 1.2,
+            "swing_bars": 30,
+            "max_bars": 12,
+            "partial_tp1_atr": 2.0,
+            "partial_tp2_atr": 4.0,
+            "partial_pct": 70.0,
+            "modifier_breakeven": false,
+            "modifier_trailing": false,
+            "avg_enabled": false,
+            "avg_mode": "dca",
+            "avg_max_levels": 2,
+            "avg_spacing_unit": "atr",
+            "avg_spacing_value": 1.0,
+            "avg_size_multiplier": 1.0,
+            "avg_recompute_stop": false,
+            "sizing_mode": "FIXED_RISK",
+            "risk_per_trade_pct": 0.1,
+            "fixed_lot": 0.01,
+            "fixed_cash_risk": 100.0,
+            "risk_multiplier": 1.0,
+            "fixed_rr": 2.0,
+            "max_daily_loss_pct": 0.0,
+            "max_weekly_loss_pct": 0.0,
+            "max_monthly_loss_pct": 0.0,
+            "max_account_loss_pct": 0.0,
+            "max_daily_gain_pct": 0.0,
+            "max_weekly_gain_pct": 0.0,
+            "max_monthly_gain_pct": 0.0,
+            "max_account_gain_pct": 0.0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "max_daily_trades": 4,
+            "max_open_trades": 1,
+            "reward_risk_ratio": 0.0,
+            "martingale_mult": 1.5,
+            "parent_ids": [
+              "strat_g3_8522",
+              "strat_g3_7022"
+            ],
+            "generation": 4,
+            "metrics": {
+              "initial_capital": 4989.44,
+              "final_balance": 5022.69,
+              "total_return_usd": 33.25,
+              "total_return_pct": 0.67,
+              "cagr_pct": 6.87,
+              "sharpe_ratio": 11.28,
+              "sortino_ratio": 1.3,
+              "calmar_ratio": 40.69,
+              "max_drawdown_usd": 8.43,
+              "max_drawdown_pct": 0.17,
+              "total_trades": 48,
+              "win_rate_pct": 47.9,
+              "profit_factor": 2.32,
+              "expectancy_usd": 0.69,
+              "recovery_factor": 3.94,
+              "max_consecutive_wins": 6,
+              "max_consecutive_losses": 6,
+              "max_daily_loss_pct": 0.05,
+              "tn_score": 88.1
+            },
+            "fitness": 92.7
+          }
+        }
+      ]
+    }
+  ],
+  "purpose": "Prueba realista DEMO; no certificación de inversión",
+  "portfolio": {
+    "id": "port_stx___demo_realista___3_lotes_1794921425",
+    "name": "STX · Demo realista · 3 lotes",
+    "folder": "Pruebas demo",
+    "strategy_ids": [
+      "strat_g3_5520",
+      "strat_g2_8027",
+      "strat_g4_2478"
+    ],
+    "weights": [
+      0.3333333333333333,
+      0.3333333333333333,
+      0.3333333333333333
+    ],
+    "risk_budget": 0.3,
+    "created_at": "2026-11-17 10:17:05",
+    "metrics": {
+      "combined_net_profit_usd": 130.4,
+      "weighted_win_rate_pct": 58.2,
+      "total_trades": 278,
+      "strategies_count": 3,
+      "symbols": [
+        "EURUSD"
+      ],
+      "timeframes": [
+        "30m"
+      ],
+      "diversification_score": 45.5,
+      "estimated_dd_reduction_pct": 18.6,
+      "avg_individual_dd_pct": 0.25,
+      "combined_max_drawdown_pct": 0.5,
+      "combined_max_drawdown_usd": 50.0,
+      "ret_to_dd_ratio": 2.61,
+      "sq_correlation_index": 0.54,
+      "sq_rating": "Moderada"
+    },
+    "strategies_summary": [
+      {
+        "id": "strat_g3_5520",
+        "name": "STX Demo L1.2 Tendencia · EURUSD M30",
+        "symbol": "EURUSD",
+        "timeframe": "30m",
+        "weight": 0.3333333333333333,
+        "metrics": {
+          "initial_capital": 4989.44,
+          "final_balance": 5093.45,
+          "total_return_usd": 104.01,
+          "total_return_pct": 2.08,
+          "cagr_pct": 12.29,
+          "sharpe_ratio": 11.92,
+          "sortino_ratio": 1.46,
+          "calmar_ratio": 23.82,
+          "max_drawdown_usd": 25.87,
+          "max_drawdown_pct": 0.52,
+          "total_trades": 32,
+          "win_rate_pct": 59.4,
+          "profit_factor": 2.5,
+          "expectancy_usd": 3.25,
+          "recovery_factor": 4.02,
+          "max_consecutive_wins": 9,
+          "max_consecutive_losses": 4,
+          "max_daily_loss_pct": 0.23,
+          "tn_score": 95.4,
+          "dsr": 0.0,
+          "filter_failures": [],
+          "holdout": {
+            "net_profit": 23.08,
+            "sharpe_ratio": 6.78,
+            "win_rate_pct": 50.0,
+            "trades": 12,
+            "max_drawdown_pct": 0.42,
+            "bars": 559
+          }
+        }
+      },
+      {
+        "id": "strat_g2_8027",
+        "name": "STX Demo L2.1 Momentum · EURUSD M30",
+        "symbol": "EURUSD",
+        "timeframe": "30m",
+        "weight": 0.3333333333333333,
+        "metrics": {
+          "initial_capital": 4989.44,
+          "final_balance": 5125.47,
+          "total_return_usd": 136.03,
+          "total_return_pct": 2.73,
+          "cagr_pct": 16.32,
+          "sharpe_ratio": 17.15,
+          "sortino_ratio": 4.89,
+          "calmar_ratio": 30.87,
+          "max_drawdown_usd": 26.5,
+          "max_drawdown_pct": 0.53,
+          "total_trades": 58,
+          "win_rate_pct": 62.1,
+          "profit_factor": 2.17,
+          "expectancy_usd": 2.35,
+          "recovery_factor": 5.13,
+          "max_consecutive_wins": 6,
+          "max_consecutive_losses": 3,
+          "max_daily_loss_pct": 0.24,
+          "tn_score": 92.2,
+          "dsr": 0.0,
+          "filter_failures": [],
+          "holdout": {
+            "net_profit": 27.35,
+            "sharpe_ratio": 8.84,
+            "win_rate_pct": 63.6,
+            "trades": 11,
+            "max_drawdown_pct": 0.47,
+            "bars": 559
+          }
+        }
+      },
+      {
+        "id": "strat_g4_2478",
+        "name": "STX Demo L3.3 Estructura · selección MT5",
+        "symbol": "EURUSD",
+        "timeframe": "30m",
+        "weight": 0.3333333333333333,
+        "metrics": {
+          "initial_capital": 4989.44,
+          "final_balance": 5140.61,
+          "total_return_usd": 151.17,
+          "total_return_pct": 3.03,
+          "cagr_pct": 18.26,
+          "sharpe_ratio": 20.27,
+          "sortino_ratio": 4.99,
+          "calmar_ratio": 43.18,
+          "max_drawdown_usd": 21.29,
+          "max_drawdown_pct": 0.42,
+          "total_trades": 188,
+          "win_rate_pct": 53.2,
+          "profit_factor": 2.5,
+          "expectancy_usd": 0.8,
+          "recovery_factor": 7.1,
+          "max_consecutive_wins": 9,
+          "max_consecutive_losses": 12,
+          "max_daily_loss_pct": 0.11,
+          "tn_score": 92.7,
+          "dsr": 0.0,
+          "filter_failures": [],
+          "holdout": {
+            "net_profit": 33.25,
+            "sharpe_ratio": 11.28,
+            "win_rate_pct": 47.9,
+            "trades": 48,
+            "max_drawdown_pct": 0.17,
+            "bars": 559
+          }
+        }
+      }
+    ]
+  },
+  "created": 1794921426.0198047,
+  "selected": [
+    {
+      "id": "strat_g3_5520",
+      "name": "STX Demo L1.2 Tendencia · EURUSD M30",
+      "score": 95.4,
+      "holdout": {
+        "net_profit": 23.08,
+        "sharpe_ratio": 6.78,
+        "win_rate_pct": 50.0,
+        "trades": 12,
+        "max_drawdown_pct": 0.42,
+        "bars": 559
+      }
+    },
+    {
+      "id": "strat_g2_8027",
+      "name": "STX Demo L2.1 Momentum · EURUSD M30",
+      "score": 92.2,
+      "holdout": {
+        "net_profit": 27.35,
+        "sharpe_ratio": 8.84,
+        "win_rate_pct": 63.6,
+        "trades": 11,
+        "max_drawdown_pct": 0.47,
+        "bars": 559
+      }
+    },
+    {
+      "id": "strat_g4_2478",
+      "name": "STX Demo L3.3 Estructura · selección MT5",
+      "score": 92.7,
+      "holdout": {
+        "net_profit": 33.25,
+        "sharpe_ratio": 11.28,
+        "win_rate_pct": 47.9,
+        "trades": 48,
+        "max_drawdown_pct": 0.17,
+        "bars": 559
+      }
+    }
+  ],
+  "native_signals": [
+    {
+      "id": "strat_g3_5520",
+      "buy": false,
+      "sell": false
+    },
+    {
+      "id": "strat_g2_8027",
+      "buy": false,
+      "sell": true
+    },
+    {
+      "id": "strat_g4_2478",
+      "buy": false,
+      "sell": true
+    }
+  ],
+  "single_session": {
+    "id": "7f4a0433651545f2af11350a33de77fb",
+    "name": "STX Demo L3.3 Estructura · selección MT5",
+    "account_id": "a008976c4ca3444a851f23214f932902",
+    "source_type": "strategy",
+    "source_id": "strat_g4_2478",
+    "symbol_map": {
+      "EURUSD": "EURUSDm"
+    },
+    "risk_percent": 0.1,
+    "fixed_lot": 0.0,
+    "max_lot": 100.0,
+    "max_daily_loss_pct": 0.0,
+    "max_drawdown_pct": 0.0,
+    "max_positions": 1,
+    "max_spread_points": 50,
+    "deviation_points": 10,
+    "risk_mode": "RISK_PERCENT",
+    "multiplier": 1,
+    "direction_filter": "BOTH",
+    "symbol_whitelist": [],
+    "group_id": null,
+    "symbol_filter": "WHITELIST",
+    "sl_tp_mode": "PROVIDER",
+    "custom_sl_pips": 20,
+    "custom_tp_pips": 40,
+    "max_daily_gain_pct": 0.0,
+    "max_account_gain_pct": 0.0,
+    "max_exposure_per_symbol": 0,
+    "max_total_exposure": 0,
+    "equity_protection": 0,
+    "max_order_age_seconds": 30,
+    "state": "ACTIVE",
+    "strategies": [
+      {
+        "strategy": {
+          "id": "strat_g4_2478",
+          "name": "STX Demo L3.3 Estructura · selección MT5",
+          "symbol": "EURUSD",
+          "timeframe": "30m",
+          "mtf_timeframe": null,
+          "direction": "BOTH",
+          "prop_firm_filter": false,
+          "entry_order_type": "MARKET",
+          "buy_conditions": [
+            {
+              "indicator": "LOWEST",
+              "params": {
+                "period": 50
+              },
+              "operator": "PRICE_BELOW",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            },
+            {
+              "indicator": "ATR",
+              "params": {
+                "period": 20
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "sell_conditions": [
+            {
+              "indicator": "ATR",
+              "params": {
+                "period": 10
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            },
+            {
+              "indicator": "LOWEST",
+              "params": {
+                "period": 35
+              },
+              "operator": "PRICE_ABOVE",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "session_filter": "NEW_YORK",
+          "close_before_weekend": true,
+          "close_before_ny_close": false,
+          "no_new_trades_friday": false,
+          "no_monday_open": false,
+          "avoid_rollover": false,
+          "exit_mode": "TRAILING_ATR",
+          "sl_atr": 2.0,
+          "tp_atr": 1.5,
+          "sl_pips": 20.0,
+          "tp_pips": 40.0,
+          "sl_pct": 0.5,
+          "tp_pct": 1.0,
+          "sl_smooth_mult": 1.5,
+          "tp_smooth_mult": 3.0,
+          "trail_atr": 0.5,
+          "be_atr": 1.2,
+          "swing_bars": 30,
+          "max_bars": 12,
+          "partial_tp1_atr": 2.0,
+          "partial_tp2_atr": 4.0,
+          "partial_pct": 70.0,
+          "modifier_breakeven": false,
+          "modifier_trailing": false,
+          "avg_enabled": false,
+          "avg_mode": "dca",
+          "avg_max_levels": 2,
+          "avg_spacing_unit": "atr",
+          "avg_spacing_value": 1.0,
+          "avg_size_multiplier": 1.0,
+          "avg_recompute_stop": false,
+          "sizing_mode": "FIXED_RISK",
+          "risk_per_trade_pct": 0.1,
+          "fixed_lot": 0.01,
+          "fixed_cash_risk": 100.0,
+          "risk_multiplier": 1.0,
+          "fixed_rr": 2.0,
+          "max_daily_loss_pct": 0.0,
+          "max_weekly_loss_pct": 0.0,
+          "max_monthly_loss_pct": 0.0,
+          "max_account_loss_pct": 0.0,
+          "max_daily_gain_pct": 0.0,
+          "max_weekly_gain_pct": 0.0,
+          "max_monthly_gain_pct": 0.0,
+          "max_account_gain_pct": 0.0,
+          "max_consecutive_wins": 0,
+          "max_consecutive_losses": 0,
+          "max_daily_trades": 4,
+          "max_open_trades": 1,
+          "reward_risk_ratio": 0.0,
+          "martingale_mult": 1.5,
+          "parent_ids": [
+            "strat_g3_8522",
+            "strat_g3_7022"
+          ],
+          "generation": 4,
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5022.69,
+            "total_return_usd": 33.25,
+            "total_return_pct": 0.67,
+            "cagr_pct": 6.87,
+            "sharpe_ratio": 11.28,
+            "sortino_ratio": 1.3,
+            "calmar_ratio": 40.69,
+            "max_drawdown_usd": 8.43,
+            "max_drawdown_pct": 0.17,
+            "total_trades": 48,
+            "win_rate_pct": 47.9,
+            "profit_factor": 2.32,
+            "expectancy_usd": 0.69,
+            "recovery_factor": 3.94,
+            "max_consecutive_wins": 6,
+            "max_consecutive_losses": 6,
+            "max_daily_loss_pct": 0.05,
+            "tn_score": 88.1
+          },
+          "fitness": 92.7
+        },
+        "weight": 1.0
+      }
+    ],
+    "magic": 233472323,
+    "created_at": 1794921583.42887,
+    "origin_type": "strategy",
+    "uses_source_risk": true,
+    "initial_equity": 4989.44
+  },
+  "single_execution": {
+    "actions": [
+      {
+        "id": "7f4a0433651545f2af11350a33de77fb:algo:0:2026-11-17T12:30:00",
+        "result": {
+          "retcode": 10009,
+          "order": 756936376,
+          "volume": 0.03,
+          "comment": "ok"
+        }
+      }
+    ],
+    "snapshot": {
+      "at": 1794921584.346991,
+      "verified_demo": true,
+      "login": 480530845,
+      "server": "Exness-MT5Trial11",
+      "balance": 4989.44,
+      "equity": 4989.44,
+      "currency": "USD",
+      "positions": []
+    },
+    "at": 1794921589.582747
+  },
+  "single_stopped": 1794921597.722343,
+  "portfolio_session": {
+    "id": "1af44c9d62104b12bc3b7844b40e95ef",
+    "name": "STX · Demo realista · 3 lotes",
+    "account_id": "a008976c4ca3444a851f23214f932902",
+    "source_type": "portfolio",
+    "source_id": "port_stx___demo_realista___3_lotes_1794921425",
+    "symbol_map": {
+      "EURUSD": "EURUSDm"
+    },
+    "risk_percent": 0.3,
+    "fixed_lot": 0.0,
+    "max_lot": 100.0,
+    "max_daily_loss_pct": 0.0,
+    "max_drawdown_pct": 0.0,
+    "max_positions": 3,
+    "max_spread_points": 50,
+    "deviation_points": 10,
+    "risk_mode": "RISK_PERCENT",
+    "multiplier": 1,
+    "direction_filter": "BOTH",
+    "symbol_whitelist": [],
+    "group_id": null,
+    "symbol_filter": "WHITELIST",
+    "sl_tp_mode": "PROVIDER",
+    "custom_sl_pips": 20,
+    "custom_tp_pips": 40,
+    "max_daily_gain_pct": 0.0,
+    "max_account_gain_pct": 0.0,
+    "max_exposure_per_symbol": 0,
+    "max_total_exposure": 0,
+    "equity_protection": 0,
+    "max_order_age_seconds": 30,
+    "state": "ACTIVE",
+    "strategies": [
+      {
+        "strategy": {
+          "id": "strat_g3_5520",
+          "name": "STX Demo L1.2 Tendencia · EURUSD M30",
+          "symbol": "EURUSD",
+          "timeframe": "30m",
+          "mtf_timeframe": null,
+          "direction": "BOTH",
+          "prop_firm_filter": false,
+          "entry_order_type": "MARKET",
+          "buy_conditions": [
+            {
+              "indicator": "EMA",
+              "params": {
+                "period": 100
+              },
+              "operator": "PRICE_ABOVE",
+              "target_type": "indicator",
+              "target_value": 0.0,
+              "target_indicator": "EMA",
+              "target_params": {
+                "period": 150
+              }
+            },
+            {
+              "indicator": "ADX",
+              "params": {
+                "period": 25,
+                "sub": "adx"
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "value",
+              "target_value": 30.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "sell_conditions": [
+            {
+              "indicator": "SMA",
+              "params": {
+                "period": 180
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "indicator",
+              "target_value": 0.0,
+              "target_indicator": "SMA",
+              "target_params": {
+                "period": 230
+              }
+            },
+            {
+              "indicator": "SMA",
+              "params": {
+                "period": 100
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "indicator",
+              "target_value": 0.0,
+              "target_indicator": "SMA",
+              "target_params": {
+                "period": 150
+              }
+            }
+          ],
+          "session_filter": "LONDON",
+          "close_before_weekend": true,
+          "close_before_ny_close": false,
+          "no_new_trades_friday": false,
+          "no_monday_open": false,
+          "avoid_rollover": false,
+          "exit_mode": "TRAILING_ATR",
+          "sl_atr": 1.0,
+          "tp_atr": 6.0,
+          "sl_pips": 20.0,
+          "tp_pips": 40.0,
+          "sl_pct": 0.5,
+          "tp_pct": 1.0,
+          "sl_smooth_mult": 1.5,
+          "tp_smooth_mult": 3.0,
+          "trail_atr": 2.5,
+          "be_atr": 1.2,
+          "swing_bars": 40,
+          "max_bars": 48,
+          "partial_tp1_atr": 0.5,
+          "partial_tp2_atr": 6.0,
+          "partial_pct": 30.0,
+          "modifier_breakeven": false,
+          "modifier_trailing": false,
+          "avg_enabled": false,
+          "avg_mode": "dca",
+          "avg_max_levels": 2,
+          "avg_spacing_unit": "atr",
+          "avg_spacing_value": 1.0,
+          "avg_size_multiplier": 1.0,
+          "avg_recompute_stop": false,
+          "sizing_mode": "FIXED_RISK",
+          "risk_per_trade_pct": 0.1,
+          "fixed_lot": 0.01,
+          "fixed_cash_risk": 100.0,
+          "risk_multiplier": 1.0,
+          "fixed_rr": 2.0,
+          "max_daily_loss_pct": 0.0,
+          "max_weekly_loss_pct": 0.0,
+          "max_monthly_loss_pct": 0.0,
+          "max_account_loss_pct": 0.0,
+          "max_daily_gain_pct": 0.0,
+          "max_weekly_gain_pct": 0.0,
+          "max_monthly_gain_pct": 0.0,
+          "max_account_gain_pct": 0.0,
+          "max_consecutive_wins": 0,
+          "max_consecutive_losses": 0,
+          "max_daily_trades": 4,
+          "max_open_trades": 1,
+          "reward_risk_ratio": 0.0,
+          "martingale_mult": 1.5,
+          "parent_ids": [
+            "strat_g2_1944",
+            "strat_g2_3787"
+          ],
+          "generation": 3,
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5012.52,
+            "total_return_usd": 23.08,
+            "total_return_pct": 0.46,
+            "cagr_pct": 4.72,
+            "sharpe_ratio": 6.78,
+            "sortino_ratio": 0.48,
+            "calmar_ratio": 11.3,
+            "max_drawdown_usd": 21.05,
+            "max_drawdown_pct": 0.42,
+            "total_trades": 12,
+            "win_rate_pct": 50.0,
+            "profit_factor": 1.69,
+            "expectancy_usd": 1.92,
+            "recovery_factor": 1.1,
+            "max_consecutive_wins": 3,
+            "max_consecutive_losses": 3,
+            "max_daily_loss_pct": 0.15,
+            "tn_score": 74.6
+          },
+          "fitness": 95.4
+        },
+        "weight": 0.3333333333333333
+      },
+      {
+        "strategy": {
+          "id": "strat_g2_8027",
+          "name": "STX Demo L2.1 Momentum · EURUSD M30",
+          "symbol": "EURUSD",
+          "timeframe": "30m",
+          "mtf_timeframe": null,
+          "direction": "BOTH",
+          "prop_firm_filter": false,
+          "entry_order_type": "MARKET",
+          "buy_conditions": [
+            {
+              "indicator": "MACD",
+              "params": {
+                "fast": 8,
+                "slow": 30,
+                "signal": 13,
+                "sub": "hist"
+              },
+              "operator": "CROSS_ABOVE",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            },
+            {
+              "indicator": "STOCHASTIC",
+              "params": {
+                "k_period": 21,
+                "d_period": 2,
+                "sub": "k"
+              },
+              "operator": "CROSS_ABOVE",
+              "target_type": "value",
+              "target_value": 25.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "sell_conditions": [
+            {
+              "indicator": "STOCHASTIC",
+              "params": {
+                "k_period": 9,
+                "d_period": 3,
+                "sub": "k"
+              },
+              "operator": "LESS_THAN",
+              "target_type": "value",
+              "target_value": 85.0,
+              "target_indicator": null,
+              "target_params": {}
+            },
+            {
+              "indicator": "MACD",
+              "params": {
+                "fast": 14,
+                "slow": 32,
+                "signal": 5,
+                "sub": "hist"
+              },
+              "operator": "LESS_THAN",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "session_filter": "ALL",
+          "close_before_weekend": true,
+          "close_before_ny_close": false,
+          "no_new_trades_friday": true,
+          "no_monday_open": false,
+          "avoid_rollover": false,
+          "exit_mode": "ATR_CLASSIC",
+          "sl_atr": 3.0,
+          "tp_atr": 3.0,
+          "sl_pips": 20.0,
+          "tp_pips": 40.0,
+          "sl_pct": 0.5,
+          "tp_pct": 1.0,
+          "sl_smooth_mult": 1.5,
+          "tp_smooth_mult": 3.0,
+          "trail_atr": 1.0,
+          "be_atr": 1.2,
+          "swing_bars": 30,
+          "max_bars": 24,
+          "partial_tp1_atr": 0.5,
+          "partial_tp2_atr": 3.0,
+          "partial_pct": 50.0,
+          "modifier_breakeven": false,
+          "modifier_trailing": false,
+          "avg_enabled": false,
+          "avg_mode": "dca",
+          "avg_max_levels": 2,
+          "avg_spacing_unit": "atr",
+          "avg_spacing_value": 1.0,
+          "avg_size_multiplier": 1.0,
+          "avg_recompute_stop": false,
+          "sizing_mode": "FIXED_RISK",
+          "risk_per_trade_pct": 0.1,
+          "fixed_lot": 0.01,
+          "fixed_cash_risk": 100.0,
+          "risk_multiplier": 1.0,
+          "fixed_rr": 0.0,
+          "max_daily_loss_pct": 0.0,
+          "max_weekly_loss_pct": 0.0,
+          "max_monthly_loss_pct": 0.0,
+          "max_account_loss_pct": 0.0,
+          "max_daily_gain_pct": 0.0,
+          "max_weekly_gain_pct": 0.0,
+          "max_monthly_gain_pct": 0.0,
+          "max_account_gain_pct": 0.0,
+          "max_consecutive_wins": 0,
+          "max_consecutive_losses": 0,
+          "max_daily_trades": 4,
+          "max_open_trades": 1,
+          "reward_risk_ratio": 1.5,
+          "martingale_mult": 1.5,
+          "parent_ids": [
+            "strat_9440f74b",
+            "strat_151e01a7"
+          ],
+          "generation": 2,
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5016.79,
+            "total_return_usd": 27.35,
+            "total_return_pct": 0.55,
+            "cagr_pct": 5.62,
+            "sharpe_ratio": 8.84,
+            "sortino_ratio": 1.86,
+            "calmar_ratio": 11.95,
+            "max_drawdown_usd": 23.5,
+            "max_drawdown_pct": 0.47,
+            "total_trades": 11,
+            "win_rate_pct": 63.6,
+            "profit_factor": 2.24,
+            "expectancy_usd": 2.49,
+            "recovery_factor": 1.16,
+            "max_consecutive_wins": 6,
+            "max_consecutive_losses": 3,
+            "max_daily_loss_pct": 0.23,
+            "tn_score": 87.5
+          },
+          "fitness": 92.2
+        },
+        "weight": 0.3333333333333333
+      },
+      {
+        "strategy": {
+          "id": "strat_g4_2478",
+          "name": "STX Demo L3.3 Estructura · selección MT5",
+          "symbol": "EURUSD",
+          "timeframe": "30m",
+          "mtf_timeframe": null,
+          "direction": "BOTH",
+          "prop_firm_filter": false,
+          "entry_order_type": "MARKET",
+          "buy_conditions": [
+            {
+              "indicator": "LOWEST",
+              "params": {
+                "period": 50
+              },
+              "operator": "PRICE_BELOW",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            },
+            {
+              "indicator": "ATR",
+              "params": {
+                "period": 20
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "sell_conditions": [
+            {
+              "indicator": "ATR",
+              "params": {
+                "period": 10
+              },
+              "operator": "GREATER_THAN",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            },
+            {
+              "indicator": "LOWEST",
+              "params": {
+                "period": 35
+              },
+              "operator": "PRICE_ABOVE",
+              "target_type": "value",
+              "target_value": 0.0,
+              "target_indicator": null,
+              "target_params": {}
+            }
+          ],
+          "session_filter": "NEW_YORK",
+          "close_before_weekend": true,
+          "close_before_ny_close": false,
+          "no_new_trades_friday": false,
+          "no_monday_open": false,
+          "avoid_rollover": false,
+          "exit_mode": "TRAILING_ATR",
+          "sl_atr": 2.0,
+          "tp_atr": 1.5,
+          "sl_pips": 20.0,
+          "tp_pips": 40.0,
+          "sl_pct": 0.5,
+          "tp_pct": 1.0,
+          "sl_smooth_mult": 1.5,
+          "tp_smooth_mult": 3.0,
+          "trail_atr": 0.5,
+          "be_atr": 1.2,
+          "swing_bars": 30,
+          "max_bars": 12,
+          "partial_tp1_atr": 2.0,
+          "partial_tp2_atr": 4.0,
+          "partial_pct": 70.0,
+          "modifier_breakeven": false,
+          "modifier_trailing": false,
+          "avg_enabled": false,
+          "avg_mode": "dca",
+          "avg_max_levels": 2,
+          "avg_spacing_unit": "atr",
+          "avg_spacing_value": 1.0,
+          "avg_size_multiplier": 1.0,
+          "avg_recompute_stop": false,
+          "sizing_mode": "FIXED_RISK",
+          "risk_per_trade_pct": 0.1,
+          "fixed_lot": 0.01,
+          "fixed_cash_risk": 100.0,
+          "risk_multiplier": 1.0,
+          "fixed_rr": 2.0,
+          "max_daily_loss_pct": 0.0,
+          "max_weekly_loss_pct": 0.0,
+          "max_monthly_loss_pct": 0.0,
+          "max_account_loss_pct": 0.0,
+          "max_daily_gain_pct": 0.0,
+          "max_weekly_gain_pct": 0.0,
+          "max_monthly_gain_pct": 0.0,
+          "max_account_gain_pct": 0.0,
+          "max_consecutive_wins": 0,
+          "max_consecutive_losses": 0,
+          "max_daily_trades": 4,
+          "max_open_trades": 1,
+          "reward_risk_ratio": 0.0,
+          "martingale_mult": 1.5,
+          "parent_ids": [
+            "strat_g3_8522",
+            "strat_g3_7022"
+          ],
+          "generation": 4,
+          "metrics": {
+            "initial_capital": 4989.44,
+            "final_balance": 5022.69,
+            "total_return_usd": 33.25,
+            "total_return_pct": 0.67,
+            "cagr_pct": 6.87,
+            "sharpe_ratio": 11.28,
+            "sortino_ratio": 1.3,
+            "calmar_ratio": 40.69,
+            "max_drawdown_usd": 8.43,
+            "max_drawdown_pct": 0.17,
+            "total_trades": 48,
+            "win_rate_pct": 47.9,
+            "profit_factor": 2.32,
+            "expectancy_usd": 0.69,
+            "recovery_factor": 3.94,
+            "max_consecutive_wins": 6,
+            "max_consecutive_losses": 6,
+            "max_daily_loss_pct": 0.05,
+            "tn_score": 88.1
+          },
+          "fitness": 92.7
+        },
+        "weight": 0.3333333333333333
+      }
+    ],
+    "magic": 128263625,
+    "created_at": 1794921598.478402,
+    "origin_type": "portfolio",
+    "uses_source_risk": true,
+    "initial_equity": 4989.14
+  },
+  "portfolio_execution": {
+    "actions": [
+      {
+        "id": "1af44c9d62104b12bc3b7844b40e95ef:algo:1:2026-11-17T12:30:00",
+        "result": {
+          "retcode": 10009,
+          "order": 756937698,
+          "volume": 0.02,
+          "comment": "ok"
+        }
+      }
+    ],
+    "snapshot": {
+      "at": 1794921598.8684795,
+      "verified_demo": true,
+      "login": 480530845,
+      "server": "Exness-MT5Trial11",
+      "balance": 4989.14,
+      "equity": 4989.14,
+      "currency": "USD",
+      "positions": []
+    },
+    "at": 1794921604.7833438
+  },
+  "positions": [
+    {
+      "ticket": 756937698,
+      "symbol": "EURUSDm",
+      "type": 1,
+      "volume": 0.02,
+      "price_open": 1.09827,
+      "sl": 1.10068,
+      "tp": 1.09471,
+      "magic": 128263626,
+      "comment": "STX2590bc5498035dd293a7",
+      "time": 1794921605
+    },
+    {
+      "ticket": 756937903,
+      "symbol": "EURUSDm",
+      "type": 1,
+      "volume": 0.03,
+      "price_open": 1.09828,
+      "sl": 1.09985,
+      "tp": 1.09508,
+      "magic": 128263627,
+      "comment": "STXfde2d466960654399f32",
+      "time": 1794921610
+    }
+  ],
+  "orders": [],
+  "account_after": {
+    "login": 480530845,
+    "server": "Exness-MT5Trial11",
+    "trade_mode": 0,
+    "margin_mode": 2,
+    "equity": 4988.52,
+    "balance": 4989.14,
+    "currency": "USD",
+    "trade_allowed": true
+  },
+  "finished": 1794921618.4047139,
+  "last_verification": {
+    "state": "ACTIVE",
+    "verified_demo": true,
+    "positions": [
+      {
+        "ticket": 756937698,
+        "symbol": "EURUSDm",
+        "type": 1,
+        "volume": 0.02,
+        "price_open": 1.09827,
+        "sl": 1.10068,
+        "tp": 1.09471,
+        "magic": 128263626,
+        "comment": "STX2590bc5498035dd293a7",
+        "time": 1794921605
+      },
+      {
+        "ticket": 756937903,
+        "symbol": "EURUSDm",
+        "type": 1,
+        "volume": 0.03,
+        "price_open": 1.09828,
+        "sl": 1.0988,
+        "tp": 1.09508,
+        "magic": 128263627,
+        "comment": "STXfde2d466960654399f32",
+        "time": 1794921610
+      }
+    ],
+    "risk_percent": 0.3,
+    "max_positions": 3
+  }
+}

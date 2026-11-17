@@ -21,6 +21,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Optional, Callable, Tuple
 from backend.strategy import Strategy, Condition
+from backend.operators import compatible
+from backend.exploration_policy import ACCOUNT_LIMITS, normalize_config
 from backend.backtester import backtester, BacktestResult
 from backend.validation import validation_suite
 from backend.data_manager import data_manager
@@ -131,33 +133,9 @@ ALL_28_INDICATORS: Dict[str, Dict[str, Any]] = {
 ALL_INDICATORS = ALL_28_INDICATORS
 
 # ---------------------------------------------------------------------------
-# MACRO INDICATORS (FRED) — context filters; only active when use_macro=True
-# and the df has MACRO_{ID} columns attached.
-# ---------------------------------------------------------------------------
-MACRO_INDICATORS: Dict[str, Dict[str, Any]] = {
-    "MACRO_VIXCLS": {"name": "VIX (volatilidad)", "family": "Macro", "params": {"threshold": {"from": 12.0, "step": 3.0, "to": 40.0}}},
-    "MACRO_DGS10": {"name": "Treasury 10Y (%)", "family": "Macro", "params": {"threshold": {"from": 0.5, "step": 0.5, "to": 5.5}}},
-    "MACRO_DGS2": {"name": "Treasury 2Y (%)", "family": "Macro", "params": {"threshold": {"from": 0.25, "step": 0.25, "to": 5.0}}},
-    "MACRO_FEDFUNDS": {"name": "Fed Funds Rate (%)", "family": "Macro", "params": {"threshold": {"from": 0.0, "step": 0.25, "to": 6.0}}},
-    "MACRO_DTWEXBGS": {"name": "DXY (índice dólar)", "family": "Macro", "params": {"threshold": {"from": 90.0, "step": 5.0, "to": 130.0}}},
-    "MACRO_CPIAUCSL": {"name": "CPI (inflación)", "family": "Macro", "params": {"threshold": {"from": 1.0, "step": 1.0, "to": 9.0}}},
-    "MACRO_PCEPI": {"name": "PCE (deflador)", "family": "Macro", "params": {"threshold": {"from": 1.0, "step": 1.0, "to": 6.0}}},
-    "MACRO_UNRATE": {"name": "Desempleo (%)", "family": "Macro", "params": {"threshold": {"from": 3.0, "step": 0.5, "to": 10.0}}},
-    "MACRO_GDP": {"name": "PIB EE.UU.", "family": "Macro", "params": {"threshold": {"from": -2.0, "step": 1.0, "to": 8.0}}},
-    "MACRO_M2SL": {"name": "M2 (masa monetaria)", "family": "Macro", "params": {"threshold": {"from": -2.0, "step": 2.0, "to": 25.0}}},
-    "MACRO_DCOILWTICO": {"name": "Petróleo WTI", "family": "Macro", "params": {"threshold": {"from": 30.0, "step": 15.0, "to": 120.0}}},
-    "MACRO_GOLDAMGBD228NLBM": {"name": "Oro (London)", "family": "Macro", "params": {"threshold": {"from": 1200.0, "step": 400.0, "to": 2800.0}}},
-    "MACRO_UMCSENT": {"name": "Michigan Sentiment", "family": "Macro", "params": {"threshold": {"from": 50.0, "step": 10.0, "to": 110.0}}},
-    "MACRO_YIELD_CURVE_10Y2Y": {"name": "Curva 10Y-2Y", "family": "Macro", "params": {"threshold": {"from": -1.0, "step": 0.5, "to": 3.0}}},
-}
+# Legacy name retained for imports; FRED is no longer an exploration universe.
+MACRO_INDICATORS: Dict[str, Dict[str, Any]] = {}
 
-
-from backend.macro_manager import FRED_CATALOG, MACRO_RANGES
-MACRO_INDICATORS = {
-    f'MACRO_{sid}': {'name': meta['name'], 'family': 'Macro',
-                     'params': {'threshold': MACRO_RANGES[sid]}}
-    for sid, meta in FRED_CATALOG.items()
-}
 
 def is_macro_indicator(name: str) -> bool:
     return str(name).upper().startswith("MACRO_")
@@ -326,6 +304,9 @@ class GeneticEngine:
         self.total_combinations: int = 0
         # User-edited per-parameter sweep ranges {IND: {param: {from, step, to}}}
         self.param_ranges: Dict[str, Any] = {}
+        self.enabled_operators = None
+        self.rejection_counts = {}
+        self.no_trade_count = 0
         # Exploration date range (start_date, end_date) — inclusive, None = full
         self.date_range: Tuple[Optional[str], Optional[str]] = (None, None)
         # Additional validators (WF/MV) config applied during exploration
@@ -350,6 +331,8 @@ class GeneticEngine:
             self.tested_count = 0
             self.discarded_count = 0
             self.accepted_count = 0
+            self.rejection_counts = {}
+            self.no_trade_count = 0
             self.progress_pct = 0.0
             self.current_generation = 0
             self.candidates_passed = []
@@ -372,6 +355,19 @@ class GeneticEngine:
     # =========================================================================
 
     def create_random_condition(self, enabled_indicators: List[str], is_buy: bool, rng: Optional[random.Random] = None) -> Condition:
+        rng=rng or random
+        cond=self._create_base_condition(enabled_indicators,is_buy,rng)
+        if self.enabled_operators is not None:
+            pool=sorted(set(self.enabled_operators)&compatible(cond.indicator))
+            if not pool: raise ValueError(f'Sin operador compatible para {cond.indicator}')
+            weights=[(.1 if candidate=='EQUAL_TO' else (3. if candidate==cond.operator else 1.)) for candidate in pool]
+            op=rng.choices(pool,weights=weights,k=1)[0]
+            if cond.operator in ('PRICE_ABOVE','PRICE_BELOW') and op not in ('PRICE_ABOVE','PRICE_BELOW'):
+                cond.target_type='indicator';cond.target_indicator='PRICE';cond.target_params={}
+            cond.operator=op
+        return cond
+
+    def _create_base_condition(self, enabled_indicators: List[str], is_buy: bool, rng: Optional[random.Random] = None) -> Condition:
         rng = rng or random
         if not enabled_indicators:
             enabled_indicators = ["EMA", "RSI", "SUPERTREND", "MACD"]
@@ -379,17 +375,8 @@ class GeneticEngine:
         ind = rng.choice(enabled_indicators)
         ind_u = ind.upper()
 
-        # --- MACRO (FRED) context filter: simple threshold on aligned column ---
-        if ind_u.startswith("MACRO_"):
-            mmeta = MACRO_INDICATORS.get(ind_u) or MACRO_INDICATORS.get(f"MACRO_{ind_u[6:]}")
-            thr_cfg = (mmeta or {}).get("params", {}).get("threshold") or {"from": 0, "step": 1, "to": 100}
-            ov_thr = (self.param_ranges or {}).get(ind_u, {}).get("threshold")
-            if ov_thr and ("from" in ov_thr or "values" in ov_thr):
-                thr_cfg = ov_thr
-            thr = float(sample_from_range(thr_cfg, rng))
-            # Alternate direction so exploration can find "VIX < X" or "VIX > X" regimes
-            op = "LESS_THAN" if (is_buy and rng.random() < 0.6) or (not is_buy and rng.random() < 0.4) else "GREATER_THAN"
-            return Condition(ind_u, {}, op, "value", target_value=thr)
+        if ind_u.startswith('MACRO_'):
+            raise ValueError('Los indicadores FRED fueron retirados del motor')
 
         meta = ALL_28_INDICATORS.get(ind_u, {})
         pcfg = meta.get("params") or {}
@@ -562,7 +549,7 @@ class GeneticEngine:
         enabled_exit_modes: List[str],
         generation: int = 0,
         min_indicators: int = 1,
-        max_indicators: int = 3,
+        max_indicators: int = 2,
         sizing_mode: Optional[str] = None,
         risk_per_trade_pct: Optional[float] = None,
         fixed_lot: Optional[float] = None,
@@ -667,6 +654,9 @@ class GeneticEngine:
                 avg_mode_pool = [str(avg_cfg["mode"])]
             else:
                 avg_mode_pool = ["dca", "pyramiding", "both"]
+        elif "enabled" in avg_cfg:
+            _prob = 0.0
+            avg_mode_pool = ["dca", "pyramiding", "both"]
         else:
             _prob = 0.15
             avg_mode_pool = ["dca", "pyramiding", "both"]
@@ -694,6 +684,8 @@ class GeneticEngine:
         m_mult = martingale_mult if martingale_mult is not None else 1.5
 
         # Risk rules (from config with random variation when allowed)
+        if not prop_firm_filter:
+            risk_rules=dict(risk_rules,**{field:0. for field in ACCOUNT_LIMITS})
         max_daily_loss = risk_rules.get("max_daily_loss_pct", rng.choice([1.0, 2.0, 2.5, 3.0, 4.0, 5.0]))
         max_weekly_loss = risk_rules.get("max_weekly_loss_pct", rng.choice([2.0, 4.0, 6.0, 8.0, 10.0]))
         max_monthly_loss = risk_rules.get("max_monthly_loss_pct", rng.choice([5.0, 10.0, 15.0, 20.0]))
@@ -1044,6 +1036,7 @@ class GeneticEngine:
         if self.is_running:
             raise RuntimeError("Ya hay una exploración en curso.")
 
+        config=normalize_config(config)
         self.reset_state()
         self.last_config = copy.deepcopy(config)
         if resume_candidates:
@@ -1238,16 +1231,18 @@ class GeneticEngine:
             max_dd = m.get("max_drawdown_pct", 0.0)
             passes_prop_firm = (max_dl <= prop_daily_loss) and (max_dd <= prop_total_dd)
 
-        passes = (
-            m["win_rate_pct"] >= min_win_rate and
-            m["total_trades"] >= min_trades and
-            m["max_drawdown_pct"] <= max_drawdown and
-            m["total_return_usd"] >= min_net_profit_usd and
-            m["sharpe_ratio"] >= min_sharpe and
-            m["profit_factor"] >= min_profit_factor and
-            m["dsr"] >= min_dsr and
-            passes_prop_firm
-        )
+        checks={
+            'Win rate':m['win_rate_pct']>=min_win_rate,
+            'Operaciones':m['total_trades']>=min_trades,
+            'Drawdown':m['max_drawdown_pct']<=max_drawdown,
+            'Beneficio':m['total_return_usd']>=min_net_profit_usd,
+            'Sharpe':m['sharpe_ratio']>=min_sharpe,
+            'Profit factor':m['profit_factor']>=min_profit_factor,
+            'DSR':m['dsr']>=min_dsr,
+            'Prop Firm':passes_prop_firm,
+        }
+        m['filter_failures']=[name for name,passed in checks.items() if not passed]
+        passes=all(checks.values())
         return passes, dsr_val
 
     def _run_exploration_worker(
@@ -1294,6 +1289,7 @@ class GeneticEngine:
             self.date_range = (start_date, end_date)
 
             enabled_indicators = config.get("enabled_indicators", list(ALL_28_INDICATORS.keys()))
+            self.enabled_operators=config.get('enabled_operators')
             enabled_entry_types = config.get("enabled_entry_types", ALL_ENTRY_TYPES)
             enabled_exit_modes = config.get("enabled_exit_modes", ALL_EXIT_MODES)
 
@@ -1335,7 +1331,7 @@ class GeneticEngine:
 
             # --- Prop challenge simulation during exploration (TN: simulador de reto) ---
             challenge_cfg: Dict[str, Any] = {
-                "enabled": bool(config.get("prop_firm_filter", False)) or objective == "pass_rate",
+                "enabled": bool(config.get("prop_firm_filter", False)),
                 "capital": float(config.get("challenge_capital", 10000.0) or 10000.0),
                 "target_pct": float(config.get("prop_firm_target_pct", 8.0) or 8.0),
                 "daily_loss_pct": float(config.get("prop_firm_daily_loss_pct", 4.0) or 4.0),
@@ -1344,21 +1340,6 @@ class GeneticEngine:
                 "simulations": max(3, min(60, int(config.get("challenge_simulations", 10) or 10))),
                 "min_pass_rate": float(config.get("challenge_min_pass_rate", 0.0) or 0.0),
             }
-
-            # --- Macro FRED context filters ---
-            use_macro = bool(config.get("use_macro", False))
-            macro_series = config.get("macro_series") or []
-            if isinstance(macro_series, str):
-                macro_series = [macro_series]
-            macro_pool: List[str] = []
-            if use_macro and macro_series:
-                from backend.macro_manager import macro_manager, FRED_CATALOG
-                for sid in macro_series:
-                    key = f"MACRO_{str(sid).upper()}"
-                    if str(sid).upper() in FRED_CATALOG or key in MACRO_INDICATORS:
-                        macro_pool.append(key)
-                # condition pool = enabled technical + selected macro
-                enabled_indicators = list(enabled_indicators) + macro_pool
 
             infinite_mode = config.get("infinite_mode", True)
             generations_limit = int(config.get("generations", 0)) if not infinite_mode else 999999
@@ -1396,7 +1377,7 @@ class GeneticEngine:
 
             # Multi-indicator parameters
             min_inds = max(1, int(config.get("min_indicators_per_strategy", 1)))
-            max_inds = max(min_inds, min(4, int(config.get("max_indicators_per_strategy", 3))))
+            max_inds = max(min_inds, min(4, int(config.get("max_indicators_per_strategy", 2))))
 
             cfg_sizing = config.get("sizing_mode", "FIXED_RISK")
             cfg_risk_pct = float(config.get("risk_per_trade_pct", 1.0))
@@ -1419,14 +1400,15 @@ class GeneticEngine:
                 "max_daily_trades", "max_open_trades",
                 "reward_risk_ratio", "fixed_rr", "risk_multiplier",
             ):
-                if k in config and config[k] is not None and float(config[k]) > 0:
+                if k in config and config[k] is not None and (float(config[k]) > 0 or k in ACCOUNT_LIMITS
+                        or k in ('max_consecutive_wins','max_consecutive_losses')):
                     risk_rules[k] = config[k]
             # Gain caps & consec wins: 0 = free (engine may still pick 0 sometimes)
             for k in (
                 "max_daily_gain_pct", "max_weekly_gain_pct",
                 "max_monthly_gain_pct", "max_account_gain_pct",
             ):
-                if k in config and config[k] is not None and float(config[k]) > 0:
+                if k in config and config[k] is not None and (float(config[k]) > 0 or k in ACCOUNT_LIMITS):
                     risk_rules[k] = config[k]
             # Booleans: always pass explicit user choice
             for k in (
@@ -1444,7 +1426,6 @@ class GeneticEngine:
                      f"{'INFINITO CONTINUO' if infinite_mode else 'PROGRAMADO'} sobre {pair_label}...")
             self.log(f"Indicadores activos: {len(enabled_indicators)} | "
                      f"Combinando: {min_inds} a {max_inds} indicadores | Modelado: {modeling_mode}"
-                     + (f" | Macro FRED: {len(macro_pool)} series" if macro_pool else "")
                      + (" | Multi-TF COMBINADO (entrada TF bajo + confirmación TF superior)"
                         if mtf_mode == "combined" else ""))
             if parallel_workers > 1:
@@ -1459,12 +1440,6 @@ class GeneticEngine:
                 except Exception as de:
                     self.log(f"⚠ Sin datos para {key}: {de}")
                     continue
-                if use_macro and macro_pool:
-                    try:
-                        from backend.macro_manager import macro_manager as _mm
-                        d = _mm.attach_macro(d, [m[6:] for m in macro_pool])  # strip MACRO_
-                    except Exception as me:
-                        raise RuntimeError(f"Macro no disponible: {me}") from me
                 dfs_map[key] = d
 
             if not dfs_map:
@@ -1521,16 +1496,20 @@ class GeneticEngine:
                         strat.mtf_timeframe = min(_higher, key=lambda t: TF_MINUTES[t])
                 return strat
 
-            def handle_results(population: List[Strategy], results: List[BacktestResult], gen: int):
-                pop_size_local = len(population)
+            def handle_results(population: List[Strategy], results: List[BacktestResult], gen: int, offset=0, total=None):
+                pop_size_local = total or len(population)
                 evaluated: List[Strategy] = []
-                for ind_idx, (individual, res) in enumerate(zip(population, results)):
+                for local_idx, (individual, res) in enumerate(zip(population, results)):
+                    ind_idx=offset+local_idx
                     if self.should_stop:
                         break
                     m = res.metrics
                     all_tested_sharpes.append(m["sharpe_ratio"])
                     pnl_arr = np.array([t["pnl_usd"] for t in res.trades]) if res.trades else np.array([])
                     passes, _dsr = self._classify(m, cls_cfg, all_tested_sharpes, pnl_arr)
+                    if m['total_trades']==0:self.no_trade_count+=1
+                    for reason in m.get('filter_failures',[]):
+                        self.rejection_counts[reason]=self.rejection_counts.get(reason,0)+1
                     if challenge_cfg["enabled"] and (objective == "pass_rate" or passes):
                         try:
                             pf = validation_suite.evaluate_prop_firm(
@@ -1589,6 +1568,19 @@ class GeneticEngine:
                     evaluated.append(individual)
                 return evaluated
 
+            def evaluate_population(population,gen):
+                if parallel_workers>1:
+                    results=self._evaluate_batch(population,dfs_map,initial_deposit,bt_kwargs,parallel_workers)
+                    return handle_results(population,results,gen)
+                evaluated=[]
+                for index,individual in enumerate(population):
+                    if self.should_stop:break
+                    results=self._evaluate_batch([individual],dfs_map,initial_deposit,bt_kwargs,0)
+                    evaluated.extend(handle_results([individual],results,gen,offset=index,total=len(population)))
+                    if search_mode=='random':
+                        self.progress_pct=round(100*self.tested_count/max(num_combinations,1),1)
+                return evaluated
+
             max_candidates = config.get("max_candidates", None)
             if max_candidates is not None:
                 max_candidates = int(max_candidates) if int(max_candidates) > 0 else None
@@ -1602,9 +1594,8 @@ class GeneticEngine:
                 while not self.should_stop and done < num_combinations:
                     batch_n = min(pop_size, num_combinations - done)
                     population = [make_one(0) for _ in range(batch_n)]
-                    results = self._evaluate_batch(population, dfs_map, initial_deposit, bt_kwargs, parallel_workers)
-                    handle_results(population, results, gen=0)
-                    done += batch_n
+                    evaluated=evaluate_population(population,gen=0)
+                    done += len(evaluated)
                     batch_idx += 1
                     self.progress_pct = round(100.0 * done / max(num_combinations, 1), 1)
                     if batch_idx % 5 == 0 or done >= num_combinations:
@@ -1627,8 +1618,7 @@ class GeneticEngine:
                 self.current_generation = gen
                 self.log(f"--- Generación {gen} ({'Modo Infinito' if infinite_mode else f'{gen}/{generations_limit}'}) ---")
 
-                results = self._evaluate_batch(population, dfs_map, initial_deposit, bt_kwargs, parallel_workers)
-                evaluated_population = handle_results(population, results, gen)
+                evaluated_population = evaluate_population(population,gen)
 
                 if self.should_stop:
                     break
@@ -1686,6 +1676,8 @@ class GeneticEngine:
                 "progress_pct": self.progress_pct,
                 "total_combinations": self.total_combinations,
                 "tested_count": self.tested_count,
+                "no_trade_count": self.no_trade_count,
+                "rejection_counts": dict(self.rejection_counts),
                 "discarded_count": self.discarded_count,
                 "accepted_count": self.accepted_count,
                 "candidates_count": len(self.candidates_passed),

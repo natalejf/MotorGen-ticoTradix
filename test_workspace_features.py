@@ -27,7 +27,7 @@ def test_publication_alignment_intraday_and_no_future_fill(tmp_path):
 def test_catalog_and_defaults():
     assert len(FRED_CATALOG) == 29
     assert len({x['category'] for x in FRED_CATALOG.values()}) == 14
-    assert set(MACRO_INDICATORS) == {f'MACRO_{s}' for s in FRED_CATALOG}
+    assert MACRO_INDICATORS == {}  # Retirados del motor; utilidades legacy conservadas.
     cfg = ExplorationConfigRequest()
     assert (cfg.min_sharpe, cfg.max_drawdown, cfg.min_win_rate, cfg.min_dsr) == (1.2,15.,50.,.3)
 
@@ -77,9 +77,8 @@ def test_portfolio_risk_is_reproducible_and_handles_constant_component():
     assert risk['terminal_equity']['p5'] <= risk['terminal_equity']['p50'] <= risk['terminal_equity']['p95']
 
 
-def test_macro_exploration_and_averaging_smoke(monkeypatch):
+def test_technical_exploration_and_averaging_smoke(monkeypatch):
     from backend.data_manager import data_manager
-    from backend.macro_manager import macro_manager
     from backend.genetic_engine import GeneticEngine
     from backend.strategy import Strategy, Condition
     from backend.backtester import backtester
@@ -87,11 +86,9 @@ def test_macro_exploration_and_averaging_smoke(monkeypatch):
     prices=1.1 + np.arange(240)*.00005 + .001*np.sin(np.arange(240)/3)
     bars=pd.DataFrame({'Open':prices,'Close':prices+.00002,'High':prices+.0003,'Low':prices-.0003,'Volume':1000},index=index)
     monkeypatch.setattr(data_manager,'load_data',lambda *args,**kwargs:bars.copy())
-    monkeypatch.setattr(macro_manager,'load_series',lambda sid:pd.Series([20.],index=pd.to_datetime(['2023-12-01']),name=sid))
     engine=GeneticEngine()
     engine.start_exploration({'search_mode':'random','num_combinations':4,'population_size':4,
-                             'infinite_mode':False,'enabled_indicators':[],
-                             'use_macro':True,'macro_series':['VIXCLS'],
+                             'infinite_mode':False,'enabled_indicators':['RSI'],
                              'validate_during_exploration':False})
     engine._thread.join(timeout=15)
     assert not engine.is_running

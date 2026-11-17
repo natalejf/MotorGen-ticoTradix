@@ -1,0 +1,28 @@
+         1931674 function calls (1921488 primitive calls) in 6.376 seconds
+
+   Ordered by: cumulative time
+   List reduced from 819 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       36    3.185    0.088    6.351    0.176 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\backtester.py:332(run_backtest)
+       36    0.005    0.000    1.477    0.041 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\backtester.py:270(generate_signal_arrays)
+      134    0.002    0.000    1.397    0.010 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\backtester.py:67(evaluate_condition)
+  128/114    0.007    0.000    1.111    0.010 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\backtester.py:83(_evaluate_condition_raw)
+    86/80    0.001    0.000    0.879    0.011 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\indicators.py:31(cached)
+    50011    0.660    0.000    0.660    0.000 {built-in method builtins.round}
+      220    0.037    0.000    0.453    0.002 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\indicators.py:20(df_fingerprint)
+  440/220    0.009    0.000    0.405    0.002 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\util\hashing.py:83(hash_pandas_object)
+   787051    0.351    0.000    0.351    0.000 {built-in method builtins.max}
+      200    0.001    0.000    0.347    0.002 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\window\rolling.py:562(_apply)
+      200    0.001    0.000    0.344    0.002 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\window\rolling.py:460(_apply_columnwise)
+      200    0.003    0.000    0.341    0.002 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\window\rolling.py:440(_apply_series)
+     1454    0.040    0.000    0.337    0.000 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\series.py:392(__init__)
+      220    0.039    0.000    0.326    0.001 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\util\hashing.py:47(combine_hash_arrays)
+      200    0.003    0.000    0.295    0.001 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\window\rolling.py:595(homogeneous_func)
+      200    0.036    0.000    0.290    0.001 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\window\rolling.py:601(calc)
+      134    0.002    0.000    0.283    0.002 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\backtester.py:55(_cond_key)
+     1540    0.002    0.000    0.282    0.000 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\util\hashing.py:173(<genexpr>)
+   144036    0.267    0.000    0.268    0.000 C:\Users\yo\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\arrays\datetimes.py:647(__iter__)
+       55    0.000    0.000    0.253    0.005 C:\Users\yo\OneDrive\Escritorio\Motor Genetico TradingNote\backend\indicators.py:194(atr)
+
+

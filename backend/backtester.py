@@ -80,7 +80,7 @@ class Backtester:
     def clear_signal_cache(self):
         self._sig_cache.clear()
 
-    def _evaluate_condition_raw(self, df: pd.DataFrame, cond: Condition, is_buy: bool) -> np.ndarray:
+    def _evaluate_condition_raw(self, df: pd.DataFrame, cond: Condition, is_buy: bool, return_indicator=False) -> np.ndarray:
         ind_name = cond.indicator.upper()
         p = cond.params
         c_series = df["Close"]
@@ -99,7 +99,7 @@ class Backtester:
         elif ind_name == "WMA":
             s1 = indicator_engine.wma(c_series, p.get("period", 20))
         elif ind_name == "KAMA":
-            s1 = indicator_engine.kama(c_series, p.get("period", 10))
+            s1 = indicator_engine.kama(c_series, p.get("period", 10),p.get("fast",2),p.get("slow",30))
         elif ind_name == "RSI":
             s1 = indicator_engine.rsi(c_series, p.get("period", 14))
         elif ind_name == "MACD":
@@ -147,7 +147,7 @@ class Backtester:
             up, down, osc = indicator_engine.aroon(df, p.get("period", 14))
             s1 = osc
         elif ind_name == "ICHIMOKU":
-            ichi = indicator_engine.ichimoku(df)
+            ichi = indicator_engine.ichimoku(df,p.get("tenkan_p",9),p.get("kijun_p",26),p.get("span_b_p",52))
             sub = p.get("sub", "kijun")
             s1 = c_series - ichi.get(sub, ichi["kijun"])
         elif ind_name == "HIGHEST":
@@ -166,8 +166,8 @@ class Backtester:
             if col in df.columns:
                 s1 = df[col]
             else:
-                # column missing -> constant 0 so condition never fires (no fake signals)
-                s1 = pd.Series(np.zeros(len(df)), index=df.index)
+                # Missing macro is unavailable information, never a synthetic zero.
+                s1 = pd.Series(np.nan, index=df.index)
         elif ind_name == "VOLUME_SMA":
             s1 = indicator_engine.volume_sma(df, p.get("period", 20))
         elif ind_name == "OBV":
@@ -181,7 +181,10 @@ class Backtester:
         elif ind_name == "PRICE":
             s1 = c_series
         else:
-            s1 = c_series
+            raise ValueError(f'Indicador no admitido: {ind_name}')
+
+        if return_indicator:
+            return s1
 
         # 2. Resolve Target / Secondary
         if cond.target_type == "value":
@@ -199,7 +202,8 @@ class Backtester:
             elif t_name == "VWAP":
                 s2 = indicator_engine.vwap(df)
             else:
-                s2 = indicator_engine.ema(c_series, 200)
+                target=Condition(t_name,tp,"GREATER_THAN")
+                s2=self._evaluate_condition_raw(df,target,is_buy,return_indicator=True)
             is_scalar = False
 
         v1 = s1.values if isinstance(s1, pd.Series) else np.asarray(s1)
@@ -258,7 +262,7 @@ class Backtester:
         elif op == "BEARISH":
             return v1 < 0
         else:
-            return np.ones(len(df), dtype=bool)
+            raise ValueError(f'Operador no admitido: {op}')
 
     # ------------------------------------------------------------------
     # SIGNAL ARRAYS (sessions, direction, time rules)
@@ -379,7 +383,7 @@ class Backtester:
         highs = df["High"].values
         lows = df["Low"].values
         closes = df["Close"].values
-        times = df.index
+        times = list(df.index)  # Box timestamps once, rather than on every simulation bar.
         n = len(df)
 
         # Precompute structural swing levels (rolling min/max of lows/highs)

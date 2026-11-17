@@ -1,0 +1,3805 @@
+{
+  "indicators": 32,
+  "checks": 200,
+  "passed": 200,
+  "failed": 0,
+  "results": [
+    {
+      "indicator": "EMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 2,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 324,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 35,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 221,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "EMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 138,
+      "constant": false,
+      "condition": {
+        "indicator": "EMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "EMA",
+        "target_params": {
+          "period": 170
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 2,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 21,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 299,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 41,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 217,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "SMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 142,
+      "constant": false,
+      "condition": {
+        "indicator": "SMA",
+        "params": {
+          "period": 20
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "SMA",
+        "target_params": {
+          "period": 180
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 6,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 6,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 12,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 4,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 213,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 146,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 184,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "DEMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 175,
+      "constant": false,
+      "condition": {
+        "indicator": "DEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "DEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 14,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 13,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 27,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 5,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 163,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 196,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 178,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "TEMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 181,
+      "constant": false,
+      "condition": {
+        "indicator": "TEMA",
+        "params": {
+          "period": 14
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "TEMA",
+        "target_params": {
+          "period": 89
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 16,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 15,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 31,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 5,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 161,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 153,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 169,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "HMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 181,
+      "constant": false,
+      "condition": {
+        "indicator": "HMA",
+        "params": {
+          "period": 9
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "HMA",
+        "target_params": {
+          "period": 42
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 6,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 185,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 86,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 187,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "WMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 159,
+      "constant": false,
+      "condition": {
+        "indicator": "WMA",
+        "params": {
+          "period": 15
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "WMA",
+        "target_params": {
+          "period": 90
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 2,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 11,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 316,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 34,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 237,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "KAMA",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 122,
+      "constant": false,
+      "condition": {
+        "indicator": "KAMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "KAMA",
+        "target_params": {
+          "period": 50
+        }
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "BEARISH",
+      "status": "PASS",
+      "signals": 42,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "BEARISH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "BULLISH",
+      "status": "PASS",
+      "signals": 318,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "BULLISH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 2,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 313,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "SUPERTREND",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 42,
+      "constant": false,
+      "condition": {
+        "indicator": "SUPERTREND",
+        "params": {
+          "period": 7,
+          "multiplier": 4.0
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RSI",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 27,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 7
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RSI",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 27,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 7
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RSI",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 54,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 7
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RSI",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 7
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RSI",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 300,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 7
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RSI",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 60,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 7
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STOCHASTIC",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 26,
+      "constant": false,
+      "condition": {
+        "indicator": "STOCHASTIC",
+        "params": {
+          "k_period": 9,
+          "d_period": 5,
+          "sub": "k"
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 25.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STOCHASTIC",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 26,
+      "constant": false,
+      "condition": {
+        "indicator": "STOCHASTIC",
+        "params": {
+          "k_period": 9,
+          "d_period": 5,
+          "sub": "k"
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 25.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STOCHASTIC",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 52,
+      "constant": false,
+      "condition": {
+        "indicator": "STOCHASTIC",
+        "params": {
+          "k_period": 9,
+          "d_period": 5,
+          "sub": "k"
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 25.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STOCHASTIC",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "STOCHASTIC",
+        "params": {
+          "k_period": 9,
+          "d_period": 5,
+          "sub": "k"
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 25.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STOCHASTIC",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 312,
+      "constant": false,
+      "condition": {
+        "indicator": "STOCHASTIC",
+        "params": {
+          "k_period": 9,
+          "d_period": 5,
+          "sub": "k"
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 25.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STOCHASTIC",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 48,
+      "constant": false,
+      "condition": {
+        "indicator": "STOCHASTIC",
+        "params": {
+          "k_period": 9,
+          "d_period": 5,
+          "sub": "k"
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 25.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MACD",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 20,
+      "constant": false,
+      "condition": {
+        "indicator": "MACD",
+        "params": {
+          "fast": 8,
+          "slow": 30,
+          "signal": 13,
+          "sub": "hist"
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MACD",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 19,
+      "constant": false,
+      "condition": {
+        "indicator": "MACD",
+        "params": {
+          "fast": 8,
+          "slow": 30,
+          "signal": 13,
+          "sub": "hist"
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MACD",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 39,
+      "constant": false,
+      "condition": {
+        "indicator": "MACD",
+        "params": {
+          "fast": 8,
+          "slow": 30,
+          "signal": 13,
+          "sub": "hist"
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MACD",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "MACD",
+        "params": {
+          "fast": 8,
+          "slow": 30,
+          "signal": 13,
+          "sub": "hist"
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MACD",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 187,
+      "constant": false,
+      "condition": {
+        "indicator": "MACD",
+        "params": {
+          "fast": 8,
+          "slow": 30,
+          "signal": 13,
+          "sub": "hist"
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MACD",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 172,
+      "constant": false,
+      "condition": {
+        "indicator": "MACD",
+        "params": {
+          "fast": 8,
+          "slow": 30,
+          "signal": 13,
+          "sub": "hist"
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CCI",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "CCI",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": -200.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CCI",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "CCI",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": -200.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CCI",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 6,
+      "constant": false,
+      "condition": {
+        "indicator": "CCI",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": -200.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CCI",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "CCI",
+        "params": {
+          "period": 14
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": -200.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CCI",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 357,
+      "constant": false,
+      "condition": {
+        "indicator": "CCI",
+        "params": {
+          "period": 14
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": -200.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CCI",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "CCI",
+        "params": {
+          "period": 14
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": -200.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ROC",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 32,
+      "constant": false,
+      "condition": {
+        "indicator": "ROC",
+        "params": {
+          "period": 8
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ROC",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 32,
+      "constant": false,
+      "condition": {
+        "indicator": "ROC",
+        "params": {
+          "period": 8
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ROC",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 64,
+      "constant": false,
+      "condition": {
+        "indicator": "ROC",
+        "params": {
+          "period": 8
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ROC",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ROC",
+        "params": {
+          "period": 8
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ROC",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 194,
+      "constant": false,
+      "condition": {
+        "indicator": "ROC",
+        "params": {
+          "period": 8
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ROC",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 158,
+      "constant": false,
+      "condition": {
+        "indicator": "ROC",
+        "params": {
+          "period": 8
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "WILLIAMS_R",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 34,
+      "constant": false,
+      "condition": {
+        "indicator": "WILLIAMS_R",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": -65.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "WILLIAMS_R",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 34,
+      "constant": false,
+      "condition": {
+        "indicator": "WILLIAMS_R",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": -65.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "WILLIAMS_R",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 68,
+      "constant": false,
+      "condition": {
+        "indicator": "WILLIAMS_R",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": -65.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "WILLIAMS_R",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "WILLIAMS_R",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": -65.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "WILLIAMS_R",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 256,
+      "constant": false,
+      "condition": {
+        "indicator": "WILLIAMS_R",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": -65.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "WILLIAMS_R",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 104,
+      "constant": false,
+      "condition": {
+        "indicator": "WILLIAMS_R",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": -65.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "BOLLINGER",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "BOLLINGER",
+        "params": {
+          "period": 10,
+          "std_dev": 3.0,
+          "sub": "pct_b"
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.15,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "BOLLINGER",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "BOLLINGER",
+        "params": {
+          "period": 10,
+          "std_dev": 3.0,
+          "sub": "pct_b"
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.15,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "BOLLINGER",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 6,
+      "constant": false,
+      "condition": {
+        "indicator": "BOLLINGER",
+        "params": {
+          "period": 10,
+          "std_dev": 3.0,
+          "sub": "pct_b"
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.15,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "BOLLINGER",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "BOLLINGER",
+        "params": {
+          "period": 10,
+          "std_dev": 3.0,
+          "sub": "pct_b"
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.15,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "BOLLINGER",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 357,
+      "constant": false,
+      "condition": {
+        "indicator": "BOLLINGER",
+        "params": {
+          "period": 10,
+          "std_dev": 3.0,
+          "sub": "pct_b"
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.15,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "BOLLINGER",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 3,
+      "constant": false,
+      "condition": {
+        "indicator": "BOLLINGER",
+        "params": {
+          "period": 10,
+          "std_dev": 3.0,
+          "sub": "pct_b"
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.15,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ATR",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ATR",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ATR",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ATR",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ATR",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ATR",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ATR",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ATR",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ATR",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 351,
+      "constant": false,
+      "condition": {
+        "indicator": "ATR",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ATR",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ATR",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "KELTNER",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 44,
+      "constant": false,
+      "condition": {
+        "indicator": "KELTNER",
+        "params": {
+          "period": 10,
+          "multiplier": 3.0
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "KELTNER",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 43,
+      "constant": false,
+      "condition": {
+        "indicator": "KELTNER",
+        "params": {
+          "period": 10,
+          "multiplier": 3.0
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "KELTNER",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 87,
+      "constant": false,
+      "condition": {
+        "indicator": "KELTNER",
+        "params": {
+          "period": 10,
+          "multiplier": 3.0
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "KELTNER",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "KELTNER",
+        "params": {
+          "period": 10,
+          "multiplier": 3.0
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "KELTNER",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 200,
+      "constant": false,
+      "condition": {
+        "indicator": "KELTNER",
+        "params": {
+          "period": 10,
+          "multiplier": 3.0
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "KELTNER",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 159,
+      "constant": false,
+      "condition": {
+        "indicator": "KELTNER",
+        "params": {
+          "period": 10,
+          "multiplier": 3.0
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "DONCHIAN",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 36,
+      "constant": false,
+      "condition": {
+        "indicator": "DONCHIAN",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "DONCHIAN",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 36,
+      "constant": false,
+      "condition": {
+        "indicator": "DONCHIAN",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "DONCHIAN",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 72,
+      "constant": false,
+      "condition": {
+        "indicator": "DONCHIAN",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "DONCHIAN",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "DONCHIAN",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "DONCHIAN",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 176,
+      "constant": false,
+      "condition": {
+        "indicator": "DONCHIAN",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "DONCHIAN",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 175,
+      "constant": false,
+      "condition": {
+        "indicator": "DONCHIAN",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STDDEV",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 33,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 50.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STDDEV",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 32,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 50.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STDDEV",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 65,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 14
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 50.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STDDEV",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 13,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 14
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 50.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STDDEV",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 223,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 14
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 50.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "STDDEV",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 124,
+      "constant": false,
+      "condition": {
+        "indicator": "RSI",
+        "params": {
+          "period": 14
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 50.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VOLUME_SMA",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "VOLUME_SMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VOLUME_SMA",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "VOLUME_SMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VOLUME_SMA",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "VOLUME_SMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VOLUME_SMA",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "VOLUME_SMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VOLUME_SMA",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 360,
+      "constant": true,
+      "condition": {
+        "indicator": "VOLUME_SMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VOLUME_SMA",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "VOLUME_SMA",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "OBV",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 7,
+      "constant": false,
+      "condition": {
+        "indicator": "OBV",
+        "params": {
+          "signal": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "OBV",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 6,
+      "constant": false,
+      "condition": {
+        "indicator": "OBV",
+        "params": {
+          "signal": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "OBV",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 13,
+      "constant": false,
+      "condition": {
+        "indicator": "OBV",
+        "params": {
+          "signal": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "OBV",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "OBV",
+        "params": {
+          "signal": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "OBV",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 343,
+      "constant": false,
+      "condition": {
+        "indicator": "OBV",
+        "params": {
+          "signal": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "OBV",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 16,
+      "constant": false,
+      "condition": {
+        "indicator": "OBV",
+        "params": {
+          "signal": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CMF",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "CMF",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CMF",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "CMF",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CMF",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "CMF",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CMF",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 9,
+      "constant": false,
+      "condition": {
+        "indicator": "CMF",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CMF",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "CMF",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "CMF",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 351,
+      "constant": false,
+      "condition": {
+        "indicator": "CMF",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MFI",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 19,
+      "constant": false,
+      "condition": {
+        "indicator": "MFI",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MFI",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 19,
+      "constant": false,
+      "condition": {
+        "indicator": "MFI",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MFI",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 38,
+      "constant": false,
+      "condition": {
+        "indicator": "MFI",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MFI",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "MFI",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MFI",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 280,
+      "constant": false,
+      "condition": {
+        "indicator": "MFI",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "MFI",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 80,
+      "constant": false,
+      "condition": {
+        "indicator": "MFI",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 40.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "HIGHEST",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 7,
+      "constant": false,
+      "condition": {
+        "indicator": "HIGHEST",
+        "params": {
+          "period": 10
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "HIGHEST",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 353,
+      "constant": false,
+      "condition": {
+        "indicator": "HIGHEST",
+        "params": {
+          "period": 10
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "LOWEST",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 353,
+      "constant": false,
+      "condition": {
+        "indicator": "LOWEST",
+        "params": {
+          "period": 10
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "LOWEST",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 7,
+      "constant": false,
+      "condition": {
+        "indicator": "LOWEST",
+        "params": {
+          "period": 10
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 92,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 92,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 184,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 4,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 182,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 177,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "LESS_THAN",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 177,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "PRICE_ABOVE",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PIVOT_POINTS",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 182,
+      "constant": false,
+      "condition": {
+        "indicator": "PIVOT_POINTS",
+        "params": {
+          "sub": "pp"
+        },
+        "operator": "PRICE_BELOW",
+        "target_type": "indicator",
+        "target_value": 0.0,
+        "target_indicator": "PRICE",
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VWAP",
+      "operator": "PRICE_ABOVE",
+      "status": "PASS",
+      "signals": 315,
+      "constant": false,
+      "condition": {
+        "indicator": "VWAP",
+        "params": {},
+        "operator": "PRICE_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "VWAP",
+      "operator": "PRICE_BELOW",
+      "status": "PASS",
+      "signals": 45,
+      "constant": false,
+      "condition": {
+        "indicator": "VWAP",
+        "params": {},
+        "operator": "PRICE_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RCI",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 26,
+      "constant": false,
+      "condition": {
+        "indicator": "RCI",
+        "params": {
+          "period": 7
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": -60.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RCI",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 27,
+      "constant": false,
+      "condition": {
+        "indicator": "RCI",
+        "params": {
+          "period": 7
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": -60.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RCI",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 53,
+      "constant": false,
+      "condition": {
+        "indicator": "RCI",
+        "params": {
+          "period": 7
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": -60.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RCI",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "RCI",
+        "params": {
+          "period": 7
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": -60.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RCI",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 247,
+      "constant": false,
+      "condition": {
+        "indicator": "RCI",
+        "params": {
+          "period": 7
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": -60.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "RCI",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 113,
+      "constant": false,
+      "condition": {
+        "indicator": "RCI",
+        "params": {
+          "period": 7
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": -60.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ADX",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "ADX",
+        "params": {
+          "period": 10,
+          "sub": "adx"
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 35.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ADX",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 1,
+      "constant": false,
+      "condition": {
+        "indicator": "ADX",
+        "params": {
+          "period": 10,
+          "sub": "adx"
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 35.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ADX",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 2,
+      "constant": false,
+      "condition": {
+        "indicator": "ADX",
+        "params": {
+          "period": 10,
+          "sub": "adx"
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 35.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ADX",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ADX",
+        "params": {
+          "period": 10,
+          "sub": "adx"
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 35.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ADX",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 11,
+      "constant": false,
+      "condition": {
+        "indicator": "ADX",
+        "params": {
+          "period": 10,
+          "sub": "adx"
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 35.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ADX",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 349,
+      "constant": false,
+      "condition": {
+        "indicator": "ADX",
+        "params": {
+          "period": 10,
+          "sub": "adx"
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 35.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "BEARISH",
+      "status": "PASS",
+      "signals": 152,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "BEARISH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "BULLISH",
+      "status": "PASS",
+      "signals": 208,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "BULLISH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 13,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 13,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 26,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 208,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "PSAR",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 152,
+      "constant": false,
+      "condition": {
+        "indicator": "PSAR",
+        "params": {
+          "step": 0.01,
+          "max_step": 0.3
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ICHIMOKU",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 23,
+      "constant": false,
+      "condition": {
+        "indicator": "ICHIMOKU",
+        "params": {
+          "tenkan_p": 7,
+          "kijun_p": 34,
+          "span_b_p": 48,
+          "sub": "kijun"
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ICHIMOKU",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 23,
+      "constant": false,
+      "condition": {
+        "indicator": "ICHIMOKU",
+        "params": {
+          "tenkan_p": 7,
+          "kijun_p": 34,
+          "span_b_p": 48,
+          "sub": "kijun"
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ICHIMOKU",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 46,
+      "constant": false,
+      "condition": {
+        "indicator": "ICHIMOKU",
+        "params": {
+          "tenkan_p": 7,
+          "kijun_p": 34,
+          "span_b_p": 48,
+          "sub": "kijun"
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ICHIMOKU",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 0,
+      "constant": true,
+      "condition": {
+        "indicator": "ICHIMOKU",
+        "params": {
+          "tenkan_p": 7,
+          "kijun_p": 34,
+          "span_b_p": 48,
+          "sub": "kijun"
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ICHIMOKU",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 195,
+      "constant": false,
+      "condition": {
+        "indicator": "ICHIMOKU",
+        "params": {
+          "tenkan_p": 7,
+          "kijun_p": 34,
+          "span_b_p": 48,
+          "sub": "kijun"
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "ICHIMOKU",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 132,
+      "constant": false,
+      "condition": {
+        "indicator": "ICHIMOKU",
+        "params": {
+          "tenkan_p": 7,
+          "kijun_p": 34,
+          "span_b_p": 48,
+          "sub": "kijun"
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "AROON",
+      "operator": "CROSS_ABOVE",
+      "status": "PASS",
+      "signals": 18,
+      "constant": false,
+      "condition": {
+        "indicator": "AROON",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_ABOVE",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "AROON",
+      "operator": "CROSS_BELOW",
+      "status": "PASS",
+      "signals": 17,
+      "constant": false,
+      "condition": {
+        "indicator": "AROON",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BELOW",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "AROON",
+      "operator": "CROSS_BOTH",
+      "status": "PASS",
+      "signals": 35,
+      "constant": false,
+      "condition": {
+        "indicator": "AROON",
+        "params": {
+          "period": 10
+        },
+        "operator": "CROSS_BOTH",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "AROON",
+      "operator": "EQUAL_TO",
+      "status": "PASS",
+      "signals": 10,
+      "constant": false,
+      "condition": {
+        "indicator": "AROON",
+        "params": {
+          "period": 10
+        },
+        "operator": "EQUAL_TO",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "AROON",
+      "operator": "GREATER_THAN",
+      "status": "PASS",
+      "signals": 193,
+      "constant": false,
+      "condition": {
+        "indicator": "AROON",
+        "params": {
+          "period": 10
+        },
+        "operator": "GREATER_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    },
+    {
+      "indicator": "AROON",
+      "operator": "LESS_THAN",
+      "status": "PASS",
+      "signals": 157,
+      "constant": false,
+      "condition": {
+        "indicator": "AROON",
+        "params": {
+          "period": 10
+        },
+        "operator": "LESS_THAN",
+        "target_type": "value",
+        "target_value": 0.0,
+        "target_indicator": null,
+        "target_params": {}
+      }
+    }
+  ],
+  "meaning": "Valida cálculo, evaluación y estabilidad al añadir velas futuras; no rentabilidad ni equivalencia numérica con MT5/TradingNote."
+}

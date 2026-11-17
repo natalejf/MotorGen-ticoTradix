@@ -5,6 +5,7 @@ Includes content-fingerprint caching for rapid genetic exploration.
 """
 
 import numpy as np
+import hashlib
 import pandas as pd
 from typing import Dict, Tuple, Any, Callable
 
@@ -21,8 +22,8 @@ class IndicatorEngine:
         n = len(df)
         if n == 0:
             return (0, 0.0, 0.0, 0.0)
-        c = df["Close"]
-        return (n, float(c.iloc[0]), float(c.iloc[-1]), float(c.iloc[n // 2]))
+        digest=hashlib.blake2b(pd.util.hash_pandas_object(df,index=True).values.tobytes(),digest_size=16).hexdigest()
+        return (n,tuple(df.columns),digest)
 
     def get_cache_key(self, df: pd.DataFrame, name: str, params: tuple) -> Tuple:
         return (self.df_fingerprint(df), name, params)
@@ -57,8 +58,14 @@ class IndicatorEngine:
         return series.rolling(window=period, min_periods=1).mean()
 
     def wma(self, series: pd.Series, period: int = 20) -> pd.Series:
-        weights = np.arange(1, period + 1)
-        return series.rolling(period).apply(lambda prices: np.dot(prices, weights) / weights.sum(), raw=True)
+        if period<1: raise ValueError('El período debe ser positivo')
+        values=series.to_numpy(dtype=float)
+        result=np.full(len(values),np.nan)
+        if len(values)>=period:
+            weights=np.arange(1,period+1,dtype=float)
+            values=np.where(np.isfinite(values),values,np.nan)
+            result[period-1:]=np.convolve(values,weights[::-1],mode='valid')/weights.sum()
+        return pd.Series(result,index=series.index)
 
     def dema(self, series: pd.Series, period: int = 21) -> pd.Series:
         e1 = self.ema(series, period)
@@ -193,7 +200,7 @@ class IndicatorEngine:
             tr2 = (high - close).abs()
             tr3 = (low - close).abs()
             tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-            return tr.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean().bfill()
+            return tr.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
         return self.cached(df, "atr", (period,), _compute)
 
     def atr_smoothed(self, df: pd.DataFrame, period: int = 14, smooth: int = 50) -> pd.Series:
@@ -287,8 +294,8 @@ class IndicatorEngine:
         r3 = prev_h + 2 * (pp - prev_l)
         s3 = prev_l - 2 * (prev_h - pp)
         return {
-            "pp": pp.bfill(), "r1": r1.bfill(), "s1": s1.bfill(),
-            "r2": r2.bfill(), "s2": s2.bfill(), "r3": r3.bfill(), "s3": s3.bfill()
+            "pp": pp, "r1": r1, "s1": s1,
+            "r2": r2, "s2": s2, "r3": r3, "s3": s3
         }
 
     def vwap(self, df: pd.DataFrame) -> pd.Series:
@@ -296,23 +303,31 @@ class IndicatorEngine:
         tp = (df["High"] + df["Low"] + df["Close"]) / 3.0
         cum_vol = df["Volume"].replace(0, np.nan).fillna(1.0).cumsum()
         cum_pv = (tp * df["Volume"].replace(0, np.nan).fillna(1.0)).cumsum()
-        return (cum_pv / cum_vol).bfill()
+        return cum_pv / cum_vol
 
     # ==========================================
     # 6. CYCLE & ADVANCED STRUCTURAL
     # ==========================================
 
     def rci(self, series: pd.Series, period: int = 9) -> pd.Series:
-        def _calc_spearman(chunk):
-            n = len(chunk)
-            order = np.argsort(-chunk)
-            price_ranks = np.empty_like(order)
-            price_ranks[order] = np.arange(1, n + 1)
-            time_ranks = np.arange(1, n + 1)
-            d = np.sum((price_ranks - time_ranks) ** 2)
-            return (1.0 - (6.0 * d) / (n * (n**2 - 1))) * 100.0
-
-        return series.rolling(period).apply(_calc_spearman, raw=True).fillna(0.0)
+        if period<1: raise ValueError('El período debe ser positivo')
+        values=series.to_numpy(dtype=float)
+        result=np.zeros(len(values))
+        if period>1 and len(values)>=period:
+            windows=np.lib.stride_tricks.sliding_window_view(values,period)
+            # Bound temporary ranking arrays even for large imported periods.
+            chunk_size=max(1,250000//period)
+            time_ranks=np.arange(1,period+1)
+            for start in range(0,len(windows),chunk_size):
+                chunk=windows[start:start+chunk_size]
+                order=np.argsort(-chunk,axis=1)
+                ranks=np.empty_like(order)
+                np.put_along_axis(ranks,order,np.broadcast_to(time_ranks,order.shape),axis=1)
+                distance=np.sum((ranks-time_ranks)**2,axis=1)
+                scores=(1.-6.*distance/(period*(period**2-1)))*100.
+                scores[~np.isfinite(chunk).all(axis=1)]=0.
+                result[period-1+start:period-1+start+len(chunk)]=scores
+        return pd.Series(result,index=series.index)
 
     def adx(self, df: pd.DataFrame, period: int = 14) -> Tuple[pd.Series, pd.Series, pd.Series]:
         def _compute():
@@ -337,10 +352,10 @@ class IndicatorEngine:
             span_a = ((tenkan + kijun) / 2.0).shift(kijun_p)
             span_b = ((df["High"].rolling(span_b_p).max() + df["Low"].rolling(span_b_p).min()) / 2.0).shift(kijun_p)
             return {
-                "tenkan": tenkan.bfill(),
-                "kijun": kijun.bfill(),
-                "span_a": span_a.bfill(),
-                "span_b": span_b.bfill()
+                "tenkan": tenkan,
+                "kijun": kijun,
+                "span_a": span_a,
+                "span_b": span_b
             }
         return self.cached(df, "ichimoku", (tenkan_p, kijun_p, span_b_p), _compute)
 

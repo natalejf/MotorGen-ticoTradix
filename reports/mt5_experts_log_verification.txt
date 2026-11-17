@@ -1,0 +1,11 @@
+ON	0	09:54:43.469	Stratix_Connector (EURUSDm,H4)	Stratix EA iniciado. Esperando instrucciones locales.
+NG	0	10:42:14.659	Stratix_Connector (EURUSDm,H4)	Stratix EA v1.02 iniciado. Esperando instrucciones locales.
+FE	0	10:42:14.808	Stratix_Connector (EURUSDm,H4)	Stratix | CONECTADO al servidor local. Cuenta demo verificada: 480530845
+ID	0	10:42:14.809	Stratix_Connector (EURUSDm,H4)	Stratix | Estado de asignaciones: STX · Demo realista · 3 lotes: PAUSED
+CF	0	10:42:19.348	Stratix_Connector (EURUSDm,H4)	Stratix | Estado solicitado: ACTIVE
+GQ	0	10:45:45.725	Stratix_Connector (EURUSDm,H4)	Stratix | DESCONECTADO | HTTP=1003 error=4006. Revisar servidor local, clave y WebRequest.
+NP	0	10:45:49.821	Stratix_Connector (EURUSDm,H4)	Stratix | DESCONECTADO | HTTP=1001 error=4006. Revisar servidor local, clave y WebRequest.
+OP	0	10:45:59.722	Stratix_Connector (EURUSDm,H4)	Stratix | CONECTADO al servidor local. Cuenta demo verificada: 480530845
+NP	0	10:46:00.275	Stratix_Connector (EURUSDm,H4)	Stratix | Conexión MT5 iniciada (PID 9864); esperando verificación de cuenta
+HS	0	10:46:57.768	Stratix_Connector (EURUSDm,H4)	Stratix | DESCONECTADO | HTTP=1003 error=4006. Revisar servidor local, clave y WebRequest.
+QF	0	10:46:57.768	Stratix_Connector (EURUSDm,H4)	Stratix | EA detenido. Motivo=9. SL/TP del broker permanecen; gestion dinamica requiere conexion.

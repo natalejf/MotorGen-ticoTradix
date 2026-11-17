@@ -33,7 +33,23 @@ def connect():
         CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, created REAL, account TEXT, deployment TEXT, message TEXT);
         CREATE TABLE IF NOT EXISTS actions(id TEXT PRIMARY KEY, state TEXT, body TEXT, updated REAL);
         CREATE TABLE IF NOT EXISTS leases(account TEXT PRIMARY KEY, owner TEXT, expires REAL);
+        CREATE TABLE IF NOT EXISTS ea_queue(id TEXT PRIMARY KEY, account TEXT, state TEXT, created REAL);
+        CREATE INDEX IF NOT EXISTS ea_queue_ready ON ea_queue(account,state,created);
+        CREATE TRIGGER IF NOT EXISTS ea_queue_insert AFTER INSERT ON records WHEN NEW.kind='ea_command'
+        BEGIN
+          INSERT OR REPLACE INTO ea_queue VALUES(NEW.id,json_extract(NEW.body,'$.account'),json_extract(NEW.body,'$.state'),json_extract(NEW.body,'$.created'));
+        END;
+        CREATE TRIGGER IF NOT EXISTS ea_queue_update AFTER UPDATE ON records WHEN NEW.kind='ea_command'
+        BEGIN
+          INSERT OR REPLACE INTO ea_queue VALUES(NEW.id,json_extract(NEW.body,'$.account'),json_extract(NEW.body,'$.state'),json_extract(NEW.body,'$.created'));
+        END;
+        CREATE TRIGGER IF NOT EXISTS ea_queue_delete AFTER DELETE ON records WHEN OLD.kind='ea_command'
+        BEGIN DELETE FROM ea_queue WHERE id=OLD.id; END;
     ''')
+    if db.execute("SELECT 1 FROM records WHERE kind='schema' AND id='ea_queue_v1'").fetchone() is None:
+        with db:
+            db.execute("INSERT OR IGNORE INTO ea_queue SELECT id,json_extract(body,'$.account'),json_extract(body,'$.state'),json_extract(body,'$.created') FROM records WHERE kind='ea_command'")
+            db.execute("INSERT OR IGNORE INTO records VALUES('schema','ea_queue_v1','{}')")
     try:
         with db:
             yield db
@@ -92,9 +108,22 @@ def finish_action(key, state, result):
                    (state, json.dumps(result, default=str), time.time(), key))
 
 
+def start_local_worker(key):
+    args=[sys.executable,'-m','backend.mt5_worker','--account',key]
+    put('worker_control',key,{'stop':False})
+    log_dir=ROOT/'data'/'copy_logs'
+    log_dir.mkdir(parents=True,exist_ok=True)
+    with (log_dir/f'{key}.log').open('ab') as output:
+        process=subprocess.Popen(args,cwd=str(ROOT),stdin=subprocess.DEVNULL,stdout=output,
+            stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    log(key,'',f'Conexión MT5 iniciada (PID {process.pid}); esperando verificación de cuenta')
+    return {'status':'starting','pid':process.pid}
+
+
 class AccountRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    terminal_path: str = Field(min_length=1, max_length=500)
+    terminal_path: str = Field(default='', max_length=500)
+    connection_mode: str = Field(default='PYTHON',pattern='^(PYTHON|EA)$')
     login: int = Field(gt=0)
     server: str = Field(min_length=1, max_length=150)
 
@@ -108,8 +137,8 @@ class DeploymentRequest(BaseModel):
     risk_percent: float = Field(default=.25, gt=0, le=5)
     fixed_lot: float = Field(default=0, ge=0, le=100)
     max_lot: float = Field(default=1, gt=0, le=100)
-    max_daily_loss_pct: float = Field(default=2, gt=0, le=20)
-    max_drawdown_pct: float = Field(default=5, gt=0, le=50)
+    max_daily_loss_pct: float = Field(default=2, ge=0, le=100)
+    max_drawdown_pct: float = Field(default=5, ge=0, le=100)
     max_positions: int = Field(default=5, ge=1, le=50)
     max_spread_points: float = Field(default=50, gt=0, le=10000)
     deviation_points: int = Field(default=10, ge=0, le=1000)
@@ -123,6 +152,7 @@ class DeploymentRequest(BaseModel):
     custom_sl_pips: float = Field(default=20,gt=0,le=100000)
     custom_tp_pips: float = Field(default=40,gt=0,le=100000)
     max_daily_gain_pct: float = Field(default=0,ge=0,le=100)
+    max_account_gain_pct: float = Field(default=0,ge=0,le=100)
     max_exposure_per_symbol: float = Field(default=0,ge=0,le=10000)
     max_total_exposure: float = Field(default=0,ge=0,le=10000)
     equity_protection: float = Field(default=0,ge=0)
@@ -146,6 +176,59 @@ class MasterRequest(BaseModel):
     account_id: str
 
 
+class ExecutionRequest(BaseModel):
+    source_type: str = Field(default='strategy',pattern='^(strategy|portfolio)$')
+    source_id: str = Field(pattern=r'^[A-Za-z0-9_-]{1,100}$')
+    account_id: str
+    symbol_map: dict[str,str] = Field(default_factory=dict)
+
+
+class SymbolMapRequest(BaseModel):
+    symbol_map: dict[str,str] = Field(default_factory=dict)
+
+
+def validate_symbol_map(mapping):
+    if len(mapping)>100:
+        raise HTTPException(422,'Máximo 100 equivalencias por cuenta')
+    for source,target in mapping.items():
+        if (not re.fullmatch(r'[A-Za-z0-9_.#-]{1,64}',source) or not target.strip()
+                or target!=target.strip() or len(target)>64 or '|' in target or any(ord(c)<32 for c in target)):
+            raise HTTPException(422,'Usa el nombre exacto del símbolo, sin espacios en los extremos ni separadores de comandos')
+    return mapping
+
+
+def same_execution_source(record,source_type,source_id):
+    origin=record.get('origin_type','strategy' if record['source_type']=='diagnostic' else record['source_type'])
+    if origin!=source_type: return False
+    if record['source_id']==source_id: return True
+    # Sessions made by the removed account-level test launcher keep their runtime/tickets.
+    from backend.mt5_diagnostic import PROFILE
+    return (source_type=='strategy' and source_id==PROFILE and record['source_type']=='diagnostic'
+            and record['source_id']=='diagnostic' and record.get('execution_profile')==PROFILE)
+
+
+def reset_execution_view(record):
+    """Fresh visible run; broker ownership, action claims and progress are untouched."""
+    source_type=record.get('origin_type','strategy' if record['source_type']=='diagnostic' else record['source_type'])
+    source_id=record['source_id']
+    if record['source_type']=='diagnostic':
+        from backend.mt5_diagnostic import PROFILE
+        source_id=PROFILE
+    related=[d['id'] for d in listing('deployment') if d['account_id']==record['account_id']
+             and same_execution_source(d,source_type,source_id)]
+    offset=0
+    if record['source_type']=='diagnostic':
+        try:offset=len(get('diagnostic',record['id']).get('results',[]))
+        except KeyError:pass
+    with connect() as db:
+        for key in related:
+            db.execute('DELETE FROM events WHERE deployment=?',(key,))
+            db.execute('DELETE FROM records WHERE kind=? AND id=?',('last_error',key))
+        hidden_audit=db.execute('SELECT 1 FROM records WHERE kind=? AND id=?',('indicator_audit',record['id'])).fetchone() is not None
+        db.execute('INSERT OR REPLACE INTO records VALUES(?,?,?)',('execution_view',record['id'],
+            json.dumps(dict(result_offset=offset,hide_audit=hidden_audit,started_at=time.time()))))
+
+
 class FollowerRequest(BaseModel):
     account_id: str | None = None
     group_id: str | None = None
@@ -157,8 +240,15 @@ def compatibility(strategy):
     reasons = []
     if strategy.timeframe not in ('30m', '1h', '4h', '1d'):
         reasons.append('Temporalidad no admitida')
-    if strategy.entry_order_type != 'MARKET':
-        reasons.append('El conector inicial admite entradas MARKET; LIMIT/STOP requieren implementación específica')
+    if strategy.entry_order_type not in ('MARKET','LIMIT','STOP'):
+        reasons.append('Tipo de entrada no admitido')
+    if strategy.exit_mode not in ('ATR_CLASSIC','PIPS_FIXED','PCT_EXIT','TRAILING_ATR','BREAKEVEN',
+                                   'STRUCTURE_SWING','TIME_EXIT','PARTIAL_TP','ATR_SMOOTHED'):
+        reasons.append('Modo de salida no admitido')
+    if strategy.sizing_mode not in ('FIXED_RISK','FIXED_LOT','FIXED_CASH','MARTINGALE','ANTI_MARTINGALE','DCA'):
+        reasons.append('Modo de tamaño no admitido')
+    if strategy.exit_mode=='TIME_EXIT' and strategy.max_bars>900:
+        reasons.append('La salida por velas admite hasta 900 velas en el conector')
     if strategy.avg_enabled:
         reasons.append('Averaging/DCA todavía no habilitado en el conector MT5')
     if strategy.sizing_mode in ('MARTINGALE', 'ANTI_MARTINGALE', 'DCA'):
@@ -166,8 +256,9 @@ def compatibility(strategy):
     if strategy.mtf_timeframe and strategy.mtf_timeframe not in ('30m','1h','4h','1d'):
         reasons.append('Temporalidad HTF no admitida')
     if strategy.max_consecutive_wins or strategy.max_consecutive_losses or any(
-        getattr(strategy,key,0) for key in ('max_daily_gain_pct','max_weekly_gain_pct','max_monthly_gain_pct','max_account_gain_pct')):
-        reasons.append('Topes de ganancia/racha de la estrategia aún no admitidos por el conector')
+        getattr(strategy,key,0) for key in ('max_weekly_gain_pct','max_monthly_gain_pct',
+                                          'max_weekly_loss_pct','max_monthly_loss_pct')):
+        reasons.append('Topes semanales/mensuales y por racha aún no admitidos por el conector; no se ignoran al activar')
     if not strategy.buy_conditions and not strategy.sell_conditions:
         reasons.append('La estrategia no tiene condiciones')
     return reasons
@@ -179,7 +270,7 @@ def install_copy_routes(app):
 
     @app.middleware('http')
     async def copy_same_origin(request, call_next):
-        if request.url.path.startswith('/api/copy/'):
+        if request.url.path.startswith(('/api/copy/','/api/execution/')):
             origin=request.headers.get('origin')
             if origin:
                 parsed=urlsplit(origin)
@@ -212,12 +303,12 @@ def install_copy_routes(app):
     @app.post('/api/copy/accounts')
     def account(req: AccountRequest):
         path = Path(req.terminal_path).resolve()
-        if not path.is_file() or path.name.lower() != 'terminal64.exe':
+        if req.connection_mode=='PYTHON' and (not path.is_file() or path.name.lower() != 'terminal64.exe'):
             raise HTTPException(400, 'Indica la ruta existente de terminal64.exe')
         for existing in listing('account'):
             if existing['login'] == req.login and existing['server'] == req.server:
                 raise HTTPException(409, 'Esa cuenta ya está registrada')
-            if Path(existing['terminal_path']).resolve() == path:
+            if req.connection_mode=='PYTHON' and existing.get('connection_mode','PYTHON')=='PYTHON' and Path(existing['terminal_path']).resolve() == path:
                 raise HTTPException(409, 'Cada cuenta simultánea necesita una instalación de terminal independiente')
         key = uuid.uuid4().hex
         return put('account', key, dict(id=key, **req.model_dump()))
@@ -228,16 +319,27 @@ def install_copy_routes(app):
         if any(d['account_id']==key and d['state']!='STOPPED' for d in listing('deployment')):
             raise HTTPException(409,'Detén las asignaciones antes de editar el terminal')
         path=Path(req.terminal_path).resolve()
-        if not path.is_file() or path.name.lower()!='terminal64.exe':
+        if req.connection_mode=='PYTHON' and (not path.is_file() or path.name.lower()!='terminal64.exe'):
             raise HTTPException(400,'Ruta terminal64.exe inválida')
         for other in listing('account'):
-            if other['id']!=key and (Path(other['terminal_path']).resolve()==path or (other['login']==req.login and other['server']==req.server)):
+            same_path=req.connection_mode=='PYTHON' and other.get('connection_mode','PYTHON')=='PYTHON' and Path(other['terminal_path']).resolve()==path
+            if other['id']!=key and (same_path or (other['login']==req.login and other['server']==req.server)):
                 raise HTTPException(409,'Terminal o cuenta ya registrada')
         with connect() as db:
             row=db.execute('SELECT expires FROM leases WHERE account=?',(key,)).fetchone()
         if row and row['expires']>time.time():
             raise HTTPException(409,'Cierra primero el conector de esta cuenta')
-        return put('account',key,dict(id=key,**req.model_dump()))
+        updated=dict(required('account',key),**req.model_dump())
+        return put('account',key,updated)
+
+    @app.put('/api/copy/accounts/{key}/symbols')
+    def save_symbols(key:str,req:SymbolMapRequest):
+        required('account',key)
+        mapping=validate_symbol_map(req.symbol_map)
+        with connect() as db:
+            db.execute('UPDATE records SET body=json_set(body,\'$.symbol_map\',json(?)) WHERE kind=? AND id=?',
+                (json.dumps(mapping),'account',key))
+        return {'symbol_map':mapping}
 
     @app.post('/api/copy/accounts/{key}/worker')
     def worker(key: str):
@@ -246,16 +348,7 @@ def install_copy_routes(app):
             active = db.execute('SELECT expires FROM leases WHERE account=?', (key,)).fetchone()
         if active and active['expires'] > time.time():
             raise HTTPException(409, 'El conector ya está activo')
-        args = [sys.executable, '-m', 'backend.mt5_worker', '--account', key]
-        put('worker_control',key,{'stop':False})
-        log_dir = ROOT / 'data' / 'copy_logs'
-        log_dir.mkdir(parents=True, exist_ok=True)
-        with (log_dir / f'{key}.log').open('ab') as output:
-            process = subprocess.Popen(args, cwd=str(ROOT), stdin=subprocess.DEVNULL,
-                                       stdout=output, stderr=subprocess.STDOUT,
-                                       creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        log(key, '', f'Conector solicitado (PID {process.pid}); pendiente de heartbeat MT5 verificado')
-        return {'status': 'starting', 'pid': process.pid}
+        return start_local_worker(key)
 
     @app.post('/api/copy/accounts/{key}/worker/stop')
     def stop_worker(key:str):
@@ -270,7 +363,7 @@ def install_copy_routes(app):
 
     @app.post('/api/copy/deployments')
     def deployment(req: DeploymentRequest):
-        required('account', req.account_id)
+        target_account=required('account', req.account_id)
         if req.risk_mode=='FIXED_LOT' and req.fixed_lot<=0:
             raise HTTPException(400,'Lote fijo debe ser mayor que cero')
         if req.source_type!='account' and req.risk_mode not in ('FIXED_LOT','RISK_PERCENT'):
@@ -304,9 +397,13 @@ def install_copy_routes(app):
         if any(not math.isfinite(float(w)) or w < 0 for w in weights) or (weights and sum(weights) <= 0):
             raise HTTPException(400, 'Pesos inválidos')
         snapshots = []
+        from backend.mt5_diagnostic import PROFILE, DiagnosticRequest, configure
+        diagnostic_items=[item for item in strategies if item.get('execution_profile')==PROFILE]
+        if diagnostic_items and (req.source_type!='strategy' or len(strategies)!=1):
+            raise HTTPException(422,'Asigna el algoritmo de pruebas individualmente, fuera de un portafolio')
         for item, weight in zip(strategies, weights):
             strategy = Strategy.from_dict(item.get('strategy', item))
-            errors = compatibility(strategy)
+            errors = [] if diagnostic_items else compatibility(strategy)
             if errors:
                 raise HTTPException(422, f'{strategy.name}: ' + '; '.join(errors))
             snapshots.append(dict(strategy=strategy.to_dict(), weight=float(weight)/sum(weights)))
@@ -316,7 +413,111 @@ def install_copy_routes(app):
         key = uuid.uuid4().hex
         record = dict(id=key, **req.model_dump(), state='PAUSED', strategies=snapshots,
                       magic=100000000 + int(key[:7], 16), created_at=time.time())
+        record['symbol_map']=validate_symbol_map({**target_account.get('symbol_map',{}),**req.symbol_map})
+        if diagnostic_items:
+            configure(record,DiagnosticRequest(**diagnostic_items[0].get('diagnostic_config',{})))
         return put('deployment', key, record)
+
+    @app.post('/api/execution/start')
+    def execute(req: ExecutionRequest):
+        account=required('account',req.account_id)
+        occupied=[d for d in listing('deployment') if d['account_id']==req.account_id and d['state']!='STOPPED']
+        if occupied:
+            existing=occupied[0]
+            if not same_execution_source(existing,req.source_type,req.source_id):
+                raise HTTPException(409,f'La cuenta está ejecutando «{existing["name"]}». Abre ese algoritmo para gestionar su sesión.')
+            # Starting an already assigned source opens its existing session. Reanudar is explicit.
+            reset_execution_view(existing)
+            log(req.account_id,existing['id'],'Registro nuevo · sesión existente, sin reiniciar operaciones')
+            return dict(existing,reused_session=True)
+        snapshot=required('snapshot',req.account_id)
+        if not snapshot.get('verified_demo') or time.time()-snapshot.get('at',0)>15:
+            raise HTTPException(409,'La cuenta no está conectada. Revisa que su EA esté abierto en MT5.')
+        try:
+            if req.source_type=='strategy':
+                saved=StrategyRecord.load(req.source_id).data
+                strategy=Strategy.from_dict(saved.get('strategy',saved))
+                risk=strategy.risk_per_trade_pct
+                fixed=strategy.fixed_lot if strategy.sizing_mode=='FIXED_LOT' else 0
+                daily=strategy.max_daily_loss_pct
+                drawdown=strategy.max_account_loss_pct
+                positions=strategy.max_open_trades
+                name=strategy.name
+            else:
+                portfolio=Portfolio.load(req.source_id)
+                risk=portfolio.risk_budget;fixed=0;daily=0;drawdown=0
+                positions=min(50,max(1,len(portfolio.strategies)))
+                name=portfolio.name
+        except FileNotFoundError:
+            raise HTTPException(404,'Algoritmo o portafolio no encontrado')
+        try:
+            request_config=req.model_dump()
+            request_config['symbol_map']=validate_symbol_map({**account.get('symbol_map',{}),**req.symbol_map})
+            config=DeploymentRequest(**request_config,name=name,risk_percent=risk,
+                fixed_lot=fixed,risk_mode='FIXED_LOT' if fixed else 'RISK_PERCENT',max_lot=100,
+                max_daily_loss_pct=daily,max_drawdown_pct=drawdown,max_positions=positions,
+                max_daily_gain_pct=strategy.max_daily_gain_pct if req.source_type=='strategy' else 0,
+                max_account_gain_pct=strategy.max_account_gain_pct if req.source_type=='strategy' else 0)
+        except ValueError as error:
+            raise HTTPException(422,f'Configuración del algoritmo no compatible: {error}')
+        record=deployment(config)
+        reset_execution_view(record)
+        record.update(state='ACTIVE',origin_type=req.source_type,uses_source_risk=True,initial_equity=snapshot.get('equity'))
+        put('deployment',record['id'],record)
+        log(req.account_id,record['id'],f'INICIO · {name} · configuración del {"algoritmo" if req.source_type=="strategy" else "portafolio"}')
+        return record
+
+    @app.get('/api/execution/sessions')
+    def sessions(source_id:str,source_type:str='strategy'):
+        result=[]
+        records=[d for d in listing('deployment') if same_execution_source(d,source_type,source_id)]
+        # Show one current session per account, rather than stacking every previous attempt.
+        records.sort(key=lambda d:d['state']=='STOPPED')
+        seen_accounts=set()
+        for record in records:
+            if record['account_id'] in seen_accounts:continue
+            seen_accounts.add(record['account_id'])
+            if not same_execution_source(record,source_type,source_id):
+                continue
+            with connect() as db:
+                events=[dict(r) for r in db.execute('SELECT created,message FROM events WHERE deployment=? ORDER BY seq DESC LIMIT 200',(record['id'],))]
+            item=dict(record,events=events)
+            try:view=get('execution_view',record['id'])
+            except KeyError:view={}
+            item['visible_started_at']=view.get('started_at',record.get('created_at'))
+            if record['source_type']=='diagnostic':
+                progress=required('diagnostic',record['id'])
+                offset=view.get('result_offset',0)
+                item['diagnostic']=dict(progress,results=progress.get('results',[])[offset:],
+                    index=max(0,progress.get('index',0)-offset),total_cases=max(0,20-offset))
+                try:item['indicator_audit']=get('indicator_audit',record['id'])
+                except KeyError: item['indicator_audit']=None
+                if view.get('hide_audit'):item['indicator_audit']=None
+            result.append(item)
+        return result
+
+    @app.post('/api/execution/sessions/{key}/{action}')
+    def session_control(key:str,action:str):
+        record=required('deployment',key)
+        if record['source_type']=='account':
+            raise HTTPException(400,'Gestiona la seguidora desde Copy Master')
+        return control(key,action)
+
+    @app.delete('/api/execution/sessions/{key}/log')
+    def clear_session_log(key:str):
+        required('deployment',key)
+        with connect() as db:
+            deleted=db.execute('DELETE FROM events WHERE deployment=?',(key,)).rowcount
+        return {'deleted':deleted}
+
+    @app.delete('/api/copy/events')
+    def clear_copy_log():
+        followers=[d['id'] for d in listing('deployment') if d['source_type']=='account']
+        with connect() as db:
+            deleted=0
+            for key in followers:
+                deleted+=db.execute('DELETE FROM events WHERE deployment=?',(key,)).rowcount
+        return {'deleted':deleted}
 
     @app.post('/api/copy/deployments/{key}/{action}')
     def control(key: str, action: str):
@@ -329,6 +530,7 @@ def install_copy_routes(app):
             snapshot = required('snapshot', record['account_id'])
             if time.time()-snapshot.get('at', 0) > 15 or not snapshot.get('verified_demo'):
                 raise HTTPException(409, 'Conecta primero la cuenta demo MT5 correcta')
+            if record['source_type']!='account':reset_execution_view(record)
         record['state'] = {'resume':'ACTIVE', 'pause':'PAUSED', 'close-stop':'CLOSING'}[action]
         put('deployment', key, record)
         log(record['account_id'], key, f'Estado solicitado: {record["state"]}')
