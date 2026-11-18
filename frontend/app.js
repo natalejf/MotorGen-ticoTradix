@@ -520,6 +520,10 @@ async function loadSymbols() {
     const res = await fetch('/api/symbols');
     const data = await res.json();
     state.symbolsMeta = data;
+    const available = new Set(data.map(item => item.symbol));
+    state.selectedSymbols = new Set([...state.selectedSymbols].filter(symbol => available.has(symbol)));
+    if (!state.selectedSymbols.size && data.length) state.selectedSymbols.add(available.has('EURUSD') ? 'EURUSD' : data[0].symbol);
+    if (!state.selectedSymbols.has(state.selectedSymbol)) state.selectedSymbol = [...state.selectedSymbols][0];
     renderSymbolPills();
     updateDataSummaryInfo();
   } catch (err) {
@@ -664,8 +668,8 @@ function updateDataSummaryInfo() {
           <div><span class="text-white font-medium">Activo:</span> ${sym.name} (${sym.category})</div>
           ${scopeLabel}
           <div><span class="text-white font-medium">Velas descargadas:</span> ${tfInfo.bars ? tfInfo.bars.toLocaleString() : 'Listo'}</div>
-          <div><span class="text-white font-medium">Rango:</span> ${tfInfo.start ? tfInfo.start.split(' ')[0] : '2024'} al presente</div>
-          <div><span class="text-white font-medium">Fuente:</span> Interbank Feeds & Futures continuos (Caché Parquet Local)</div>
+          <div><span class="text-white font-medium">Rango:</span> ${tfInfo.start ? tfInfo.start.slice(0,10) + ' → ' + tfInfo.end.slice(0,10) : 'Sin descargar'}</div>
+          <div><span class="text-white font-medium">Fuente:</span> ${tfInfo.source || sym.source || 'Sin datos'} · caché local</div>
         </div>
       `;
     }
@@ -897,6 +901,7 @@ async function stopExploration() {
 }
 
 async function triggerDataUpdate() {
+  if (window.historyCatalog) { window.historyCatalog.open(); return; }
   const btn = document.getElementById('btn-update-data');
   const originalText = btn.innerHTML;
   btn.innerHTML = `<span class="animate-spin inline-block w-3 h-3 border-2 border-black border-t-transparent rounded-full mr-2"></span> Actualizando...`;

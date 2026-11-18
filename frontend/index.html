@@ -13,6 +13,7 @@
   <!-- Custom Monochrome Design System -->
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="proppass.css">
+  <link rel="stylesheet" href="theme.css">
 </head>
 <body class="bg-[#08080a] text-white min-h-screen antialiased selection:bg-white selection:text-black">
 
@@ -111,7 +112,7 @@
               <span>🎲</span> Mezcla Aleatoria
             </button>
             <button id="btn-update-data" class="btn-secondary text-xs py-1.5 px-3">
-              <span>🔄</span> Actualizar Datos
+              <span>▤</span> Datos históricos
             </button>
             <button id="btn-toggle-neural" class="btn-secondary text-xs py-1.5 px-3">
               <span>🌐</span> Neural Explorer 3D
@@ -130,7 +131,7 @@
 
         <!-- LIVE METRICS & TRIAGE COUNTERS BANNER -->
         <section class="bg-[#0f0f13] border-b border-[#1c1c22] px-6 py-3">
-          <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-6">
+          <div class="w-full flex flex-wrap items-center justify-between gap-6">
             <div class="flex items-center gap-3 min-w-[180px]">
               <div>
                 <div class="text-[10px] text-[#71717a] uppercase font-semibold">Generación Activa</div>
@@ -171,7 +172,7 @@
 
         <!-- NAVIGATION TABS -->
         <nav class="bg-[#0b0b0e] border-b border-[#1c1c22] px-6">
-          <div class="max-w-7xl mx-auto flex items-center space-x-1 overflow-x-auto">
+          <div class="w-full flex items-center space-x-1 overflow-x-auto">
             <button class="tab-btn active" data-tab="config">
               <span>⚙️</span> Configuración
             </button>
@@ -194,7 +195,7 @@
         </nav>
 
         <!-- MAIN VIEWPORT CONTAINER -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-6">
+        <main class="flex-1 app-content w-full">
 
           <!-- TAB 1: CONFIGURACIÓN -->
           <div id="panel-config" class="tab-panel space-y-6">
@@ -334,9 +335,9 @@
                     <option value="ohlc" selected>OHLC completo (precise)</option>
                     <option value="open_prices">Precios de apertura (rápido)</option>
                     <option value="ohlc_m1">OHLC M1 (sub-velas sintéticas)</option>
-                    <option value="tick">Tick (trayectoria intra-barra)</option>
+                    <option value="tick">Trayectoria sintética detallada (sin ticks reales)</option>
                   </select>
-                  <span class="text-[10px] text-[#71717a]">open_prices acelera; ohlc_m1/tick afinan entradas/salidas</span>
+                  <span class="text-[10px] text-[#71717a]">OHLC para explorar. Los modos sintéticos no sustituyen una validación con M1 o ticks reales.</span>
                 </div>
                 <div>
                   <label class="block text-xs text-[#a0a0ab] mb-1">Workers en Paralelo (0 = serial)</label>
@@ -1042,7 +1043,7 @@
             </button>
           </div>
         </header>
-        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+        <main class="app-content w-full space-y-6">
           <!-- VIEW 1: FOLDERS / BATCHES CARDS -->
           <div id="view-strategy-folders" class="tn-card">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
@@ -1132,7 +1133,7 @@
           </div>
         </header>
 
-        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+        <main class="app-content w-full space-y-6">
 
           <!-- RUTA DEL TRADER ALGORÍTMICO (PIPELINE STEPPER) -->
           <div class="p-4 rounded-xl bg-[#0e0e14] border border-[#22222e]">
@@ -1325,7 +1326,7 @@
           </button>
         </div>
 
-        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+        <main class="app-content w-full space-y-6">
 
           <!-- TAB 1: RESULTADOS EN VIVO (TOP PORTAFOLIOS) -->
           <div id="tab-port-view-results" class="space-y-6">
@@ -1540,7 +1541,7 @@
             </button>
           </div>
         </header>
-        <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+        <main class="app-content w-full space-y-6">
           <!-- VIEW 1: PORTFOLIO FOLDERS -->
           <div id="view-portfolio-folders" class="tn-card">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-[#202028]">
@@ -1890,5 +1891,6 @@
   <script src="copy-trading.js"></script>
   <script src="proppass-view.js"></script>
   <script src="ninja-trader.js"></script>
+  <script src="history.js"></script>
 </body>
 </html>

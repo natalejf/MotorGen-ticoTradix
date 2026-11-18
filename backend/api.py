@@ -14,6 +14,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from backend.data_manager import data_manager, SUPPORTED_SYMBOLS
+from backend.historical_data import historical_archive
 from backend.strategy import Strategy
 from backend.backtester import backtester
 from backend.genetic_engine import genetic_engine, ALL_28_INDICATORS, ALL_ENTRY_TYPES, ALL_EXIT_MODES, SESSION_FILTERS, SIZING_MODES
@@ -160,6 +161,29 @@ class UpdateDataRequest(BaseModel):
 def get_symbols():
     """Returns available symbols and cached bar counts."""
     return data_manager.get_symbols_summary()
+
+@app.get('/api/history/status')
+def history_status():
+    status = historical_archive.status()
+    # A CLI import can run independently of the web process and survives restarts.
+    progress = historical_archive.root / 'progress.json'
+    if status['status'] == 'idle' and progress.exists():
+        status = json.loads(progress.read_text(encoding='utf-8'))
+        import time
+        if status.get('status') == 'running' and time.time() - progress.stat().st_mtime > 1800:
+            status['status'] = 'interrupted'
+    return status
+
+@app.post('/api/history/update')
+def history_update(req: UpdateDataRequest):
+    status = history_status()
+    if status['status'] == 'running':
+        return {'started': False, 'status': status}
+    try:
+        started = historical_archive.start([req.symbol] if req.symbol else None)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {'started': started, 'status': historical_archive.status()}
 
 @app.post("/api/update-data")
 def update_data(req: UpdateDataRequest):
@@ -655,7 +679,7 @@ def get_candidate_detail(candidate_id: str):
 
         if not equity_curve or not trades:
             try:
-                df = data_manager.load_data(strat.symbol, strat.timeframe)
+                df = data_manager.load_data(strat.symbol, strat.timeframe, source=strat.data_source)
                 init_cap = float(metrics.get("initial_capital", 10000.0))
                 res = backtester.run_backtest(strat, df, initial_deposit=init_cap)
                 equity_curve = res.equity_curve
@@ -721,7 +745,7 @@ def validate_candidate(candidate_id: str, req: Optional[ValidateCandidateRequest
         raise HTTPException(status_code=404, detail="Estrategia no encontrada.")
 
     strat = Strategy.from_dict(target_c.get("strategy", target_c))
-    df = data_manager.load_data(strat.symbol, strat.timeframe)
+    df = data_manager.load_data(strat.symbol, strat.timeframe, source=strat.data_source)
 
     # 1. Walk-Forward (con modo reoptimización y umbrales configurables)
     wf_res = validation_suite.run_walk_forward(

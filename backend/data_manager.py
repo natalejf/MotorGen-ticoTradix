@@ -9,6 +9,8 @@ import datetime
 import pandas as pd
 import numpy as np
 import yfinance as yf
+from backend.historical_data import historical_archive, HistoricalArchive, INSTRUMENTS, source_for
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
@@ -46,16 +48,27 @@ SUPPORTED_SYMBOLS = {
     "LTCUSD": {"ticker": "LTC-USD", "name": "Litecoin / US Dollar", "category": "Crypto", "pip_size": 0.01, "point_value": 1.0, "default_spread": 0.05, "digits": 2},
 }
 
-# Timeframes served by this data layer (M30 = intraday 60d from yfinance)
+# Preserve metadata for previously saved strategies; expose only the requested universe.
+ALL_SYMBOLS = SUPPORTED_SYMBOLS
+SUPPORTED_SYMBOLS = {s: ALL_SYMBOLS[s] for s in INSTRUMENTS}
+
+# M30 remains available as a separate Yahoo dataset, not as ten-year coverage.
 SUPPORTED_TIMEFRAMES = ["1h", "30m", "4h", "1d"]
 
 class DataManager:
     def __init__(self, data_dir: str = DATA_DIR):
-        self.data_dir = data_dir
+        self.data_dir = os.path.abspath(os.fspath(data_dir))
         os.makedirs(self.data_dir, exist_ok=True)
         self.memory_cache: Dict[str, pd.DataFrame] = {}
+        self.archive = historical_archive if os.path.abspath(data_dir) == DATA_DIR else HistoricalArchive(Path(data_dir) / 'history')
 
-    def get_file_path(self, symbol: str, timeframe: str) -> str:
+    def get_file_path(self, symbol: str, timeframe: str, source: Optional[str] = None) -> str:
+        if symbol in INSTRUMENTS and timeframe in ('1h', '4h', '1d'):
+            meta = self.archive.metadata(symbol)
+            if source in ('dukascopy', 'bitstamp') or (source is None and meta and meta['status'] == 'complete'):
+                return str(self.archive.path(symbol, timeframe, source))
+        if source not in (None, 'yahoo'):
+            raise ValueError(f'Historical source unavailable: {source}/{symbol}/{timeframe}')
         return os.path.join(self.data_dir, f"{symbol.upper()}_{timeframe.lower()}.parquet")
 
     def resample_ohlcv(self, df_1h: pd.DataFrame, rule: str = "4h") -> pd.DataFrame:
@@ -71,7 +84,12 @@ class DataManager:
 
     def download_symbol_history(self, symbol: str) -> Dict[str, int]:
         """Download full available history for a symbol and cache 1h, 4h, and 1d."""
-        meta = SUPPORTED_SYMBOLS.get(symbol)
+        if symbol in INSTRUMENTS and self.archive.metadata(symbol):
+            result = self.archive.download([symbol])
+            if result['status'] != 'completed':
+                raise RuntimeError('Historical update incomplete; inspect /api/history/status')
+            return {tf: info['bars'] for tf, info in self.archive.metadata(symbol)['timeframes'].items()}
+        meta = ALL_SYMBOLS.get(symbol)
         if not meta:
             raise ValueError(f"Symbol {symbol} not in supported symbols")
         
@@ -85,7 +103,7 @@ class DataManager:
         df_1h = df_1h[["Open", "High", "Low", "Close", "Volume"]].dropna()
         df_1h.index = pd.to_datetime(df_1h.index)
         
-        p1h = self.get_file_path(symbol, "1h")
+        p1h = self.get_file_path(symbol, "1h", source='yahoo')
         df_1h.to_parquet(p1h)
         results["1h"] = len(df_1h)
 
@@ -130,7 +148,9 @@ class DataManager:
         Auto-updates cached data by appending newly closed bars.
         Reads existing parquet, fetches delta, appends, and re-saves.
         """
-        meta = SUPPORTED_SYMBOLS.get(symbol)
+        if symbol in INSTRUMENTS and self.archive.metadata(symbol):
+            return self.download_symbol_history(symbol)
+        meta = ALL_SYMBOLS.get(symbol)
         if not meta:
             raise ValueError(f"Symbol {symbol} not in supported symbols")
         
@@ -216,25 +236,41 @@ class DataManager:
         symbol: str,
         timeframe: str = "1h",
         start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        end_date: Optional[str] = None,
+        source: Optional[str] = None
     ) -> pd.DataFrame:
         """
         Load historical OHLCV data for backtesting and exploration.
         Cached in memory for extreme speed.
         """
-        cache_key = f"{symbol}_{timeframe}_{start_date}_{end_date}"
+        fpath = self.get_file_path(symbol, timeframe, source)
+        stamp = os.stat(fpath).st_mtime_ns if os.path.exists(fpath) else 0
+        cache_key = f"{symbol}_{timeframe}_{start_date}_{end_date}_{source}_{stamp}"
         if cache_key in self.memory_cache:
             return self.memory_cache[cache_key]
 
-        fpath = self.get_file_path(symbol, timeframe)
         if not os.path.exists(fpath):
+            if source in ('dukascopy', 'bitstamp'):
+                raise FileNotFoundError(f'Dataset not downloaded: {symbol}/{timeframe}/{source}')
             # Try to download if missing
+            if source == 'yahoo' and symbol in INSTRUMENTS and self.archive.metadata(symbol):
+                raise FileNotFoundError(f'Original Yahoo dataset unavailable: {symbol}/{timeframe}')
             self.download_symbol_history(symbol)
 
         if not os.path.exists(fpath):
             raise FileNotFoundError(f"Data not found for {symbol} ({timeframe})")
 
         df = pd.read_parquet(fpath)
+        actual_source = source or ('yahoo' if os.path.dirname(fpath) == self.data_dir else source_for(symbol))
+        meta = self.archive.metadata(symbol) if actual_source != 'yahoo' else None
+        if meta and meta['status'] != 'complete':
+            raise ValueError(f'Incomplete historical import for {symbol}: {meta["missing_months"]}')
+        df.attrs['data_source'] = actual_source
+        df.attrs['symbol_metadata'] = dict(ALL_SYMBOLS.get(symbol, {}))
+        if meta:
+            df.attrs['dataset'] = meta
+            if 'point_value' in meta:
+                df.attrs['symbol_metadata']['point_value'] = meta['point_value']
 
         # Date filtering (end_date inclusive: whole day)
         if start_date or end_date:
@@ -247,6 +283,8 @@ class DataManager:
             if end_date:
                 df = df[df.index < pd.to_datetime(end_date, utc=True) + pd.Timedelta(days=1)]
 
+        if len(self.memory_cache) >= 16:
+            self.memory_cache.clear()
         self.memory_cache[cache_key] = df
         return df
 
@@ -264,15 +302,26 @@ class DataManager:
                 "digits": meta["digits"],
                 "timeframes": {}
             }
+            archive_meta = self.archive.metadata(sym)
+            active = archive_meta and archive_meta['status'] == 'complete'
+            sym_info['source'] = source_for(sym) if active else 'yahoo'
+            sym_info['history'] = archive_meta
+            if active:
+                sym_info['name'] = archive_meta['description']
+                sym_info['point_value'] = archive_meta.get('point_value', meta['point_value'])
             for tf in SUPPORTED_TIMEFRAMES:
                 p = self.get_file_path(sym, tf)
                 if os.path.exists(p):
                     try:
                         df = pd.read_parquet(p)
+                        if df.empty:
+                            continue
                         sym_info["timeframes"][tf] = {
                             "bars": len(df),
                             "start": str(df.index[0]),
-                            "end": str(df.index[-1])
+                            "end": str(df.index[-1]),
+                            "source": 'yahoo' if tf == '30m' else sym_info['source'],
+                            "bytes": os.path.getsize(p)
                         }
                     except Exception:
                         pass

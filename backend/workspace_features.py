@@ -85,12 +85,12 @@ def portfolio_risk(portfolio, options):
         curve = item.get('equity_curve')
         if not curve:
             strategy = Strategy.from_dict(st)
-            bars = data_manager.load_data(strategy.symbol, strategy.timeframe)
+            bars = data_manager.load_data(strategy.symbol, strategy.timeframe, source=strategy.data_source)
             macro_ids = [name[6:] for name in strategy.get_used_indicators() if name.startswith('MACRO_')]
             if macro_ids:
                 from backend.macro_manager import macro_manager
                 bars = macro_manager.attach_macro(bars, macro_ids)
-            htf = data_manager.load_data(strategy.symbol, strategy.mtf_timeframe) if strategy.mtf_timeframe else None
+            htf = data_manager.load_data(strategy.symbol, strategy.mtf_timeframe, source=strategy.data_source) if strategy.mtf_timeframe else None
             result = backtester.run_backtest(strategy, bars, htf_df=htf,
                                             initial_deposit=options.initial_capital)
             curve = result.equity_curve

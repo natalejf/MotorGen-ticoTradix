@@ -363,6 +363,7 @@ class ValidationSuite:
                 "Close": synth_close,
                 "Volume": df["Volume"].values
             }, index=df.index)
+            synth_df.attrs = dict(df.attrs)
 
             # Classify regime from synthetic path
             total_ret = (synth_close[-1] / synth_close[0]) - 1.0
@@ -639,7 +640,7 @@ class ValidationSuite:
         
         if df is None:
             from backend.data_manager import data_manager
-            df = data_manager.load_data(strat.symbol, strat.timeframe)
+            df = data_manager.load_data(strat.symbol, strat.timeframe, source=strat.data_source)
 
         # 1. Backtest if trades_sample not already provided
         trades = strategy_data.get("trades_sample", [])

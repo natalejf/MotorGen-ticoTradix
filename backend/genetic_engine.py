@@ -979,6 +979,12 @@ class GeneticEngine:
         else:
             dfs_map = dict(dfs)
 
+        # Bind provenance in the parent too (parallel workers serialize strategies).
+        for strategy in population:
+            frame = dfs_map.get(f'{strategy.symbol}_{strategy.timeframe}')
+            if frame is not None and frame.attrs.get('data_source'):
+                strategy.data_source = frame.attrs['data_source']
+
         if parallel_workers and parallel_workers > 1 and len(population) > 4:
             try:
                 import base64, pickle

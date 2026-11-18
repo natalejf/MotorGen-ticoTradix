@@ -158,12 +158,14 @@ class Strategy:
         avg_size_multiplier: float = 1.0,
         avg_recompute_stop: bool = False,
         parent_ids: Optional[List[str]] = None,
-        generation: int = 0
+        generation: int = 0,
+        data_source: str = "yahoo"
     ):
         self.id = strategy_id or f"strat_{uuid.uuid4().hex[:8]}"
         self.name = name or f"Algo {self.id[-4:].upper()} ({symbol} {timeframe})"
         self.symbol = symbol
         self.timeframe = timeframe
+        self.data_source = data_source
         self.mtf_timeframe = mtf_timeframe
         self.direction = direction
         self.prop_firm_filter = bool(prop_firm_filter)
@@ -237,6 +239,7 @@ class Strategy:
             "name": self.name,
             "symbol": self.symbol,
             "timeframe": self.timeframe,
+            "data_source": self.data_source,
             "mtf_timeframe": self.mtf_timeframe,
             "direction": self.direction,
             "prop_firm_filter": self.prop_firm_filter,
@@ -307,6 +310,7 @@ class Strategy:
             name=d.get("name"),
             symbol=d.get("symbol", "EURUSD"),
             timeframe=d.get("timeframe", "1h"),
+            data_source=d.get("data_source", "yahoo"),
             mtf_timeframe=d.get("mtf_timeframe"),
             direction=d.get("direction", "BOTH"),
             prop_firm_filter=d.get("prop_firm_filter", False),

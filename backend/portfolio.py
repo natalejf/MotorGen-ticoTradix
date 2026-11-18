@@ -316,7 +316,7 @@ class Portfolio:
                     from backend.data_manager import data_manager
                     from backend.backtester import backtester
                     st_obj = Strategy.from_dict(st_data)
-                    df = data_manager.load_data(st_obj.symbol, st_obj.timeframe)
+                    df = data_manager.load_data(st_obj.symbol, st_obj.timeframe, source=st_obj.data_source)
                     res = backtester.run_backtest(st_obj, df, initial_deposit=initial_capital)
                     eq = res.equity_curve
                 except Exception:

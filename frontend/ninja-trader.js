@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded',()=>{
  const esc=escapeWorkspaceText,panel=document.createElement('section'),dialog=document.createElement('dialog');
  const section=document.createElement('section');section.id='section-proppass';section.className='app-section hidden';panel.className='pp-app';section.append(panel);document.getElementById('section-engine').before(section);
- const nav=document.createElement('button');nav.className='sidebar-item';nav.dataset.section='proppass';nav.innerHTML='<span class="sidebar-item-icon">P</span><span class="flex-1">PropPass</span>';nav.addEventListener('click',()=>showSection('proppass'));document.querySelector('#app-sidebar nav').append(nav);
+ const nav=document.createElement('button');nav.className='sidebar-item';nav.dataset.section='proppass';nav.innerHTML='<span class="sidebar-item-icon">P</span><span class="flex-1">PropPass</span>';nav.addEventListener('click',()=>showSection('proppass'));const category=document.createElement('div');category.className='sidebar-section-label mt-4';category.textContent='Futuros';document.querySelector('#app-sidebar nav').append(category,nav);
  dialog.className='stx-dialog pp-dialog';document.body.append(dialog);const groupPanel=null;
  let data={connections:[],groups:[]},busy=false;
  const view={tab:'panel',filter:'all',services:{},zone:'America/Argentina/Buenos_Aires',curve:[],hiddenLogs:new Set(),logAfter:0};

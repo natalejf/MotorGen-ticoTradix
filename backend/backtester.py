@@ -15,7 +15,7 @@ import pandas as pd
 from typing import Dict, List, Tuple, Any, Optional
 from backend.indicators import indicator_engine
 from backend.strategy import Strategy, Condition
-from backend.data_manager import SUPPORTED_SYMBOLS
+from backend.data_manager import ALL_SYMBOLS as SUPPORTED_SYMBOLS
 
 class BacktestResult:
     def __init__(
@@ -353,9 +353,11 @@ class Backtester:
         Entries keep bar-level fills (open/limit/stop) in all modes.
         """
         capital = initial_deposit or self.default_initial_deposit
-        sym_meta = SUPPORTED_SYMBOLS.get(strategy.symbol, {
+        sym_meta = df.attrs.get('symbol_metadata') or SUPPORTED_SYMBOLS.get(strategy.symbol, {
             "pip_size": 0.0001, "point_value": 100000.0, "default_spread": 0.00015, "digits": 5
         })
+        if df.attrs.get('data_source'):
+            strategy.data_source = df.attrs['data_source']
         pip_size = sym_meta["pip_size"]
         point_val = sym_meta["point_value"]
         spread = (custom_spread_pips * pip_size) if custom_spread_pips is not None else sym_meta["default_spread"]
