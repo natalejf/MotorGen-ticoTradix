@@ -131,6 +131,32 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private readonly Dictionary<string,Instrument> engineFeeds=new Dictionary<string,Instrument>();
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string,DateTime> engineTickTimes=new System.Collections.Concurrent.ConcurrentDictionary<string,DateTime>();
         private readonly HashSet<string> engineSeen=new HashSet<string>();
+        private readonly Dictionary<string,long> copyObservedTickets=new Dictionary<string,long>();
+        private readonly Dictionary<string,long> copyObservedTimes=new Dictionary<string,long>();
+        private readonly Dictionary<string,int> copyObservedDirections=new Dictionary<string,int>();
+        private long copyNextTicket=DateTime.UtcNow.Ticks/100;
+        private string CopyObserve(Account acc) {
+            var rows=new List<string>();var active=new HashSet<string>();
+            foreach(var p in acc.Positions.Cast<Position>().Where(p=>p.MarketPosition!=MarketPosition.Flat)) {
+                string key=acc.Name+":"+p.Instrument.FullName;active.Add(key);
+                int side=p.MarketPosition==MarketPosition.Long?0:1;
+                if(!copyObservedTickets.ContainsKey(key)||copyObservedDirections[key]!=side) {
+                    copyObservedTickets[key]=++copyNextTicket;copyObservedDirections[key]=side;
+                    copyObservedTimes[key]=(long)(DateTime.UtcNow-new DateTime(1970,1,1)).TotalSeconds;
+                }
+                var exits=acc.Orders.Cast<Order>().Where(o=>o.Instrument.FullName==p.Instrument.FullName&&EngineWorking(o)&&
+                    (side==0?o.OrderAction==OrderAction.Sell:o.OrderAction==OrderAction.BuyToCover)).ToArray();
+                var stops=exits.Where(o=>o.OrderType==OrderType.StopMarket||o.OrderType==OrderType.StopLimit).ToArray();
+                var targets=exits.Where(o=>o.OrderType==OrderType.Limit).ToArray();
+                double sl=stops.Length==1?stops[0].StopPrice:0,tp=targets.Length==1?targets[0].LimitPrice:0;
+                rows.Add("{\"ticket\":"+copyObservedTickets[key]+",\"symbol\":"+J(p.Instrument.FullName)+",\"type\":"+side+",\"volume\":"+p.Quantity+",\"price_open\":"+N(p.AveragePrice)+",\"sl\":"+N(sl)+",\"tp\":"+N(tp)+",\"magic\":0,\"comment\":\"NT8 master\",\"time\":"+copyObservedTimes[key]+"}");
+            }
+            foreach(string key in copyObservedTickets.Keys.Where(k=>k.StartsWith(acc.Name+":")&&!active.Contains(k)).ToArray()) {
+                copyObservedTickets.Remove(key);copyObservedTimes.Remove(key);copyObservedDirections.Remove(key);
+            }
+            double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
+            return "{\"balance\":"+N(cash)+",\"equity\":"+N(cash+open)+",\"positions\":["+string.Join(",",rows)+"]}";
+        }
         private string EngineResults() {return "["+string.Join(",",engineReplies.Select(k=>"{\"id\":"+J(k.Key)+",\"value\":"+k.Value+"}"))+"]";}
         private void EngineReply(string id,string value) {lock(serviceGate){engineReplies[id]=value;engineReplyOrder.Enqueue(id);while(engineReplyOrder.Count>2){string old=engineReplyOrder.Dequeue();if(old!=id)engineReplies.Remove(old);}}}
         private void EngineError(string id,string reason) {EngineReply(id,"{\"error\":"+J(reason)+"}");Print("Motor NT8: "+reason);}
@@ -143,6 +169,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private void EngineMarketData(object sender,MarketDataEventArgs e) {if(e.MarketDataType==MarketDataType.Last)engineTickTimes[e.Instrument.FullName]=DateTime.UtcNow;}
         private bool PrepareEngineFeed(string command) {
             string[] parts=command.Split('|');if(parts.Length<4||parts[3]!="engine"||parts[1]!=instance)return true;
+            if(parts.Contains("method=observe"))return true;
             // NT subscriptions can synchronously wait for a market-data callback.
             // Never subscribe while holding the gate used by those callbacks.
             string symbol=parts.Skip(4).FirstOrDefault(p=>p.StartsWith("symbol="));if(symbol==null)return true;
@@ -195,7 +222,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 string method=v["method"],sid=v["session"],account=v["account"],symbol=v["symbol"],parent=v.ContainsKey("parent")?v["parent"]:v["session"];
                 if(sid.Length!=32||sid.Any(c=>!Uri.IsHexDigit(c)))throw new Exception("Sesión inválida");
                 if(parent.Length!=32||parent.Any(c=>!Uri.IsHexDigit(c)))throw new Exception("Portafolio inválido");
-                EngineTrack(symbol);var acc=GetAccountCached(account);if(!CanExecute(acc))throw new Exception("Solo cuentas locales Simulator/Playback");
+                var acc=GetAccountCached(account);if(!CanExecute(acc))throw new Exception("Solo cuentas locales Simulator/Playback");
+                if(method=="observe"){EngineReply(id,CopyObserve(acc));return;}
+                EngineTrack(symbol);
                 if(method=="claim") {
                     EngineLease old;if(engineLeases.TryGetValue(sid,out old)){if(old.Account!=account||old.Symbol!=symbol||old.Parent!=parent)throw new Exception("La sesión cambió de identidad");EngineReply(id,"{\"ok\":true}");return;}
                     AccountRiskSettings settings;if(groupAccounts.Contains(account)&&accountsConfig.TryGetValue(account,out settings)&&settings.Enabled&&settings.Status=="EN PROCESO")throw new Exception("La cuenta está reservada a PropPass");
@@ -473,7 +502,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             ",\"wins\":"+(settings==null?0:settings.TradesWon)+",\"losses\":"+(settings==null?0:settings.TradesLost)+",\"closed_trades\":"+(settings==null?0:settings.TradesClosed)+"}";
                     }
                     string events;lock(serviceEvents)events=string.Join(",",serviceEvents.Select(J));
-                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.5.4-portfolio\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
+                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.6.0-copy\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
                         ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+

@@ -126,7 +126,7 @@
                             ",\"wins\":"+(settings==null?0:settings.TradesWon)+",\"losses\":"+(settings==null?0:settings.TradesLost)+",\"closed_trades\":"+(settings==null?0:settings.TradesClosed)+"}";
                     }
                     string events;lock(serviceEvents)events=string.Join(",",serviceEvents.Select(J));
-                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.5.4-portfolio\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
+                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.6.0-copy\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
                         ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+

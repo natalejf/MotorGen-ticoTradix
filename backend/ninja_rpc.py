@@ -56,7 +56,7 @@ class NinjaBroker(EABroker):
                 return value
             if c['state']=='EXPIRED':raise BridgeReadUnavailable('RPC NT8 vencido sin entregar')
             time.sleep(.1)
-        if method in ('state','bars'):raise BridgeReadUnavailable('Lectura NT8 sin respuesta')
+        if method in ('state','bars','observe'):raise BridgeReadUnavailable('Lectura NT8 sin respuesta')
         raise RuntimeError('Resultado NT8 incierto; no se reenvía '+key)
 
     def state(self):

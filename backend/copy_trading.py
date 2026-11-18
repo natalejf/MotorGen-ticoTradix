@@ -157,6 +157,8 @@ class DeploymentRequest(BaseModel):
     max_total_exposure: float = Field(default=0,ge=0,le=10000)
     equity_protection: float = Field(default=0,ge=0)
     max_order_age_seconds: int = Field(default=30,ge=1,le=300)
+    price_scale: float = Field(default=1,gt=0,le=1000000)
+    quantity_ratio: float | None = Field(default=None,gt=0,le=1000000)
 
 
 class GroupRequest(BaseModel):
@@ -191,7 +193,7 @@ def validate_symbol_map(mapping):
     if len(mapping)>100:
         raise HTTPException(422,'Máximo 100 equivalencias por cuenta')
     for source,target in mapping.items():
-        if (not re.fullmatch(r'[A-Za-z0-9_.#-]{1,64}',source) or not target.strip()
+        if (not source.strip() or source!=source.strip() or len(source)>64 or '|' in source or any(ord(c)<32 for c in source) or not target.strip()
                 or target!=target.strip() or len(target)>64 or '|' in target or any(ord(c)<32 for c in target)):
             raise HTTPException(422,'Usa el nombre exacto del símbolo, sin espacios en los extremos ni separadores de comandos')
     return mapping
@@ -343,7 +345,12 @@ def install_copy_routes(app):
 
     @app.post('/api/copy/accounts/{key}/worker')
     def worker(key: str):
-        required('account', key)
+        account_record=required('account', key)
+        if account_record.get('platform')=='NT8':
+            from backend.cross_copy import ensure_observers
+            put('worker_control',key,{'stop':False})
+            ensure_observers(account_record['connection'])
+            return {'status':'observing'}
         with connect() as db:
             active = db.execute('SELECT expires FROM leases WHERE account=?', (key,)).fetchone()
         if active and active['expires'] > time.time():
@@ -414,6 +421,9 @@ def install_copy_routes(app):
         record = dict(id=key, **req.model_dump(), state='PAUSED', strategies=snapshots,
                       magic=100000000 + int(key[:7], 16), created_at=time.time())
         record['symbol_map']=validate_symbol_map({**target_account.get('symbol_map',{}),**req.symbol_map})
+        if req.source_type=='account':
+            from backend.cross_copy import configure_copy
+            configure_copy(record,target_account,required('account',req.source_id))
         if diagnostic_items:
             configure(record,DiagnosticRequest(**diagnostic_items[0].get('diagnostic_config',{})))
         return put('deployment', key, record)
@@ -551,7 +561,7 @@ def install_copy_routes(app):
                   'max_drawdown_pct','max_positions','max_spread_points','deviation_points',
                   'direction_filter','symbol_whitelist','symbol_map','symbol_filter','sl_tp_mode',
                   'custom_sl_pips','custom_tp_pips','max_daily_gain_pct','max_exposure_per_symbol',
-                  'max_total_exposure','equity_protection','max_order_age_seconds'}
+                  'max_total_exposure','equity_protection','max_order_age_seconds','price_scale','quantity_ratio'}
         if set(req)-editable:
             raise HTTPException(400,'Campos no editables en la configuración')
         try:
@@ -564,6 +574,13 @@ def install_copy_routes(app):
             raise HTTPException(400,'Ese modo de tamaño requiere una master')
         for field in editable:
             record[field]=validated[field]
+        record['symbol_map']=validate_symbol_map(record['symbol_map'])
+        if record['source_type']=='account':
+            from backend.cross_copy import configure_copy
+            previous=required('deployment',key)
+            if previous.get('platform')=='NT8' and record['symbol_map']!=previous['symbol_map']:
+                raise HTTPException(409,'Detén y crea una nueva copia para cambiar contratos NT8')
+            configure_copy(record,required('account',record['account_id']),required('account',record['source_id']))
         put('deployment',key,record)
         log(record['account_id'],key,'Tamaño, filtros y límites actualizados desde Stratix')
         return record
@@ -604,6 +621,10 @@ def install_copy_routes(app):
         if group['risk_mode'] not in ('FIXED_LOT','RISK_PERCENT') and any(d['source_type']!='account' for d in members):
             raise HTTPException(422,'El modo de tamaño del grupo no es compatible con sus asignaciones de algoritmos')
         updated=[]
+        if group['risk_mode']=='FIXED_LOT' and group['fixed_lot']!=int(group['fixed_lot']) and any(d.get('platform')=='NT8' for d in members):
+            raise HTTPException(422,'Las seguidoras NinjaTrader requieren un tamaño fijo entero de contratos')
+        if group['risk_mode'] in ('MIRROR','MULTIPLIER','PROPORTIONAL') and any(d.get('cross_platform') and d.get('quantity_ratio') is None for d in members):
+            raise HTTPException(422,'Configura la equivalencia de tamaño en cada copia entre plataformas antes de aplicar este modo')
         for record in members:
             if record.get('group_id')==key and record['state']!='STOPPED':
                 for field in ('risk_mode','fixed_lot','multiplier','risk_percent','max_daily_loss_pct','max_drawdown_pct'):

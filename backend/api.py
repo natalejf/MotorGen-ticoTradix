@@ -876,6 +876,8 @@ from backend.workspace_features import install_routes
 install_routes(app, genetic_engine, ExplorationConfigRequest)
 from backend.copy_trading import install_copy_routes
 install_copy_routes(app)
+from backend.cross_copy import install_routes as install_cross_copy_routes
+install_cross_copy_routes(app)
 from backend.ea_bridge import install_routes as install_ea_routes
 install_ea_routes(app)
 from backend.mt5_diagnostic import install_routes as install_diagnostic_routes

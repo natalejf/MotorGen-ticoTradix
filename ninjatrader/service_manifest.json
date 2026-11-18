@@ -9,6 +9,6 @@
   "warmup": "2 closed candles",
   "compile_status": "PENDING",
   "native_compile_status": "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
-  "compile_checked_at": "2026-11-18T03:28:42.4920028Z",
-  "integrated_sha256": "0bc8cc792a3e48e7abd961320fa6d2410cd43759800bfeeb79c5d9fcc6193a7d"
+  "compile_checked_at": "2026-11-18T23:54:29.5721079Z",
+  "integrated_sha256": "c6a3ceae5f658f19d28f7f271ac129d1c9667eacb897e8dc9d47070d7f6f45dc"
 }

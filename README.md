@@ -91,6 +91,10 @@ Implementación vectorizada ultrarrápida con caché en memoria:
 
 ## 💻 Instalación y Uso
 
+Para configurar el copy entre masters y seguidoras MT5/NinjaTrader, consulta
+[la guía de copy trading](COPY_TRADING.md). Incluye instalación, equivalencias
+de lotes/contratos, tickets y límites de la versión demo/simulación.
+
 ### 1. Iniciar el Servidor y la Interfaz
 Simplemente ejecuta:
 ```bash

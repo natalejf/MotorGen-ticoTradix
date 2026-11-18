@@ -168,7 +168,7 @@ def install_routes(app):
             if not snapshot.get('data_ready'):raise HTTPException(409,'Esperando ticks recientes del instrumento')
         params=(settings or Settings()).model_dump() if action in ('configure','reset','close-stop') else {}
         if action=='close-stop':
-            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio'):
+            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy'):
                 raise HTTPException(409,'Compila el AddOn actualizado: esta versión anterior no garantiza el cierre exclusivo de PropPass')
             try:applied=store.get('ninja_config_ack',key)
             except KeyError:raise HTTPException(409,'No hay grupo PropPass aplicado para cerrar')
@@ -259,6 +259,8 @@ def install_routes(app):
         ninja_rpc.accept_results(key,instance,value.get('engine_results',[]))
         from backend.ninja_execution import ensure_workers
         ensure_workers(key)
+        from backend.cross_copy import ensure_observers
+        ensure_observers(key)
         if isinstance(ack,str) and ack:
             try:cmd=store.get('ninja_command',ack)
             except KeyError:cmd={}

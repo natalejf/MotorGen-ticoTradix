@@ -92,6 +92,17 @@ class NinjaWorker(MT5Worker):
         for index,(item,broker) in enumerate(zip(record['strategies'],self.brokers)):
             self.mt5=broker
             sub=dict(record,risk_percent=record['risk_percent']*item['weight'])
+            if record['source_type']=='account':
+                sub.update(magic=record['magic']+index,copy_source_symbol=item['strategy']['symbol'])
+                leg=runtime.setdefault('copy_legs',{}).setdefault(str(index),dict(positions={},baseline_master=None))
+                try:self.account_copy(sub,leg,record['state']=='ACTIVE' and self.risk_allowed(record,info))
+                except Exception as error:
+                    if len(self.brokers)==1:raise
+                    if time.time()-runtime.setdefault('leg_errors',{}).get(str(index),0)>60:
+                        store.log(self.account['id'],self.session,f'{broker.symbol} · {error}')
+                        runtime['leg_errors'][str(index)]=time.time()
+                finally:store.put('runtime',record['id'],runtime)
+                continue
             # Weights allocate cash risk, never fractions of futures contracts.
             try:self.algorithm(sub,runtime,dict(item,weight=1),index,store.get('deployment',self.session)['state']=='ACTIVE' and self.risk_allowed(record,info))
             except Exception as error:
@@ -127,7 +138,7 @@ def install_routes(app):
         with assignment_lock:
             try:snapshot=store.get('ninja_snapshot',req.connection)
             except KeyError:raise HTTPException(409,'Conecta NinjaTrader primero')
-            if time.time()-snapshot.get('at',0)>10 or snapshot.get('version')!='1.5.4-portfolio':
+            if time.time()-snapshot.get('at',0)>10 or snapshot.get('version') not in ('1.5.4-portfolio','1.6.0-copy'):
                 raise HTTPException(409,'Conecta el AddOn 1.5.4-portfolio actualizado y compilado en NinjaTrader')
             row=next((a for a in snapshot['accounts'] if a['name']==req.account),{})
             if not row.get('execution_allowed') or row.get('provider') not in ('Simulator','Playback'):

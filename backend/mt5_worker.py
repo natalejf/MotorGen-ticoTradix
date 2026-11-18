@@ -213,6 +213,7 @@ class MT5Worker:
             requested=cash_risk/abs(one_lot_loss)
         if source_volume is not None:
             mode=deployment.get('risk_mode','RISK_PERCENT')
+            source_volume*=deployment.get('quantity_ratio') or 1.
             if mode=='RISK_PERCENT':
                 requested=cash_risk/abs(one_lot_loss)
             elif mode=='FIXED_LOT':
@@ -459,20 +460,33 @@ class MT5Worker:
         if time.time()-source['at'] > 15 or not source.get('verified_demo'):
             raise RuntimeError('Master desconectada/obsoleta: no se infieren cierres ni se abren copias')
         master = {str(p['ticket']):p for p in source['positions']}
+        if deployment.get('copy_source_symbol'):
+            master={ticket:p for ticket,p in master.items() if p['symbol']==deployment['copy_source_symbol']}
+        instance=source.get('source_instance')
+        if runtime.get('source_instance') and runtime['source_instance']!=instance:
+            raise RuntimeError('Master NT8 reiniciada: crea una nueva copia tras reconciliar posiciones; no se infieren cierres')
+        if instance:runtime['source_instance']=instance
         if runtime['baseline_master'] is None:
             runtime['baseline_master'] = list(master)
-            store.put('runtime',deployment['id'],runtime)
+            if not deployment.get('copy_source_symbol'):store.put('runtime',deployment['id'],runtime)
+        if not may_open:
+            runtime['baseline_master']=list(set(runtime['baseline_master']).union(master))
         positions = self.positions()
         for ticket, ref in list(runtime['positions'].items()):
             local = next((p for p in positions if p.magic==deployment['magic'] and p.comment==ref['comment']),None)
             if local is None:
                 continue  # Broker/manual closure is respected; never reopen it.
+            ref['target_ticket']=local.ticket
             origin = master.get(ticket)
             if origin is None:
                 self.close_position(deployment,local,reason='master-close')
             else:
                 if deployment.get('sl_tp_mode','PROVIDER')=='PROVIDER':
-                    self.modify(deployment,local,origin['sl'],origin['tp'])
+                    sl,tp=origin['sl'],origin['tp']
+                    if ref.get('translated'):
+                        sl=ref['target_entry']+(sl-ref['source_entry'])*ref['price_scale'] if sl else 0
+                        tp=ref['target_entry']+(tp-ref['source_entry'])*ref['price_scale'] if tp else 0
+                    if sl>0 and tp>0:self.modify(deployment,local,sl,tp)
                 target = ref['initial_local_volume']*origin['volume']/ref['initial_master_volume']
                 info = self.mt5.symbol_info(local.symbol)
                 if local.volume-target >= info.volume_step*.99:
@@ -499,7 +513,19 @@ class MT5Worker:
                 if not custom and (origin['sl'] <= 0 or origin['tp'] <= 0):
                     raise RuntimeError('Señal master sin SL/TP: copia rechazada')
                 symbol = deployment['symbol_map'].get(origin['symbol'],origin['symbol'])
+                if deployment.get('cross_platform') and origin['symbol'] not in deployment['symbol_map']:
+                    continue
                 sl,tp=origin['sl'],origin['tp']
+                translated=deployment.get('cross_platform') or deployment.get('price_scale',1)!=1
+                target_entry=None
+                if translated:
+                    info,tick=self.tick(symbol,deployment,opening=True)
+                    target_entry=tick.ask if direction=='BUY' else tick.bid
+                    sl=target_entry+(sl-origin['price_open'])*deployment.get('price_scale',1)
+                    tp=target_entry+(tp-origin['price_open'])*deployment.get('price_scale',1)
+                    if getattr(self.mt5,'platform','MT5')=='NT8':
+                        sl=round(sl/info.point)*info.point
+                        tp=round(tp/info.point)*info.point
                 if custom:
                     info,tick=self.tick(symbol,deployment,opening=True)
                     pip=info.point*(10 if info.digits in (3,5) else 1)
@@ -512,9 +538,15 @@ class MT5Worker:
                 result = self.open_position(deployment,key,symbol,direction,sl,tp,
                                             source_volume=origin['volume'],source_equity=source.get('equity'))
                 if result:
-                    runtime['positions'][ticket] = dict(comment=comment,initial_master_volume=origin['volume'],initial_local_volume=result.volume)
-                    store.put('runtime',deployment['id'],runtime)
-        store.put('runtime',deployment['id'],runtime)
+                    matched=next((p for p in self.positions() if p.magic==deployment['magic'] and p.comment==comment),None)
+                    runtime['positions'][ticket] = dict(comment=comment,source_ticket=ticket,target_order=result.order,
+                        target_ticket=matched.ticket if matched else None,
+                        source_symbol=origin['symbol'],target_symbol=symbol,initial_master_volume=origin['volume'],
+                        initial_local_volume=result.volume,translated=bool(translated),target_entry=matched.price_open if matched and translated else target_entry,
+                        source_entry=origin.get('price_open'),price_scale=deployment.get('price_scale',1))
+                    store.log(self.account['id'],deployment['id'],f'COPY {ticket} → {result.order} · {origin["symbol"]} {origin["volume"]} → {symbol} {result.volume}')
+                    if not deployment.get('copy_source_symbol'):store.put('runtime',deployment['id'],runtime)
+        if not deployment.get('copy_source_symbol'):store.put('runtime',deployment['id'],runtime)
 
     def cycle(self):
         if not store.lease(self.account['id'],self.owner):
