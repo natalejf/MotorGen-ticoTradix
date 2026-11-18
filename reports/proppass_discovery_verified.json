@@ -1,0 +1,71 @@
+{
+  "at": 1794946563.9816833,
+  "version": "1.2-discovery",
+  "accounts": [
+    {
+      "name": "Backtest",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "Playback101",
+      "provider": "Playback",
+      "execution_allowed": true
+    },
+    {
+      "name": "Sim101",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount2",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount3",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount4",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount5",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount6",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount7",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount8",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount9",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "SimAccount10",
+      "provider": "Simulator",
+      "execution_allowed": true
+    },
+    {
+      "name": "DEMO9979111",
+      "provider": "Provider31",
+      "execution_allowed": false
+    }
+  ]
+}

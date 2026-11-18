@@ -1101,7 +1101,7 @@ class GeneticEngine:
                 "passed_filters": True
             }
             cand_score = m.get(objective, m.get("tn_score", 0.0))
-
+            replacement_message=None
             with self.lock:
                 if max_candidates is None or len(self.candidates_passed) < max_candidates:
                     self.accepted_count += 1
@@ -1124,11 +1124,12 @@ class GeneticEngine:
                             key=lambda x: x["metrics"].get(objective, x["metrics"].get("tn_score", 0.0)),
                             reverse=True
                         )
-                        self.log(f"⚡ Top {max_candidates} actualizado: Algo {individual.id[-4:].upper()} ({cand_score:.1f}) desplazó a uno menor ({lowest_score:.1f})")
+                        replacement_message=f"⚡ Top {max_candidates} actualizado: Algo {individual.id[-4:].upper()} ({cand_score:.1f}) desplazó a uno menor ({lowest_score:.1f})"
                     else:
                         self.discarded_count += 1
                         return
 
+            if replacement_message:self.log(replacement_message)
             # --- Additional validators (WF/MV) on top-N accepted candidates ---
             vc = self.validator_cfg or {}
             if passes_classification and df is not None and vc.get("validate_during_exploration"):
@@ -1205,12 +1206,12 @@ class GeneticEngine:
         pnl_arr: np.ndarray
     ) -> Tuple[bool, float]:
         """Apply classification filters; returns (passes, dsr)."""
-        min_win_rate = float(cfg.get("min_win_rate", 50.0))
-        min_trades = int(cfg.get("min_trades", 8))
-        max_drawdown = float(cfg.get("max_drawdown", 15.0))
+        min_win_rate = float(cfg.get("min_win_rate", 40.0))
+        min_trades = int(cfg.get("min_trades", 30))
+        max_drawdown = float(cfg.get("max_drawdown", 20.0))
         min_net_profit_usd = float(cfg.get("min_net_profit_usd", 0.0))
-        min_sharpe = float(cfg.get("min_sharpe", 1.2))
-        min_profit_factor = float(cfg.get("min_profit_factor", 1.1))
+        min_sharpe = float(cfg.get("min_sharpe", 0.8))
+        min_profit_factor = float(cfg.get("min_profit_factor", 1.2))
         min_dsr = float(cfg.get("min_dsr", 0.3))
 
         sharpe_var = float(np.var(all_tested_sharpes)) if len(all_tested_sharpes) > 2 else 0.25

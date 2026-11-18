@@ -1,0 +1,20 @@
+{
+  "execution_allowed": false,
+  "fault": "Protecci\u00f3n rechazada; cierre preventivo de la posici\u00f3n de esta sesi\u00f3n",
+  "account": "SimAccount2",
+  "balance": 49839.5,
+  "equity": 49839.5,
+  "tick_size": 0.25,
+  "point_value": 2,
+  "bid": 27126.5,
+  "ask": 27127.25,
+  "tick_time": 1794970246.64515,
+  "positions": [],
+  "last_exit": {
+    "name": "STXG_CLOSE_825c557fcf1148eab9cfc50dd3d849b0",
+    "price": 27125.25,
+    "quantity": 1
+  },
+  "protections": [],
+  "orders": []
+}

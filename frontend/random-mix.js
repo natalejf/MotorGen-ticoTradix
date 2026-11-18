@@ -9,12 +9,11 @@
     const families={};
     for(const [key,meta] of Object.entries(catalog))(families[meta.family]??=[]).push(key);
     const groups=shuffle(Object.values(families),rng);
-    const count=Math.min(groups.length,3+Math.floor(rng()*3));
-    return groups.slice(0,count).map(keys=>keys[Math.floor(rng()*keys.length)]);
+    return groups.map(keys=>keys[Math.floor(rng()*keys.length)]);
   }
   function orders(rng=Math.random){
     return {entries:shuffle(['entry-market','entry-limit','entry-stop'],rng).slice(0,1),
-      exits:shuffle(['exit-atr','exit-pips','exit-pct','exit-trailing','exit-breakeven','exit-swing','exit-time','exit-partial','exit-atr-smooth'],rng).slice(0,1+Math.floor(rng()*2))};
+      exits:shuffle(['exit-atr','exit-pips','exit-pct','exit-trailing','exit-breakeven','exit-swing','exit-time','exit-partial','exit-atr-smooth'],rng).slice(0,1)};
   }
   root.StratixMix={shuffle,indicators,orders};
 })(typeof window==='undefined'?globalThis:window);

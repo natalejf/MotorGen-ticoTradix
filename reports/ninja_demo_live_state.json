@@ -1,0 +1,26 @@
+{
+  "execution_allowed": true,
+  "account": "Sim101",
+  "balance": 50000,
+  "equity": 49986,
+  "tick_size": 0.25,
+  "point_value": 2,
+  "bid": 27220,
+  "ask": 27220.75,
+  "tick_time": 1794966530.32238,
+  "positions": [
+    {
+      "ticket": 639305632820261302,
+      "symbol": "MNQ DEC26",
+      "type": 0,
+      "volume": 1,
+      "price_open": 27227,
+      "sl": 26989.5,
+      "tp": 27702,
+      "magic": 116657890,
+      "comment": "STXc5c2d582592159cd9e23",
+      "time": 1794966482
+    }
+  ],
+  "orders": []
+}

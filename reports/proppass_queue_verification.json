@@ -1,0 +1,18 @@
+{
+  "at": 1794947747.6320844,
+  "state": "RUNNING",
+  "current_group": "PropPass · NQ M5 · 4 contratos · 1500/2000",
+  "group_order": [
+    [
+      "PropPass · NQ M5 · 4 contratos · 1500/2000",
+      "ACTIVE"
+    ],
+    [
+      "PropPass · NQ M5 · 1 contrato · 150/2000",
+      "PENDING"
+    ]
+  ],
+  "next_account": "SimAccount3",
+  "active_accounts": [],
+  "verification": "14 API/queue tests passed; native SimAccount2 entry observed with group 2 still pending; full queue remains running"
+}

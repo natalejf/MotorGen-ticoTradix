@@ -16,9 +16,11 @@ def main():
     config=source[source.index('        private Account GetAccountCached'):source.index('        protected override void OnStateChange')]
     core=source[source.index('        private void EvaluateEntrySignals'):source.index('        //  UI HELPERS')]
     core=core[:core.rfind('        // =====================================================================')]
-    config=config.replace('if (string.IsNullOrEmpty(name)) return null;',
-        'if (string.IsNullOrEmpty(name) || !allowedAccounts.Contains(name)) return null;')
+    # Discovery is independent from the execution authorization check.
     core=core.replace('Draw.HorizontalLine(this,','NoChart(')
+    core=core.replace('private void OnGlobalExecutionUpdate(', 'private void ProcessAccountExecution(')
+    core=core.replace('acc.Submit(', 'QueueSubmit(acc,').replace('acc.Cancel(', 'QueueCancel(acc,').replace('acc.Flatten(', 'QueueFlatten(acc,')
+    core=core.replace('if (e.Execution == null || e.Execution.Account == null) return;', 'if (Instrument == null || e.Execution == null || e.Execution.Account == null || e.Execution.Order == null || e.Execution.Order.Instrument.FullName != Instrument.FullName || !groupAccounts.Contains(e.Execution.Account.Name)) return;')
     core=core.replace('foreach (var kvp in accountsConfig)','foreach (var kvp in accountsConfig.OrderBy(p=>Array.IndexOf(groupAccounts,p.Key)))')
     core=core.replace('settings.SessionRealizedPnl += tradePnl;',
         'settings.SessionRealizedPnl += tradePnl;\n                            if(e.Execution.Order!=null && !e.Execution.Order.Name.StartsWith("Entry",StringComparison.Ordinal)) {settings.TradesClosed++;if(tradePnl>0)settings.TradesWon++;else if(tradePnl<0)settings.TradesLost++;}')
@@ -35,12 +37,16 @@ def main():
     core=before+'        private void PeriodicMonitoring()'+monitor
     core=core.replace('(Close.Count > 0 ? Close[0] : avgPrice)','avgPrice').replace('(Close.Count > 0 ? Close[0] : 0.0)','0.0')
     core=core.replace('            settings.Direction = direction;',
-        '            if (!allowedAccounts.Contains(acc.Name)) throw new Exception("Solo simulación autorizada");\n            settings.Direction = direction;',1)
+        '            if (!CanExecute(acc)) throw new Exception("Solo simulación autorizada");\n            settings.Direction = direction;',1)
     fragment=ROOT.joinpath('CandleService.fragment.cs').read_text(encoding='utf-8')
     imports='\n'.join(['using System;','using System.Collections.Generic;','using System.Linq;',
         'using System.IO;','using System.Text;','using System.Windows.Media;','using NinjaTrader.Cbi;',
         'using NinjaTrader.Data;','using NinjaTrader.Gui;','using NinjaTrader.NinjaScript;'])
-    result=imports+'\nnamespace NinjaTrader.NinjaScript.AddOns {\n public class StratixCandleService : AddOnBase {\n'+account+fragment+config+core+'\n }\n}\n'
+    core=core.replace('if (Instrument == null || e.Execution', 'if(e.Execution!=null && e.Execution.Account!=null && (!candleOwnedAccounts.Contains(e.Execution.Account.Name)||candleOwnershipConflicts.Contains(e.Execution.Account.Name)))return;\n            if(e.Execution!=null && e.Execution.Order!=null && e.Execution.Order.Name.StartsWith("STXG_"))return;\n            if (Instrument == null || e.Execution')
+    core=core.replace('            settings.Direction = direction;', '            candleOwnedAccounts.Add(acc.Name);\n            settings.Direction = direction;',1)
+    core=core.replace('!groupAccounts.Contains(kvp.Key) || removedAccounts', '!CanManageCandle(GetAccountCached(kvp.Key),Instrument) || !groupAccounts.Contains(kvp.Key) || removedAccounts')
+    core=core.replace('!groupAccounts.Contains(kvp.Key) || removedAccounts', 'engineLeases.Values.Any(l=>l.Account==kvp.Key) || !groupAccounts.Contains(kvp.Key) || removedAccounts')
+    result=imports+'\nnamespace NinjaTrader.NinjaScript.AddOns {\n public class StratixCandleService : AddOnBase {\n'+account+ROOT.joinpath('BridgeHealth.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('EngineBridge.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('CandleOwnership.fragment.cs').read_text(encoding='utf-8')+fragment+config+core+'\n }\n}\n'
     if 'ChartControl' in result or 'Draw.HorizontalLine' in result:raise RuntimeError('Quedó una dependencia del gráfico')
     ROOT.joinpath('StratixCandleService.cs').write_text(result,encoding='utf-8')
     ROOT.joinpath('service_manifest.json').write_text(json.dumps(dict(source=str(SOURCE),sha256=hashlib.sha256(raw).hexdigest(),

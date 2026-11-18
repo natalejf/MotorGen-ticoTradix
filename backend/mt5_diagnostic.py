@@ -67,10 +67,11 @@ def run(worker,d,may_open):
         if not may_open: return
         from backend.indicator_audit import audit_frame
         audit=audit_frame(worker.bars(d['diagnostic_symbol'],'30m'))
-        store.put('indicator_audit',d['id'],dict(dataset='MT5 closed M30 bars',**audit))
+        platform=getattr(worker.mt5,'platform','MT5')
+        store.put('indicator_audit',d['id'],dict(dataset=platform+' closed M30 bars',**audit))
         state['audit_complete']=True
         store.put('diagnostic',d['id'],state)
-        store.log(d['account_id'],d['id'],f'Auditoría indicadores MT5: {audit["passed"]}/{audit["checks"]}, fallos {audit["failed"]}')
+        store.log(d['account_id'],d['id'],f'Auditoría indicadores {platform}: {audit["passed"]}/{audit["checks"]}, fallos {audit["failed"]}')
         if audit['failed']:
             state['audit_complete']=False
             store.put('diagnostic',d['id'],state)
@@ -86,6 +87,7 @@ def run(worker,d,may_open):
     orders=[p for p in pending_orders(worker) if p.magic==d['magic']] if case['entry']!='MARKET' else []
     def save(): store.put('diagnostic',d['id'],state)
     def finish(outcome,detail):
+        detail=detail.replace('MT5',getattr(worker.mt5,'platform','MT5'))
         state['results'].append(dict(**case,outcome=outcome,detail=detail,at=time.time()))
         store.log(d['account_id'],d['id'],f'Diagnóstico {state["index"]+1}/{len(CASES)} {case}: {outcome} · {detail}')
         next_index=state['index']+1
@@ -103,14 +105,24 @@ def run(worker,d,may_open):
         distance=max(info.trade_stops_level*info.point*3,(tick.ask-tick.bid)*4,info.point*30)
         if case['entry']!='MARKET':
             price=round(price+sign*distance*(-1 if case['entry']=='LIMIT' else 1),info.digits)
+            if getattr(worker.mt5,'platform','MT5')=='NT8':
+                price=round(price+sign*distance*7*(-1 if case['entry']=='LIMIT' else 1),info.digits)
         sl,tp=price-sign*distance*2,price+sign*distance*2
         if case['exit']=='SL': sl=price-sign*distance
         if case['exit']=='TP': tp=price+sign*distance
+        if getattr(worker.mt5,'platform','MT5')=='NT8':
+            # Use a nearby tested boundary and a distant alternative so a
+            # native SL/TP case is less likely to finish via the opposite exit.
+            reference=tick.bid if sign==1 else tick.ask
+            if case['exit']=='SL':sl=reference-sign*info.point*3;tp=price+sign*distance*8
+            elif case['exit']=='TP':tp=reference+sign*max(info.point*4,tick.ask-tick.bid+info.point*2);sl=price-sign*distance*4
+            elif case['exit'] in ('PARTIAL','BREAKEVEN','TRAILING'):sl=price-sign*distance*4;tp=price+sign*distance*8
         store.log(d['account_id'],d['id'],f'INICIO {state["index"]+1}/{len(CASES)} · {case["direction"]} {case["entry"]} · salida {case["exit"]}')
         # Persist intent before requesting; ambiguous sends never restart a case.
         state.update(phase='WAIT',started=time.time(),distance=distance,entry=price)
         save()
         key=f'{d["id"]}:case:{state["index"]}'
+        if state.get('attempt'):key+=f':attempt:{state["attempt"]}'
         if case['entry']=='MARKET':
             result=worker.open_position(d,key,symbol,case['direction'],sl,tp)
         else:
@@ -143,6 +155,8 @@ def run(worker,d,may_open):
         if positions:
             cleanup('INCONCLUSIVE','Pendiente ejecutada antes de completar modificación/cancelación');return
         if not orders:
+            if getattr(worker.mt5,'platform','MT5')=='NT8' and worker.mt5.history_deals_get(position=state.get('opening_ticket')):
+                cleanup('INCONCLUSIVE','Pendiente activada y cerrada antes de modificar; ejecución nativa confirmada');return
             cleanup('FAIL','Pendiente no encontrada tras aceptación');return
         if not state.get('modified'):
             o=orders[0];sign=1 if case['direction']=='BUY' else -1
@@ -151,13 +165,21 @@ def run(worker,d,may_open):
             request=dict(action=7,order=int(o.ticket),symbol=symbol,price=round(o.price_open+delta,info.digits),
                 sl=round(o.sl+delta,info.digits),tp=round(o.tp+delta,info.digits),type_time=0)
             result=worker.send(d,f'{d["id"]}:pending-modify:{o.ticket}',request)
-            if not result: cleanup('FAIL','Modificación pendiente rechazada');return
+            if not result:
+                if any(p.magic==d['magic'] for p in worker.positions()):cleanup('INCONCLUSIVE','Pendiente activada antes del cambio; rechazo confirmado sin reenviar')
+                else:cleanup('FAIL','Modificación pendiente rechazada')
+                return
             state['modified']=True;state['pending_price']=request['price'];save();return
         info,_=worker.tick(symbol,d)
         if abs(orders[0].price_open-state['pending_price'])>=info.point:
             cleanup('FAIL','El precio pendiente no refleja la modificación');return
         cleanup('PASS','Pendiente colocada y modificada; cancelación se verifica en limpieza');return
     if not positions:
+        if case['exit'] in ('BREAKEVEN','TRAILING','MODIFY') and state.get('target_sl') is not None and getattr(worker.mt5,'platform','MT5')=='NT8':
+            deals=worker.mt5.history_deals_get(position=state.get('opening_ticket'))
+            point=worker.mt5.symbol_info(symbol).point
+            if any(deal.reason==4 and deal.stop_price is not None and abs(deal.stop_price-state['target_sl'])<=point/2 for deal in deals):
+                cleanup('PASS','SL modificado y ejecutado antes de la siguiente consulta; precio del stop confirmado en NT8');return
         if case['exit'] in ('SL','TP') and state.get('opening_ticket'):
             deals=worker.mt5.history_deals_get(position=state['opening_ticket'])
             reason=4 if case['exit']=='SL' else 5

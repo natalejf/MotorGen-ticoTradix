@@ -10,12 +10,12 @@ contratos, TP/SL, límites, horario y activación/pausa.
 - **PropPass → Conexiones / Registro**: conexión del servicio, datos recibidos, cuentas y
   registro nativo. NinjaTrader debe estar abierto y conectado a datos.
 - **PropPass → Panel**: crear, editar, eliminar y aplicar
-  grupos. «Aplicar y activar grupo» pausa la configuración anterior, espera su
-  confirmación, aplica el grupo y solicita activación. No cierra posiciones para
-  cambiar de grupo: requiere estar flat y sin órdenes pendientes.
-- Un grupo aplicado por servicio. Se conserva la operativa **secuencial** del
-  original: una cuenta por vez, no réplica simultánea en todas las cuentas.
-- Primera fase limitada a Sim101 y SimAccount2–SimAccount10. No se habilitaron
+  grupos. «Activar en cola» agrega el grupo al final de la cola de activación.
+  El grupo actual no se interrumpe. Solo al terminar todas sus cuentas por
+  target o stop y estar flat/sin órdenes pendientes, se configura el siguiente.
+- Un grupo ejecutándose por servicio y otros en espera. La secuencia tiene
+  dos niveles: cuentas dentro del grupo y después grupos en orden de activación.
+- Detección dinámica mediante Account.All; hasta 200 cuentas por grupo. La ejecución de esta fase se limita a los proveedores nativos Simulator/Playback. No se habilitaron
   cuentas de fondeo ni copy entre plataformas.
 - «Pausar entradas» conserva la gestión nativa y los TP/SL. Ante desconexión web
   se pausan nuevas entradas; no se reactiva automáticamente al reconectar.
@@ -92,11 +92,11 @@ https://static.ninjatrader.com/support/helpGuides/nt8/state.htm
 - Alcanzar un límite deshabilita la cuenta y solicita el cierre; la próxima
   cuenta elegible recibe la siguiente señal de vela. No abre inmediatamente
   al marcar PASS/SL. No hay diez posiciones simultáneas.
-- Por ahora hay **un grupo aplicado por servicio**, no dos grupos simultáneos.
-  Los dos quedan guardados; para alternarlos hay que pausar y estar flat.
+- Hay **un grupo ejecutándose por servicio** y una cola de grupos activados.
+  No se alternan por trade: primero terminan todas las cuentas del actual.
 - La prueba conectada utiliza la conexión **Simulación** de NinjaTrader:
-  precios generados por NT8, no cotizaciones del mercado real. Sus resultados
-  comprueban la integración, no la rentabilidad.
+  ejecuciones en las cuentas locales de simulación sobre las cotizaciones que
+  recibe NT8. Sus resultados comprueban la integración, no la rentabilidad.
 - Evidencia conectada: `reports/proppass_requested_groups.json`.
 - Prueba determinista: `reports/PropPassLimitsHarness.cs` extrae literalmente los
   métodos de monitoreo y selección del servicio. Sus 26 escenarios utilizan
@@ -129,13 +129,14 @@ PC/VPS**. El AddOn se conecta al servidor de esa máquina por 127.0.0.1:8000;
    reiniciar NT8 si la vinculación no se carga. El `.cs` es fuente, no un ZIP
    importable desde Tools → Import → NinjaScript Add-On.
 5. Esperar en PropPass «NT8 conectado», las cuentas y ticks recientes.
-   El conector actual admite SOLO los nombres Sim101 y SimAccount2–10;
-   todavía no permite cuentas reales/de fondeo con otros nombres.
+   El conector descubre las cuentas disponibles por nombre y proveedor, sin una
+   lista fija de SimAccount. Cuentas conectadas de otros proveedores aparecen
+   como solo lectura en esta fase; ejecutar se limita a simuladores locales.
 6. Crear el grupo: instrumento exacto y vencimiento admitido por el proveedor,
    M5, contratos y objetivos por cuenta. Revisar el balance de referencia.
    «Guardar» no activa operaciones. «Reiniciar seguimiento» requiere flat y
    pausa; borra los contadores del controlador, no el historial de NT8.
-7. Pulsar «Aplicar y activar». Esperar ACK nativo. Desde una suscripción nueva
+7. Pulsar «Activar en cola». Los grupos siguientes quedan en espera. Esperar ACK nativo del grupo actual. Desde una suscripción nueva
    hacen falta dos cierres M5, entre cinco y diez minutos aproximadamente.
    Después opera la primera cuenta elegible si la vela tiene dirección.
 8. Ver «Actual», «Siguiente elegible» y Registro. Pausar entradas conserva la
@@ -156,3 +157,90 @@ El PC/VPS debe permanecer encendido, con NT8, servidor, datos y conectividad.
 Cerrar el navegador no equivale a parar el algoritmo. Una pérdida de conexión
 con el servidor pausa nuevas entradas en unos diez segundos; nunca vuelve a
 activar entradas automáticamente tras reconectar.
+
+
+## Detección y compilación corregidas (actualización)
+
+Se instala **una sola vez como AddOn en AddOns**, no como estrategia en cada
+cuenta ni en cada gráfico. Al cargar NT8, el servicio consulta `Account.All`,
+publica las cuentas conectadas y vuelve a descubrir nuevas cuentas en sus
+pulsos. Con veinte cuentas disponibles se pueden seleccionar esas veinte en un
+grupo (máximo técnico actual: 200). Crear un grupo no activa entradas.
+
+No guardar otra copia de la clase `StratixCandleService` en `Strategies`: genera
+una definición duplicada al compilar toda la biblioteca NinjaScript. Se encontró
+una copia idéntica y se respaldó fuera de Custom en
+`reports/native_backup/StratixCandleService.duplicate.cs.bak`.
+
+La fuente nueva se compiló de forma aislada y dentro de NinjaTrader; el DLL
+contiene `1.2-discovery`. Después de actualizar hay que verificar en PropPass
+que el servicio está conectado y publica esa versión; compilar no demuestra
+que la instancia anterior ya haya sido reemplazada. Si no aparece, reiniciar
+NT8 y comprobar la vinculación local. No duplicar la instalación para resolverlo.
+
+La interfaz Cuentas muestra las asignaciones MT5 y las cuentas publicadas por
+NinjaTrader; para gestionar Candle y sus grupos se abre PropPass.
+
+
+## Cola de grupos: regla obligatoria
+
+Los grupos activados se ejecutan en su orden de activación. Un grupo se completa
+solo si **cada cuenta** tiene PASS/BURNED o TARGET_REACHED/LOSS_LIMIT_REACHED,
+ninguna posición y ninguna orden pendiente. Una cuenta simplemente deshabilitada,
+pausada o ausente no cuenta como finalizada. Al completar el grupo se espera el
+ACK de configuración del siguiente antes de activarlo. No se reinician los PASS
+anteriores al cambiar de grupo ni al reanudar la cola.
+
+«Pausar entradas» pausa la cola completa. Activar otro grupo mientras hay uno en
+curso lo agrega en espera; no reemplaza al actual. La API bloquea configure,
+reset y start manuales durante la cola activa. Cambiar de instancia de NT8 pausa
+la cola y requiere reanudación explícita.
+
+La configuración del grupo actual se conserva durante su ejecución: editar su
+plantilla no modifica órdenes en curso. Editar un grupo pendiente actualiza solo
+su configuración en la cola; no cambia el grupo actual ni otros grupos. Dos
+grupos de la misma cola no pueden compartir cuentas.
+
+Prueba conectada del 17/11: Sim101 abrió 4 NQ por vela M5 verde, ejecutó su TP,
+SL cancelado por OCO y PASS; SimAccount6 abrió 1 NQ por otra vela M5 verde,
+ejecutó TP y quedó PASS. Ese ensayo probaba una cuenta por grupo; no era el flujo
+final de cola. Tras la corrección solicitada, el grupo 1 reanudó desde SimAccount2,
+con Sim101 PASS conservado y el grupo 2 en espera. Las pruebas aisladas de cola
+verifican que completar una sola cuenta no permite avanzar al otro grupo.
+
+
+## Toggles y decisiones independientes por grupo
+
+Al alcanzar target o stop, el toggle de la cuenta se muestra apagado y bloqueado
+hasta reiniciar explícitamente el seguimiento. Esto se conserva al cambiar al
+siguiente grupo. El grupo se marca completado cuando todas sus cuentas han
+terminado y no quedan posiciones ni órdenes pendientes.
+
+Editar contratos, límites o el toggle de un grupo pendiente solo actualiza ese
+grupo en la cola. El toggle nativo de una cuenta del grupo actual se conserva al
+reanudar ese grupo y no se propaga a otros. Intentar reiniciar un grupo distinto
+al actual se rechaza antes de pausar o modificar el servicio en ejecución.
+Activar un grupo pendiente tampoco reanuda por sí solo un grupo actual pausado;
+para ello se utiliza «Reanudar este grupo» en el grupo actual. «Pausar entradas»
+de la cabecera sigue siendo un control global explícito de toda la cola.
+
+
+## Watchdog 1.3: errores transitorios y pausas visibles
+
+Un timeout aislado o un HTTP 408/429/5xx no apaga las entradas de inmediato.
+El servicio conserva su estado mientras no pasen 10 segundos desde la última
+respuesta confirmada. Al cumplir ese plazo pausa las entradas, mantiene la gestión
+nativa de salidas y registra COMMUNICATION_TIMEOUT con el último error.
+Los rechazos HTTP 4xx de autenticación/protocolo (excepto 408/429) pausan de
+inmediato con COMMUNICATION_REJECTED. No se reenvían comandos entregados.
+
+Al recuperar comunicación se registra la recuperación. Una pausa de seguridad,
+manual o por error NO se reactiva sola: se reanuda explícitamente desde PropPass.
+La telemetría publica pause_code, pause_reason, pause_at, bridge_failures y
+bridge_last_error. La cola conserva la causa y las últimas 20 pausas; PropPass
+muestra la causa en el estado del motor y en la cola. Los fallos se registran con
+código HTTP o estado WebException, sin imprimir claves del conector.
+
+La lógica temporal se comprobó compilando BridgeHealthHarness.cs contra el mismo
+fragmento C# que incorpora el AddOn. Las pruebas son deterministas, sin cortar
+la conexión de una cuenta que tenga posiciones abiertas.

@@ -14,8 +14,34 @@ def pair(client):
     return p,{'X-Stratix-Key':p['token']}
 
 
+def test_pairing_is_persistent_and_a_second_device_requires_explicit_intent():
+    client=TestClient(app);p,h=pair(client)
+    assert client.post('/api/ninja/connections',json={}).status_code==409
+    assert len(client.get('/api/ninja/status').json()['connections'])==1
+    other=client.post('/api/ninja/connections?new_device=true',json={})
+    assert other.status_code==200 and other.json()['id']!=p['id']
+
+
+def test_close_proppass_uses_confirmed_scope_instead_of_arbitrary_accounts():
+    client=TestClient(app);p,h=pair(client);pulse(client,p,h)
+    store.put('ninja_config_ack',p['id'],dict(instance='native1',group_id='owned',settings=dict(accounts=['Sim101'],symbol='NQ DEC26')))
+    response=client.post('/api/ninja/connections/'+p['id']+'/close-stop',json=dict(accounts=['SimAccount2'],symbol='MNQ DEC26'))
+    assert response.status_code==200,response.text
+    assert response.json()['settings']['accounts']==['Sim101']
+    assert response.json()['settings']['symbol']=='NQ DEC26'
+    assert response.json()['group_id']=='owned'
+
+
+def test_close_proppass_rejects_an_old_addon_without_ownership_guards():
+    client=TestClient(app);p,h=pair(client);pulse(client,p,h,version='1.5.2-portfolio')
+    store.put('ninja_config_ack',p['id'],dict(instance='native1',group_id='owned',settings=dict(accounts=['Sim101'])))
+    response=client.post('/api/ninja/connections/'+p['id']+'/close-stop',json={})
+    assert response.status_code==409 and 'exclusivo' in response.json()['detail']
+    assert not store.listing('ninja_command')
+
+
 def pulse(client,p,headers,**changes):
-    value=dict(account='Sim101',instance='native1',realtime=True,account_available=True,
+    value=dict(account='Sim101',instance='native1',version='1.5.4-portfolio',realtime=True,account_available=True,
                master_enabled=False,position_quantity=0,kind='candle_service_v1',data_ready=True,
                accounts=[{'name':'Sim101'},{'name':'SimAccount2'}])
     value.update(changes)
@@ -95,7 +121,8 @@ def test_groups_apply_ack_and_start_require_matching_group_and_sim_accounts():
     assert 'accounts=Sim101,SimAccount2' in wire and 'symbol=GC DEC26' in wire
     pulse(client,p,h,last_ack=command['id'],ack_status='APPLIED')
     assert client.post(prefix+'/start').status_code==200
-    assert client.post('/api/ninja/groups',json={'name':'No','settings':{'accounts':['Funded123']}}).status_code==422
+    # Arbitrary detected names can be organized; execution checks telemetry scope.
+    assert client.post('/api/ninja/groups',json={'name':'Otra','settings':{'accounts':['Funded123']}}).status_code==200
     assert client.put('/api/ninja/groups/'+group['id'],json={'name':'Editado','settings':{'accounts':['Sim101']}}).status_code==200
     assert client.get('/api/ninja/status').json()['groups'][0]['name']=='Editado'
 
@@ -127,4 +154,33 @@ def test_second_five_accounts_and_emergency_use_applied_not_edited_scope():
     close=client.post(prefix+'/close-stop').json()
     assert close['settings']['accounts']==accounts
     assert close['settings']['symbol']=='NQ DEC26'
-    assert client.post('/api/ninja/groups',json={'name':'Cuenta ajena','settings':{'accounts':['SimAccount11']}}).status_code==422
+    assert client.post('/api/ninja/groups',json={'name':'Cuenta adicional','settings':{'accounts':['SimAccount11']}}).status_code==200
+
+
+def test_discovery_twenty_dynamic_names_without_executing_readonly_accounts():
+    client=TestClient(app);p,h=pair(client)
+    names=['Prueba '+str(i) for i in range(20)]
+    rows=[dict(name=n,connected=True,execution_allowed=True) for n in names]
+    rows.append(dict(name='Cuenta broker',connected=True,execution_allowed=False))
+    pulse(client,p,h,accounts=rows)
+    group=client.post('/api/ninja/groups',json={'name':'Veinte','settings':{'accounts':names}}).json()
+    prefix=f'/api/ninja/connections/{p["id"]}/groups/'
+    assert client.post(prefix+group['id']+'/apply').status_code==200
+    command=pulse(client,p,h,accounts=rows).text.split('|')[0]
+    pulse(client,p,h,accounts=rows,last_ack=command,ack_status='APPLIED')
+    readonly=client.post('/api/ninja/groups',json={'name':'Solo lectura','settings':{'accounts':['Cuenta broker']}}).json()
+    assert client.post(prefix+readonly['id']+'/apply').status_code==409
+    missing=client.post('/api/ninja/groups',json={'name':'No existe','settings':{'accounts':['Ausente']}}).json()
+    assert client.post(prefix+missing['id']+'/apply').status_code==409
+    assert client.post('/api/ninja/groups',json={'name':'Inválido','settings':{'accounts':['a|pause']}}).status_code==422
+
+
+def test_internal_backtest_and_disconnected_playback_are_not_linked_accounts():
+    from backend.ninja_bridge import visible_accounts
+    rows=[dict(name='Backtest',provider='Simulator'),
+          dict(name='Playback101',provider='Playback'),
+          dict(name='Sim propia',provider='Simulator',connected=True),
+          dict(name='Broker ausente',connected=False)]
+    assert [a['name'] for a in visible_accounts({'accounts':rows})]==['Sim propia']
+    rows[1]['native_connection_status']='Connected'
+    assert [a['name'] for a in visible_accounts({'accounts':rows})]==['Playback101','Sim propia']

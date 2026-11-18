@@ -1,0 +1,18 @@
+{
+  "classification": {
+    "min_win_rate": 40.0,
+    "min_trades": 30,
+    "max_drawdown": 20.0,
+    "min_sharpe": 0.8,
+    "min_profit_factor": 1.2,
+    "min_dsr": 0.3
+  },
+  "families": [
+    "SUPERTREND",
+    "CCI",
+    "BOLLINGER",
+    "OBV",
+    "VWAP",
+    "RCI"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "action": {
+    "id": "be32fd9f457b4192a089d6af070aab98:639305676903475007:modify:27190.75:27250.75",
+    "state": "UNKNOWN",
+    "body": "{\"error\": \"NT8: Orden sin confirmaci\\u00f3n final; no reenviar\"}"
+  },
+  "case_before": {
+    "direction": "BUY",
+    "entry": "MARKET",
+    "exit": "BREAKEVEN",
+    "outcome": "INCONCLUSIVE",
+    "detail": "Posición cerrada sin motivo esperado confirmado en historial NT8",
+    "at": 1794970947.7375643
+  },
+  "native_log": "C:\\Users\\yo\\OneDrive\\Documentos\\NinjaTrader 8\\log\\log.20261118.00000.txt",
+  "native_order_evidence": [
+    "2026-11-18 00:01:31:189|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Submitted' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27160.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=0 Fill price=0 Error='No error' Native error=''",
+    "2026-11-18 00:01:31:290|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Accepted' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27160.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=0 Fill price=0 Error='No error' Native error=''",
+    "2026-11-18 00:01:46:427|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Change submitted' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27190.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=0 Fill price=0 Error='No error' Native error=''",
+    "2026-11-18 00:01:46:536|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Accepted' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27190.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=0 Fill price=0 Error='No error' Native error=''",
+    "2026-11-18 00:01:46:538|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Working' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27190.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=0 Fill price=0 Error='No error' Native error=''",
+    "2026-11-18 00:01:46:539|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Working' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27190.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=0 Fill price=0 Error='No error' Native error=''",
+    "2026-11-18 00:01:46:569|1|32|Order='9f70a66818da46dbb51e0d7ec87abd63/SimAccount2' Name='STXG_SL_be32fd9f457b4192a089d6af070aab98' New state='Filled' Instrument='MNQ DEC26' Action='Sell' Limit price=0 Stop price=27190.75 Quantity=2 Type='Stop Market' Time in force=GTC Oco='STXG_be32fd9f457b4192a089d6af070aab98_639305676911529292' Filled=2 Fill price=27190.5 Error='No error' Native error=''"
+  ],
+  "reason": "Stop accepted at the entry price then filled before the one-second ACK monitor observed Working; mutation was not replayed."
+}

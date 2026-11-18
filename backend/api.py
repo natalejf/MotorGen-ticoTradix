@@ -66,12 +66,12 @@ class ExplorationConfigRequest(BaseModel):
     indicator_ranges: Optional[Dict[str, Any]] = None
     # User-edited exit/risk sweep ranges {param: {from, step, to}}
     exit_ranges: Optional[Dict[str, Any]] = None
-    min_win_rate: float = 50.0
-    min_trades: int = 8
-    max_drawdown: float = 15.0
+    min_win_rate: float = 40.0
+    min_trades: int = 30
+    max_drawdown: float = 20.0
     min_net_profit_usd: float = 0.0
-    min_sharpe: float = 1.2
-    min_profit_factor: float = 1.1
+    min_sharpe: float = 0.8
+    min_profit_factor: float = 1.2
     min_dsr: float = 0.3
     max_candidates: Optional[int] = None
 
@@ -558,38 +558,12 @@ def clear_all_strategies(req: Optional[Dict[str, Any]] = None):
 
 @app.post("/api/clear-all-phases")
 def clear_all_phases():
-    """Limpia resultados de TODAS las fases: motor genético, retest, motor de portafolios, estrategias guardadas y portafolios guardados."""
-    import shutil
+    """Clear transient exploration results; saved libraries survive cleanup/restarts."""
     genetic_engine.clear_candidates()
     if RETEST_CACHE_FILE.exists():
-        try:
-            RETEST_CACHE_FILE.unlink()
-        except Exception:
-            pass
+        RETEST_CACHE_FILE.unlink()
     portfolio_engine.clear_top_portfolios()
-    for p in STRATEGY_DIR.glob("**/*.json"):
-        try:
-            p.unlink()
-        except Exception:
-            pass
-    for d in STRATEGY_DIR.iterdir():
-        if d.is_dir():
-            try:
-                shutil.rmtree(d)
-            except Exception:
-                pass
-    for p in PORTFOLIO_DIR.glob("**/*.json"):
-        try:
-            p.unlink()
-        except Exception:
-            pass
-    for d in PORTFOLIO_DIR.iterdir():
-        if d.is_dir():
-            try:
-                shutil.rmtree(d)
-            except Exception:
-                pass
-    return {"status": "cleared", "phases": ["engine", "retest", "portfolio_engine", "strategies", "portfolios"]}
+    return {"status":"cleared","phases":["engine","retest","portfolio_engine"],"saved_libraries_preserved":True}
 
 @app.post("/api/portfolios/clear-all")
 def clear_all_portfolios(req: Optional[Dict[str, Any]] = None):
@@ -845,7 +819,7 @@ def get_config_defaults():
         "wf_depths": ["fast", "standard", "deep"],
         "mv_presets": ["balanced", "conservative", "aggressive"],
         "macro_available": False,
-        "classification_defaults": {"min_sharpe": 1.2, "max_drawdown": 15.0, "min_win_rate": 50.0, "min_dsr": 0.3},
+        "classification_defaults": {"min_trades": 30,"min_profit_factor": 1.2,"min_sharpe": 0.8, "max_drawdown": 20.0, "min_win_rate": 40.0, "min_dsr": 0.3},
         "optimization_objectives": [
             {"id": "tn_score", "name": "Score balanceado (default TN Score)"},
             {"id": "sharpe", "name": "Mayor Sharpe Ratio"},
@@ -885,6 +859,8 @@ install_diagnostic_routes(app)
 from backend.indicator_audit import install_routes as install_audit_routes
 install_audit_routes(app)
 from backend.ninja_bridge import install_routes as install_ninja_routes
+from backend.ninja_execution import install_routes as install_ninja_execution
+install_ninja_execution(app)
 install_ninja_routes(app)
 
 # Mount static frontend files if folder exists

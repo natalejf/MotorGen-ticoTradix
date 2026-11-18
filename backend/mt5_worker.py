@@ -145,7 +145,7 @@ class MT5Worker:
                 store.log(self.account['id'], deployment['id'], f'Orden rechazada: {result.retcode} {result.comment}')
                 return None
             store.finish_action(key, 'EXECUTED', result_dict)
-            store.log(self.account['id'], deployment['id'], f'{deployment.get("name","STX")} · Ejecución MT5: {request["comment"]}; acción={request["action"]}; retcode={result.retcode}; orden={result.order}; volumen={result.volume}')
+            store.log(self.account['id'], deployment['id'], f'{deployment.get("name","STX")} · Ejecución {getattr(self.mt5,"platform","MT5")}: {request["comment"]}; acción={request["action"]}; retcode={result.retcode}; orden={result.order}; volumen={result.volume}')
             return result
         except Exception as error:
             store.finish_action(key, 'UNKNOWN', {'error':str(error)})

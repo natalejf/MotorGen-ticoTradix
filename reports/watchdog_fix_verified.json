@@ -1,0 +1,21 @@
+{
+  "version": "1.3-watchdog",
+  "status": "INSTALLED_AND_LOADED",
+  "behavior": [
+    "Transient network failures do not immediately pause entries",
+    "Ten seconds without a successful server response pauses entries with a reason",
+    "HTTP 408/429 and server errors use the grace period",
+    "Authentication/protocol rejections pause immediately",
+    "Recovery never rearms a manual or safety pause",
+    "Queue preserves pause code, reason, time and last 20 pause events"
+  ],
+  "validation": {
+    "api_queue_tests": 19,
+    "view_tests": 2,
+    "csharp_health_harness": "PASS",
+    "isolated_compile": "PASS",
+    "native_runtime": "CONFIRMED"
+  },
+  "resume": "Same Examenes group, results preserved, next SimAccount10",
+  "evidence": "reports/watchdog_after.json"
+}

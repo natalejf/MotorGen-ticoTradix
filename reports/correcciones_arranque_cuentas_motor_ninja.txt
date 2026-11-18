@@ -1,0 +1,43 @@
+Correcciones de arranque, Cuentas, motor y NinjaTrader — 17/11/2026
+
+Implementado:
+- start.bat e INICIAR_TRADINGNOTE.bat arrancan desde su carpeta y reutilizan una
+  instancia Stratix existente. Priorizan .venv, py -3 y Python. run.py deja
+  diagnóstico de errores de importación en reports/startup_error.log.
+- Cuentas muestra asignaciones y estrategias de portafolios, estado y acceso al
+  registro. Mapeo/edición/vinculación se agrupan en Configuración. Se muestran
+  también las cuentas publicadas por NinjaTrader, con acceso a PropPass.
+- Aleatorio selecciona exactamente uno por familia disponible (seis actualmente),
+  una entrada y una salida. Cada estrategia sigue usando 1–2 indicadores.
+- Clasificación: 30 trades, WR 40%, DD 20%, beneficio >=0, Sharpe .8, PF 1.2,
+  DSR .3. Perfil de descubrimiento equilibrado y editable, no estándar universal
+  ni validación suficiente para operar dinero real.
+- NT8: eliminado duplicado de compilación mediante respaldo reversible fuera
+  de Custom. Una clase en AddOns, ninguna copia de ella en Strategies.
+- Detección Account.All dinámica, sin listas de nombres, refrescada en el pulso;
+  admite grupos de hasta 200 cuentas. Cuentas de otros proveedores se muestran
+  en solo lectura; las pruebas de ejecución usan Simulator/Playback.
+- Las llamadas de órdenes se despachan a la cola nativa; eventos de ejecución
+  se procesan fuera del callback para evitar bloqueos de sincronización.
+
+Verificación:
+- 35 tests de API/asignaciones/propfirm; 10 de rendimiento; 2 del lanzador.
+- 1000 mezclas deterministas comprobaron uno por familia y cobertura de opciones.
+- Tres mezclas y seis estrategias con datos EURUSD H1: sin excepción; mercado
+  ATR, limit pips y stop tiempo. Evidencia standard_random_live_sample.json.
+- 26 escenarios C# con dobles de cuentas verificaron límites y siguiente cuenta;
+  no representan fills del mercado ni ejecuciones en NinjaTrader.
+- Compilación aislada sin errores y DLL nativo con 1.2-discovery comprobado.
+- UI Cuentas verificada: muestra la asignación actual Algo 12C4 (XAUUSD 4h).
+  No se sustituyó ni se activó un algoritmo distinto en MT5.
+
+Pendiente operativo:
+El pulso disponible seguía en 1.1-ten-sims y offline. Se solicitó al usuario
+reiniciar NT8 para cargar 1.2-discovery, tras intentos de cierre normal sin efecto.
+No se registra la prueba conectada como aprobada. Los dos grupos NQ M5 de cinco
+cuentas permanecen guardados; la primera prueba conectada anterior se interrumpió
+por desconexión, y su informe conserva ese error. Al recargar la instancia se
+retoman las pruebas con test_proppass_native_groups.py y se deja flat/pausado.
+
+
+Actualización tras reinicio: 1.2-discovery conectado. Dos entradas y targets nativos confirmados (Sim101 y SimAccount6). Se corrigió después la secuencia a una cola persistente: grupo 1 completo antes de grupo 2, sin reiniciar PASS previos. Se observó nueva entrada de SimAccount2 con grupo 2 PENDING. La cola sigue RUNNING; no se presenta como completada. Evidencia: proppass_queue_live.json y proppass_queue_verification.json.

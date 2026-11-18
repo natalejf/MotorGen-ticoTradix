@@ -127,6 +127,29 @@ def test_opposite_signal_closes_managed_trade():
     assert not broker.opened and len(broker.sent)==2
 
 
+def test_hedging_same_symbol_repeated_algorithm_and_opposite_leg_stay_independent():
+    from backend.ea_bridge import EAResult
+    class UniqueTickets(Broker):
+        def order_send(self,request):
+            result=super().order_send(request)
+            if request.get('action')==1 and not request.get('position'):
+                self.opened[-1].ticket=100+len(self.sent)
+                return EAResult(retcode=result.retcode,order=self.opened[-1].ticket,volume=result.volume,comment=result.comment)
+            return result
+    broker=UniqueTickets();worker=MT5Worker(broker,account());d=deployment()
+    long=strategy();short=strategy();short.buy_conditions,short.sell_conditions=[],short.buy_conditions;short.direction='SHORT_ONLY'
+    state=worker.local_state(d)
+    for index,s in enumerate((long,long,short)):
+        worker.algorithm(d,state,dict(strategy=s.to_dict(),weight=1),index,True)
+    assert len(broker.opened)==3
+    assert {p.symbol for p in broker.opened}=={'EURUSD'}
+    assert [p.type for p in broker.opened]==[0,0,1]
+    assert [p.magic for p in broker.opened]==[d['magic']+i for i in range(3)]
+    kept={broker.opened[0].ticket,broker.opened[2].ticket}
+    worker.close_position(dict(d,magic=d['magic']+1),broker.opened[1],reason='one-leg')
+    assert {p.ticket for p in broker.opened}==kept
+
+
 def test_unsupported_limits_and_dynamic_sizing_are_explicitly_blocked():
     s=strategy(max_weekly_loss_pct=1)
     assert any('semanales' in reason for reason in store.compatibility(s))

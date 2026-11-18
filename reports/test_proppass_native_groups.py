@@ -7,7 +7,9 @@ def save():OUT.write_text(json.dumps(r,indent=2,ensure_ascii=False),encoding='ut
 def api(path,body=None):
  z=requests.get(base+path,timeout=8) if body is None else requests.post(base+path,json=body,timeout=8)
  z.raise_for_status();return z.json()
-key=api('status')['connections'][0]['id']
+live=[c for c in api('status')['connections'] if c['connected'] and c['snapshot'].get('version')=='1.2-discovery']
+if len(live)!=1:raise RuntimeError('Requiere exactamente un servicio 1.2-discovery conectado')
+key=live[0]['id']
 def state():return next(c for c in api('status')['connections'] if c['id']==key)
 def cmd(path):
  sent=api('connections/'+key+'/'+path,{})
@@ -20,8 +22,8 @@ def flat():return state()['snapshot']['position_quantity']==0 and not any(a.get(
 try:
  for index,g in enumerate(r['groups']):
   trial={'group_id':g['id'],'start_at':time.time(),'accounts':g['settings']['accounts']};r.setdefault('trials',[]).append(trial);save()
-  if index:
-   trial['reset']=cmd('groups/'+g['id']+'/reset');save()
+  if state()['snapshot']['master_enabled']:cmd('pause')
+  trial['reset']=cmd('groups/'+g['id']+'/reset');save()
   trial['configured']=state()['snapshot'];trial['start_ack']=cmd('groups/'+g['id']+'/start');save();print('START group',index+1,flush=True)
   deadline=time.time()+650;entry=False;last='';target=False
   while time.time()<deadline:

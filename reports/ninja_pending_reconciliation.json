@@ -1,0 +1,170 @@
+{
+  "action": {
+    "id": "be32fd9f457b4192a089d6af070aab98:pending-modify:639305691016913816",
+    "state": "UNKNOWN",
+    "body": "{\"error\": \"NT8: Pendiente no disponible para modificar\"}"
+  },
+  "diagnostic_before": {
+    "index": 17,
+    "phase": "OPEN",
+    "results": [
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "CLOSE",
+        "outcome": "PASS",
+        "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+        "at": 1794970782.7831748
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "PARTIAL",
+        "outcome": "PASS",
+        "detail": "Reducción de volumen confirmada en NT8",
+        "at": 1794970807.8665676
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "MODIFY",
+        "outcome": "PASS",
+        "detail": "Modificación de SL confirmada en NT8",
+        "at": 1794970832.11791
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "TIME",
+        "outcome": "PASS",
+        "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+        "at": 1794970857.172217
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "SL",
+        "outcome": "PASS",
+        "detail": "Salida SL confirmada en historial del bróker",
+        "at": 1794970872.3530927
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "TP",
+        "outcome": "PASS",
+        "detail": "Salida TP confirmada en historial del bróker",
+        "at": 1794970886.4519734
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "BREAKEVEN",
+        "outcome": "PASS",
+        "detail": "SL movido al precio de entrada y ejecutado inmediatamente; confirmado en registro nativo. Acuse reconciliado sin repetir orden.",
+        "at": 1794970947.7375643,
+        "evidence": "reports/ninja_ack_reconciliation.json"
+      },
+      {
+        "direction": "BUY",
+        "entry": "MARKET",
+        "exit": "TRAILING",
+        "outcome": "PASS",
+        "detail": "Modificación de SL confirmada en NT8",
+        "at": 1794972068.2186475
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "CLOSE",
+        "outcome": "PASS",
+        "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+        "at": 1794972086.371662
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "PARTIAL",
+        "outcome": "PASS",
+        "detail": "Reducción de volumen confirmada en NT8",
+        "at": 1794972110.6068344
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "MODIFY",
+        "outcome": "PASS",
+        "detail": "Modificación de SL confirmada en NT8",
+        "at": 1794972134.718094
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "TIME",
+        "outcome": "PASS",
+        "detail": "Cierre programado del diagnóstico; se verifica desaparición en limpieza",
+        "at": 1794972157.8759704
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "SL",
+        "outcome": "PASS",
+        "detail": "Salida SL confirmada en historial del bróker",
+        "at": 1794972202.2107112
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "TP",
+        "outcome": "PASS",
+        "detail": "Salida TP confirmada en historial del bróker",
+        "at": 1794972216.2540836
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "BREAKEVEN",
+        "outcome": "INCONCLUSIVE",
+        "detail": "Tiempo agotado sin condición de precio confirmada; se limpia el caso",
+        "at": 1794972275.6966348
+      },
+      {
+        "direction": "SELL",
+        "entry": "MARKET",
+        "exit": "TRAILING",
+        "outcome": "PASS",
+        "detail": "Modificación de SL confirmada en NT8",
+        "at": 1794972297.8387492
+      },
+      {
+        "direction": "BUY",
+        "entry": "LIMIT",
+        "exit": "MODIFY_CANCEL",
+        "outcome": "INCONCLUSIVE",
+        "detail": "Pendiente ejecutada antes de completar modificación/cancelación",
+        "at": 1794972717.3485982
+      }
+    ],
+    "audit_complete": true
+  },
+  "native_flat_verified": {
+    "execution_allowed": true,
+    "fault": "",
+    "account": "SimAccount2",
+    "balance": 49783.5,
+    "equity": 49783.5,
+    "tick_size": 0.25,
+    "point_value": 2,
+    "bid": 27279.75,
+    "ask": 27280.5,
+    "tick_time": 1795003430.02472,
+    "positions": [],
+    "position_ticket": 639305691016913816,
+    "last_exit": null,
+    "protections": [],
+    "orders": []
+  },
+  "at": 1795003431.067479,
+  "reason": "Entry was filled before modification. Native precondition rejected the change before mutation. Retest uses a new entry intent after flat verification."
+}

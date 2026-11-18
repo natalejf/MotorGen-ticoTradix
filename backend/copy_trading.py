@@ -527,9 +527,17 @@ def install_copy_routes(app):
         if action == 'resume':
             if record['state'] == 'STOPPED':
                 raise HTTPException(409, 'Crea una nueva asignación para reiniciar una detenida')
-            snapshot = required('snapshot', record['account_id'])
-            if time.time()-snapshot.get('at', 0) > 15 or not snapshot.get('verified_demo'):
-                raise HTTPException(409, 'Conecta primero la cuenta demo MT5 correcta')
+            if record.get('platform')=='NT8':
+                native=required('ninja_snapshot',record['connection'])
+                if time.time()-native.get('at',0)>10:raise HTTPException(409,'Conecta NinjaTrader primero')
+                row=next((a for a in native['accounts'] if a['name']==record['account_name']),{})
+                if not row.get('execution_allowed') or row.get('provider') not in ('Simulator','Playback'):
+                    raise HTTPException(409,'La cuenta simulada de NinjaTrader no está disponible')
+                record['instance']=native['instance']
+            else:
+                snapshot = required('snapshot', record['account_id'])
+                if time.time()-snapshot.get('at', 0) > 15 or not snapshot.get('verified_demo'):
+                    raise HTTPException(409, 'Conecta primero la cuenta demo MT5 correcta')
             if record['source_type']!='account':reset_execution_view(record)
         record['state'] = {'resume':'ACTIVE', 'pause':'PAUSED', 'close-stop':'CLOSING'}[action]
         put('deployment', key, record)

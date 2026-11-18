@@ -1,0 +1,114 @@
+{
+  "session": "a2fd51ed79a146d4be4ebb6afe46306c",
+  "purpose": "Native SHORT breakeven retest",
+  "status": "PASS",
+  "entry_result": {
+    "retcode": 10009,
+    "order": 639306005601331460,
+    "volume": 1,
+    "comment": "Ejecución confirmada"
+  },
+  "before_modify": {
+    "execution_allowed": true,
+    "fault": "",
+    "account": "SimAccount2",
+    "balance": 49783.5,
+    "equity": 49792,
+    "tick_size": 0.25,
+    "point_value": 2,
+    "bid": 27287.75,
+    "ask": 27288.5,
+    "tick_time": 1795003777.02467,
+    "positions": [
+      {
+        "ticket": 639306005601331460,
+        "symbol": "MNQ DEC26",
+        "type": 1,
+        "volume": 1,
+        "price_open": 27294.25,
+        "sl": 27314.75,
+        "tp": 27194.25,
+        "magic": 140000001,
+        "comment": "STX_BE_SHORT_TEST",
+        "time": 1795003760
+      }
+    ],
+    "position_ticket": 639306005601331460,
+    "last_exit": null,
+    "protections": [
+      {
+        "name": "STXG_SL_a2fd51ed79a146d4be4ebb6afe46306c",
+        "state": "Accepted",
+        "quantity": 1,
+        "stop": 27314.75,
+        "limit": 0
+      },
+      {
+        "name": "STXG_TP_a2fd51ed79a146d4be4ebb6afe46306c",
+        "state": "Working",
+        "quantity": 1,
+        "stop": 0,
+        "limit": 27194.25
+      }
+    ],
+    "orders": []
+  },
+  "modify_result": {
+    "retcode": 10009,
+    "order": 639306005601331460,
+    "volume": 1,
+    "comment": "SL/TP confirmado, incluso si se ejecutó antes del siguiente pulso"
+  },
+  "after_modify": {
+    "execution_allowed": true,
+    "fault": "",
+    "account": "SimAccount2",
+    "balance": 49783.5,
+    "equity": 49796.5,
+    "tick_size": 0.25,
+    "point_value": 2,
+    "bid": 27287.5,
+    "ask": 27288,
+    "tick_time": 1795003781.11061,
+    "positions": [
+      {
+        "ticket": 639306005601331460,
+        "symbol": "MNQ DEC26",
+        "type": 1,
+        "volume": 1,
+        "price_open": 27294.25,
+        "sl": 27294.25,
+        "tp": 27194.25,
+        "magic": 140000001,
+        "comment": "STX_BE_SHORT_TEST",
+        "time": 1795003760
+      }
+    ],
+    "position_ticket": 639306005601331460,
+    "last_exit": null,
+    "protections": [
+      {
+        "name": "STXG_SL_a2fd51ed79a146d4be4ebb6afe46306c",
+        "state": "Accepted",
+        "quantity": 1,
+        "stop": 27294.25,
+        "limit": 0
+      },
+      {
+        "name": "STXG_TP_a2fd51ed79a146d4be4ebb6afe46306c",
+        "state": "Working",
+        "quantity": 1,
+        "stop": 0,
+        "limit": 27194.25
+      }
+    ],
+    "orders": []
+  },
+  "cleanup_result": {
+    "retcode": 10009,
+    "order": 639306005601331460,
+    "volume": 1,
+    "comment": "Ejecución confirmada"
+  },
+  "flat_after_test": true
+}

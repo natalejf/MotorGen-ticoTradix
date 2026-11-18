@@ -796,12 +796,12 @@ function buildExplorationConfig() {
     wf_windows: parseInt(document.getElementById('input-explore-wf-windows')?.value) || 4,
 
     // Classification criteria
-    min_win_rate: Number(document.getElementById('input-min-wr').value || 50.0),
-    min_trades: parseInt(document.getElementById('input-min-trades').value) || 8,
-    max_drawdown: Number(document.getElementById('input-max-dd').value || 15.0),
+    min_win_rate: Number(document.getElementById('input-min-wr').value || 40.0),
+    min_trades: parseInt(document.getElementById('input-min-trades').value) || 30,
+    max_drawdown: Number(document.getElementById('input-max-dd').value || 20.0),
     min_net_profit_usd: parseFloat(document.getElementById('input-min-profit').value) || 0.0,
-    min_sharpe: Number(document.getElementById('input-min-sharpe').value || 1.2),
-    min_profit_factor: parseFloat(document.getElementById('input-min-pf').value) || 1.1,
+    min_sharpe: Number(document.getElementById('input-min-sharpe').value || 0.8),
+    min_profit_factor: parseFloat(document.getElementById('input-min-pf').value) || 1.2,
     min_dsr: Number(document.getElementById('input-min-dsr').value || 0.30),
     max_candidates: maxCandRaw || maxCandResults || 0,
     min_indicators_per_strategy: parseInt(document.getElementById('input-min-indicators')?.value) || 1,
@@ -3829,7 +3829,7 @@ async function clearSavedPortfoliosAction() {
 window.clearSavedPortfoliosAction = clearSavedPortfoliosAction;
 
 async function clearAllPhases() {
-  if (!confirm('¿Eliminar TODOS los resultados y carpetas de todas las fases (motor, retest, portafolios)?')) return;
+  if (!confirm('¿Limpiar los resultados temporales del motor, retest y ranking? Tus algoritmos y portafolios guardados se conservarán.')) return;
   try {
     const res = await fetch('/api/clear-all-phases', { method: 'POST' });
     if (res.ok) {
@@ -3843,7 +3843,7 @@ async function clearAllPhases() {
       loadSavedPortfolios();
       loadPortfolioFolders();
       refreshSidebarBadges();
-      alert('✓ Se limpiaron todos los resultados de todas las fases.');
+      alert('✓ Resultados temporales limpiados. Tus algoritmos y portafolios guardados se conservaron.');
     } else {
       alert('Error al limpiar todos los resultados.');
     }

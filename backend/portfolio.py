@@ -4,6 +4,8 @@ Provides classes to store strategies, combine them, analyze correlation and pers
 import json
 import os
 import time
+import tempfile
+import shutil
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -15,6 +17,22 @@ STRATEGY_DIR = DATA_DIR / "saved_strategies"
 # Ensure required directories exist
 for d in (PORTFOLIO_DIR, STRATEGY_DIR):
     d.mkdir(parents=True, exist_ok=True)
+
+def write_saved_json(path,value):
+    """Durable atomic save, with a local backup; no browser storage dependency."""
+    payload=json.dumps(value,indent=2,ensure_ascii=False,allow_nan=False)
+    path.parent.mkdir(parents=True,exist_ok=True)
+    backup=path.with_suffix('.json.bak')
+    if path.exists():shutil.copy2(path,backup)
+    temporary=None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',dir=path.parent,suffix='.tmp',delete=False) as handle:
+            temporary=Path(handle.name);handle.write(payload);handle.flush();os.fsync(handle.fileno())
+        os.replace(temporary,path)
+        if not backup.exists():shutil.copy2(path,backup)
+    finally:
+        if temporary and temporary.exists():temporary.unlink()
+
 
 class StrategyRecord:
     """Wrap a candidate strategy with its full metrics and metadata for persistence in folders/batches."""
@@ -39,7 +57,7 @@ class StrategyRecord:
             self.data["saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
         path = target_dir / f"{self.id}.json"
-        path.write_text(json.dumps(self.data, indent=2, ensure_ascii=False), encoding="utf-8")
+        write_saved_json(path,self.data)
         return path
 
     @staticmethod
@@ -168,7 +186,7 @@ class Portfolio:
         self.folder = "".join(c for c in str(folder) if c.isalnum() or c in (" ", "_", "-", ".", "(", ")")).strip() or "General"
         
         # Clean ID
-        clean_name = "".join(c if c.isalnum() else "_" for c in name.lower())
+        clean_name = "".join(c if c.isascii() and c.isalnum() else "_" for c in name.lower())
         self.id = portfolio_id or f"port_{clean_name}_{int(time.time())}"
         
         # Compute combined portfolio analytics (StrategyQuant / TradingNote style)
@@ -367,7 +385,7 @@ class Portfolio:
             "meta": d,
             "strategies": self.strategies,
         }
-        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        write_saved_json(path,payload)
         return path
 
     @staticmethod

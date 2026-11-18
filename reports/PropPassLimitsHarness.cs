@@ -92,7 +92,7 @@ class Harness {
 
 
 Dictionary<string,AccountRiskSettings> accountsConfig=new Dictionary<string,AccountRiskSettings>();Dictionary<string,Account> accounts=new Dictionary<string,Account>();HashSet<string> removedAccounts=new HashSet<string>();string[] groupAccounts;DateTime realtimeStartTime=DateTime.UtcNow.AddSeconds(-10);double lastRealtimePrice=20000;Instrument Instrument=new Instrument();string entered="";
-Account GetAccountCached(string name){return accounts[name];}void Print(string text){}void SaveConfiguration(){}bool IsInTradingHours(AccountRiskSettings x){return true;}void ExecuteEntry(AccountRiskSettings x,AccountRiskSettings y,Account a,OrderAction action,string dir,double price){entered=a.Name;}void SyncTpSlOrders(Account a,AccountRiskSettings s,AccountRiskSettings e,Position p){}void CancelTpSlOrders(Account a,AccountRiskSettings s){}void ResetTradingState(Account a,AccountRiskSettings s){s.Direction="FLAT";}
+Account GetAccountCached(string name){return accounts[name];}void Print(string text){}void SaveConfiguration(){}bool IsInTradingHours(AccountRiskSettings x){return true;}void ExecuteEntry(AccountRiskSettings x,AccountRiskSettings y,Account a,OrderAction action,string dir,double price){entered=a.Name;}void SyncTpSlOrders(Account a,AccountRiskSettings s,AccountRiskSettings e,Position p){}void QueueFlatten(Account a,Instrument[] symbols){a.Flatten(symbols);}void CancelTpSlOrders(Account a,AccountRiskSettings s){}void ResetTradingState(Account a,AccountRiskSettings s){s.Direction="FLAT";}
 void Setup(string[] names,double target){accounts.Clear();accountsConfig.Clear();groupAccounts=names;entered="";foreach(string name in names){accounts[name]=new Account{Name=name};accountsConfig[name]=new AccountRiskSettings(name){Enabled=true,Target=target,MaxLoss=2000,DailyProfitLimit=target,DailyLossLimit=2000,StartBalance=50000,DailyStartBalance=50000,LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd")};}}
 static void Check(bool b,string message){if(!b)throw new Exception(message);}
         private void EvaluateEntrySignals(bool isLongSignal, bool isShortSignal)
@@ -231,7 +231,7 @@ static void Check(bool b,string message){if(!b)throw new Exception(message);}
                             settings.Enabled = false;
                             Print(string.Format("[CCC] ✓ ¡CUENTA QUEMADA! (Drawdown Máximo EOD alcanzado en {0}). Equidad Neta: ${1:F2} <= Límite: ${2:F2}", settings.Name, netEquity, settings.StartBalance - eff.MaxLoss));
                             CancelTpSlOrders(acc, settings);
-                            acc.Flatten(new[] { Instrument });
+                            QueueFlatten(acc,new[] { Instrument });
                             SaveConfiguration();
                             continue;
                         }
@@ -272,7 +272,7 @@ static void Check(bool b,string message){if(!b)throw new Exception(message);}
                             settings.Enabled = false;
                             Print(string.Format("[CCC] ❌ LÍMITE PÉRDIDA DIARIA ALCANZADO en {0}. PnL: ${1:F2}. Cuenta deshabilitada, pasando a la siguiente.", settings.Name, dailyPnlFloating));
                             CancelTpSlOrders(acc, settings);
-                            acc.Flatten(new[] { Instrument });
+                            QueueFlatten(acc,new[] { Instrument });
                             ResetTradingState(acc, settings);
                             SaveConfiguration();
                             continue;
@@ -286,7 +286,7 @@ static void Check(bool b,string message){if(!b)throw new Exception(message);}
                             settings.Enabled = false;
                             Print(string.Format("[CCC] ✓ OBJETIVO DE GANANCIA (MAX PROFIT) ALCANZADO en {0}. PnL Realizado: ${1:F2}. Cuenta deshabilitada, pasando a la siguiente.", settings.Name, dailyPnlRealized));
                             CancelTpSlOrders(acc, settings);
-                            acc.Flatten(new[] { Instrument });
+                            QueueFlatten(acc,new[] { Instrument });
                             ResetTradingState(acc, settings);
                             SaveConfiguration();
                             continue;

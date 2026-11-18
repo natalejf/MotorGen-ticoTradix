@@ -1,0 +1,138 @@
+{
+  "result": "PASS",
+  "before": {
+    "execution_allowed": true,
+    "fault": "",
+    "account": "SimAccount3",
+    "balance": 50000,
+    "equity": 49973,
+    "tick_size": 0.25,
+    "point_value": 2,
+    "bid": 27182.75,
+    "ask": 27183.5,
+    "tick_time": 1794972110.45721,
+    "positions": [
+      {
+        "ticket": 639305688561133983,
+        "symbol": "MNQ DEC26",
+        "type": 0,
+        "volume": 1,
+        "price_open": 27196.5,
+        "sl": 27034.75,
+        "tp": 28813,
+        "magic": 107062619,
+        "comment": "STX86cd7a2cdbb55916b0d9",
+        "time": 1794972056
+      }
+    ],
+    "position_ticket": 639305688561133983,
+    "last_exit": null,
+    "protections": [
+      {
+        "name": "STXG_SL_06bc45b5bfcb460c9290543bd7339617",
+        "state": "Accepted",
+        "quantity": 1,
+        "stop": 27034.75,
+        "limit": 0
+      },
+      {
+        "name": "STXG_TP_06bc45b5bfcb460c9290543bd7339617",
+        "state": "Working",
+        "quantity": 1,
+        "stop": 0,
+        "limit": 28813
+      }
+    ],
+    "orders": []
+  },
+  "after": {
+    "execution_allowed": true,
+    "fault": "",
+    "account": "SimAccount3",
+    "balance": 50000,
+    "equity": 49970,
+    "tick_size": 0.25,
+    "point_value": 2,
+    "bid": 27179.75,
+    "ask": 27180.5,
+    "tick_time": 1794972114.44933,
+    "positions": [
+      {
+        "ticket": 639305688561133983,
+        "symbol": "MNQ DEC26",
+        "type": 0,
+        "volume": 1,
+        "price_open": 27196.5,
+        "sl": 27034.75,
+        "tp": 28813,
+        "magic": 107062619,
+        "comment": "STX86cd7a2cdbb55916b0d9",
+        "time": 1794972056
+      }
+    ],
+    "position_ticket": 639305688561133983,
+    "last_exit": null,
+    "protections": [
+      {
+        "name": "STXG_SL_06bc45b5bfcb460c9290543bd7339617",
+        "state": "Accepted",
+        "quantity": 1,
+        "stop": 27034.75,
+        "limit": 0
+      },
+      {
+        "name": "STXG_TP_06bc45b5bfcb460c9290543bd7339617",
+        "state": "Working",
+        "quantity": 1,
+        "stop": 0,
+        "limit": 28813
+      }
+    ],
+    "orders": []
+  },
+  "proppass_command": {
+    "id": "649e498281ac4d8fa163c2fff8293717",
+    "connection": "38f7b4403b0c42dbbfef643ea6dea5ad",
+    "instance": "e0bca8d453f54c5f88a0d424b1e1d682",
+    "action": "close-stop",
+    "settings": {
+      "accounts": [
+        "Sim101",
+        "SimAccount2",
+        "SimAccount3",
+        "SimAccount4",
+        "SimAccount5",
+        "SimAccount6",
+        "SimAccount7",
+        "SimAccount8",
+        "SimAccount9",
+        "SimAccount10"
+      ],
+      "symbol": "NQ DEC26",
+      "timeframe_minutes": 5,
+      "account_overrides": {},
+      "lots": 4,
+      "tp_usd": 1510.0,
+      "sl_usd": 2000.0,
+      "target": 1510.0,
+      "max_loss": 2000.0,
+      "daily_profit_limit": 1510.0,
+      "daily_loss_limit": 2000.0,
+      "start_balance": 50000.0,
+      "exit_only_profit": false,
+      "time_filter": false,
+      "start_time": "09:30",
+      "end_time": "16:00"
+    },
+    "group_id": "0aa3df172ea44f42ad37c2d540b6bdc2",
+    "state": "APPLIED",
+    "created": 1794972111.5311773,
+    "expires": 1794972131.5311773,
+    "detail": "close-stop",
+    "acked": 1794972113.3942978
+  },
+  "connection_count": 1,
+  "algorithm_remained_active": true,
+  "meaning": "Native simulation: global PropPass close-stop did not flatten the separately assigned algorithm on SimAccount3.",
+  "native_protections_unchanged_verified": true
+}

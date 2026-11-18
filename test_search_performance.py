@@ -1,5 +1,6 @@
 import random
 import threading
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,25 @@ import pytest
 from backend.indicators import IndicatorEngine
 from backend.genetic_engine import GeneticEngine
 from backend.indicator_audit import sample_frame
+
+
+def test_full_ranking_replacement_does_not_deadlock_status_or_stop():
+    from backend.strategy import Strategy,Condition
+    engine=GeneticEngine();errors=[]
+    result=SimpleNamespace(equity_curve=[],trades=[])
+    def replace():
+        try:
+            for i in range(2):
+                strategy=Strategy(buy_conditions=[Condition('RSI',{},'LESS_THAN',target_value=30+i)])
+                metrics=dict(total_trades=30,total_return_usd=100+i,max_drawdown_pct=2,win_rate_pct=60,tn_score=70+i,sharpe_ratio=1)
+                engine._ingest_result(strategy,result,metrics,True,'tn_score',1,1,i,2)
+        except Exception as error:errors.append(error)
+    thread=threading.Thread(target=replace,daemon=True);thread.start();thread.join(3)
+    assert not thread.is_alive(),'Replacing a full ranking deadlocked inside logging'
+    assert not errors
+    assert engine.get_status()['candidates_count']==1
+    assert engine.get_candidates()[0]['metrics']['tn_score']==71
+    engine.stop_exploration()
 
 
 @pytest.mark.parametrize('period',[2,9,21,80])

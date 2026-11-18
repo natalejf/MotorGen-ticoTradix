@@ -1,0 +1,77 @@
+[
+  {
+    "indicators": [
+      "SUPERTREND",
+      "CCI",
+      "BOLLINGER",
+      "OBV",
+      "VWAP",
+      "RCI"
+    ],
+    "entry": "MARKET",
+    "exit": "ATR_CLASSIC",
+    "strategies": [
+      {
+        "trades": 419,
+        "score": 0.0,
+        "actual_exit": "ATR_CLASSIC"
+      },
+      {
+        "trades": 5,
+        "score": 3.8,
+        "actual_exit": "ATR_CLASSIC"
+      }
+    ],
+    "seconds": 1.767
+  },
+  {
+    "indicators": [
+      "SMA",
+      "ROC",
+      "STDDEV",
+      "VOLUME_SMA",
+      "PIVOT_POINTS",
+      "RCI"
+    ],
+    "entry": "LIMIT",
+    "exit": "PIPS_FIXED",
+    "strategies": [
+      {
+        "trades": 24,
+        "score": 49.5,
+        "actual_exit": "PIPS_FIXED"
+      },
+      {
+        "trades": 245,
+        "score": 10.7,
+        "actual_exit": "PIPS_FIXED"
+      }
+    ],
+    "seconds": 0.595
+  },
+  {
+    "indicators": [
+      "WMA",
+      "MACD",
+      "STDDEV",
+      "OBV",
+      "LOWEST",
+      "AROON"
+    ],
+    "entry": "STOP",
+    "exit": "TIME_EXIT",
+    "strategies": [
+      {
+        "trades": 49,
+        "score": 10.0,
+        "actual_exit": "TIME_EXIT"
+      },
+      {
+        "trades": 10,
+        "score": 48.8,
+        "actual_exit": "TIME_EXIT"
+      }
+    ],
+    "seconds": 0.602
+  }
+]

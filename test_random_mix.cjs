@@ -10,12 +10,12 @@ test('compact mixes stay bounded, cover different families and retain every choi
   const seen=new Set(),entries=new Set(),exits=new Set(),counts=new Set();
   for(let i=0;i<1000;i++){
     const selected=StratixMix.indicators(catalog,rng),orders=StratixMix.orders(rng);
-    assert(selected.length>=3&&selected.length<=5);
+    assert(selected.length===7);
     assert.equal(new Set(selected).size,selected.length);
     assert.equal(new Set(selected.map(key=>catalog[key].family)).size,selected.length);
-    assert.equal(orders.entries.length,1);assert(orders.exits.length>=1&&orders.exits.length<=2);
+    assert.equal(orders.entries.length,1);assert.equal(orders.exits.length,1);
     selected.forEach(key=>seen.add(key));orders.entries.forEach(key=>entries.add(key));orders.exits.forEach(key=>exits.add(key));counts.add(selected.length);
   }
   assert.equal(seen.size,28);assert.equal(entries.size,3);assert.equal(exits.size,9);
-  assert.deepEqual([...counts].sort(),[3,4,5]);
+  assert.deepEqual([...counts].sort(),[7]);
 });
