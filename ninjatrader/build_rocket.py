@@ -11,6 +11,8 @@ def main():
     code=source.read_text(encoding='utf-8')
     code=code.replace('StratixCandleService','RocketPassService').replace('"Stratix","NinjaTrader"','"Stratix","RocketPass"')
     code=code.replace('/api/ninja/','/api/rocket/').replace('CandleBridge.key','RocketBridge.key')
+    code=code.replace('1.7.0-pending','1.8.0-ema20')
+    code=code.replace('timeframeMinutes=Math.Max(1,Math.Min(60,int.Parse(saved[1])))','timeframeMinutes=5')
     code=code.replace('CandleServiceConfig.txt','RocketServiceConfig.txt').replace('CandleServiceScope.txt','RocketServiceScope.txt')
     code=code.replace('EntryLong','RocketEntryLong').replace('EntryShort','RocketEntryShort')
     code=code.replace('"TP_"','"ROCKET_TP_"').replace('"SL_"','"ROCKET_SL_"')
@@ -19,6 +21,8 @@ def main():
     start=code.index('                if(CurrentBar>=2 && masterTradingEnabled')
     end=code.index('\n            }\n        }',start)
     code=code[:start]+'                RocketOnBar(close);'+code[end:]
+    code=code.replace('double open=candleOpen,close=candleClose;candleSlot=slot;', 'long rocketClosedSlot=candleSlot;double open=candleOpen,close=candleClose;candleSlot=slot;')
+    code=code.replace('                RocketOnBar(close);', '                if(slot==rocketClosedSlot+1)RocketOnBar(close);else{rocketCloses.Clear();rocketEma=double.NaN;CurrentBar=0;Print("RocketPass: interrupción de velas M5; reiniciando EMA 20 sin operar la vela antigua");}')
     code=code.replace('if(Instrument!=null)PeriodicMonitoring();','RocketMonitor();')
     code=code.replace('long slot=lastTick.Ticks/', 'RocketMonitor();long slot=lastTick.Ticks/')
     code=code.replace('LoadEvaluationAccounts();LoadConfiguration();','RocketLoad();LoadEvaluationAccounts();LoadConfiguration();')

@@ -8,7 +8,7 @@ if (location.hostname.endsWith('.github.io')) {
     '/api/copy/status': {accounts,masters:[{id:'preview-master-record',name:'Operativa principal',account_id:'preview-master'}],
       groups:[{id:'preview-group',name:'Fondeo · Grupo de ejemplo',description:'Vista de diseño con datos ficticios',account_ids:['preview-follower'],risk_mode:'RISK_PERCENT',risk_percent:.25,fixed_lot:1,multiplier:1,max_daily_loss_pct:2,max_drawdown_pct:5}],deployments:[],events:[]},
     '/api/ninja/status':{connections:[],groups:[]},
-    '/api/rocket/status':{connections:[],groups:[{id:'rocket-preview',name:'RocketPass · MNQ',settings:{accounts:['Examen de ejemplo'],symbol:'MNQ 12-26',timeframe_minutes:1,lots:2,tp_usd:1500,sl_usd:2000,target:3000,max_loss:2000,daily_profit_limit:0,daily_loss_limit:0,start_balance:50000,trend_period:40,limit_count:5,limit_contracts:2,stop_count:2,stop_contracts:2,max_contracts:30,direction:'AUTO'}}]},
+    '/api/rocket/status':{connections:[],groups:[{id:'rocket-preview',name:'RocketPass · MNQ',settings:{accounts:['Examen de ejemplo'],symbol:'MNQ 12-26',timeframe_minutes:5,lots:2,tp_usd:1500,sl_usd:2000,target:3000,max_loss:2000,daily_profit_limit:0,daily_loss_limit:0,start_balance:50000,trend_period:20,limit_count:5,limit_contracts:2,stop_count:2,stop_contracts:2,max_contracts:30,direction:'AUTO'}}]},
     '/api/strategies/saved':[], '/api/portfolios':[], '/api/symbols':[],
     '/api/sessions':[], '/api/candidates':[], '/api/retest/results':[],
     '/api/rule-operators':[], '/api/config-defaults':{}, '/api/status':{}

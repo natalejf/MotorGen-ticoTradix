@@ -34,11 +34,21 @@ precios distintos dentro del rango permitido por el tick.
 
 ## Señal y gestión de cuentas
 
-La dirección automática compara el último cierre con el cierre de hace N velas,
-como en la estrategia original. Puedes elegir solo compras o solo ventas.
-El período predeterminado es 40 y necesita 41 velas cerradas desde que se carga
-esa serie. Para una prueba breve en simulación se puede usar período 2.
-Cambiar de instrumento o temporalidad reinicia el calentamiento.
+La señal automática usa **velas M5 cerradas y EMA 20 de sus cierres**:
+compra si el último cierre queda por encima de la EMA y vende si queda por debajo.
+Si son iguales, no entra. No exige un cruce: cada nuevo cierre puede dar señal,
+pero solo abre una cesta si el grupo está flat y sin pendientes.
+«Solo compras» y «Solo ventas» filtran esa señal; no fuerzan una entrada contraria
+al filtro EMA. Un cambio de lado respecto a la EMA no cierra una cesta abierta;
+sus salidas siguen siendo el TP/SL global y los límites de cuenta.
+
+La EMA se inicializa con el promedio de los primeros 20 cierres M5 y después se
+actualiza con alfa 2/21. El servicio reúne velas desde ticks en vivo: sin historial
+precargado necesita 20 velas cerradas (unos 100 minutos desde el inicio).
+Cambiar de instrumento o perder una secuencia de velas reinicia el calentamiento.
+Nunca utiliza la vela M5 en formación. Requiere **RocketPass 1.8.0-ema20**;
+los grupos guardados se actualizan como plantilla y deben volver a aplicarse
+con la cuenta flat para cambiar la configuración nativa.
 
 Cada cuenta tiene objetivo y pérdida máxima; además puedes configurar límites
 diarios. Al alcanzar un objetivo o pérdida límite, se cancelan las pendientes,
@@ -53,7 +63,7 @@ ni de TP fijado al precio inicial; el TP de RocketPass es global por importe.
 
 ## Instalación y separación respecto a PropPass
 
-1. Actualiza el EA MT5 y el AddOn PropPass a la versión **1.7.0-pending**.
+1. El EA MT5 y PropPass usan **1.7.0-pending**; actualiza RocketPass a **1.8.0-ema20**.
    El EX5 del repositorio también está recompilado.
 2. Descarga `RocketPassService.cs` desde **RocketPass → Conexiones** y añádelo
    a AddOns en NinjaScript. Compila en NinjaTrader con F5.

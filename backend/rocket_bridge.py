@@ -5,6 +5,7 @@ from backend.ninja_bridge import Settings,Group,install_routes as install_native
 
 
 class RocketSettings(Settings):
+    timeframe_minutes:Literal[5]=5
     symbol:str=Field(default='MNQ 12-26',pattern=r'^[A-Za-z0-9._ -]{1,40}$')
     lots:int=Field(default=2,ge=1,le=100)
     sl_usd:float=Field(default=2000,gt=0,le=100000)
@@ -13,7 +14,7 @@ class RocketSettings(Settings):
     max_loss:float=Field(default=2000,gt=0,le=100000)
     daily_profit_limit:float=Field(default=0,ge=0,le=100000)
     daily_loss_limit:float=Field(default=0,ge=0,le=100000)
-    trend_period:int=Field(default=40,ge=2,le=500)
+    trend_period:Literal[20]=20
     direction:Literal['AUTO','LONG','SHORT']='AUTO'
     limit_count:int=Field(default=5,ge=0,le=10)
     limit_contracts:int=Field(default=2,ge=1,le=100)
@@ -34,4 +35,13 @@ class RocketGroup(Group):
 
 
 def install_routes(app):
+    # Update saved templates; an applied native group still requires reapplication.
+    from backend import copy_trading as store
+    for group in store.listing('rocket_group'):
+        group['settings'].update(timeframe_minutes=5,trend_period=20)
+        store.put('rocket_group',group['id'],group)
+    for queue in store.listing('rocket_queue'):
+        for item in queue.get('items',[]):
+            if item.get('state')=='PENDING':item['settings'].update(timeframe_minutes=5,trend_period=20)
+        store.put('rocket_queue',queue['connection'],queue)
     install_native_routes(app,'rocket',RocketSettings,RocketGroup)

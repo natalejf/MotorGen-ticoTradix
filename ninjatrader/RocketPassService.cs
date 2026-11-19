@@ -443,6 +443,16 @@ namespace NinjaTrader.NinjaScript.AddOns {
             QueueFlatten(account,new[]{instrument});
         }
         private static class RocketMath {
+            public static double NextEma(double previous,double close,int period) {
+                if(period<1||double.IsNaN(close)||double.IsInfinity(close))throw new ArgumentException("EMA inválida");
+                return previous+(2.0/(period+1))*(close-previous);
+            }
+            public static int EmaSignal(double close,double ema,string direction) {
+                if(double.IsNaN(ema))return 0;
+                if(close>ema&&direction!="SHORT")return 1;
+                if(close<ema&&direction!="LONG")return -1;
+                return 0;
+            }
             public static double[] Levels(double entry,double edge,double tick,int count) {
                 if(count<0||count>10||tick<=0||double.IsNaN(entry)||double.IsNaN(edge))throw new ArgumentException("Cuadrícula inválida");
                 if(count==0)return new double[0];
@@ -457,9 +467,10 @@ namespace NinjaTrader.NinjaScript.AddOns {
             }
         }
 
-        private int rocketTrend=40,rocketLimits=5,rocketLimitContracts=2,rocketStops=0,rocketStopContracts=2,rocketMax=30;
+        private int rocketTrend=20,rocketLimits=5,rocketLimitContracts=2,rocketStops=0,rocketStopContracts=2,rocketMax=30;
         private string rocketDirection="AUTO";
         private readonly List<double> rocketCloses=new List<double>();
+        private double rocketEma=double.NaN;
         private class RocketBasket {public bool Closing;public DateTime FlatAt;public int Quantity;public double Average;public HashSet<string> Used=new HashSet<string>();public Dictionary<string,Order> Grid=new Dictionary<string,Order>();}
         private readonly Dictionary<string,RocketBasket> rocketBaskets=new Dictionary<string,RocketBasket>();
         private void RocketSave() {
@@ -468,23 +479,28 @@ namespace NinjaTrader.NinjaScript.AddOns {
         }
         private void RocketLoad() {
             string root=Path.GetDirectoryName(configFilePath),path=Path.Combine(root,"RocketGrid.txt");
-            if(File.Exists(path)){var a=File.ReadAllLines(path);if(a.Length==8){rocketTrend=int.Parse(a[0]);rocketDirection=a[1];rocketLimits=int.Parse(a[2]);rocketLimitContracts=int.Parse(a[3]);rocketStops=int.Parse(a[4]);rocketStopContracts=int.Parse(a[5]);rocketMax=int.Parse(a[6]);}}
+            if(File.Exists(path)){var a=File.ReadAllLines(path);if(a.Length==8){rocketTrend=20;rocketDirection=a[1];rocketLimits=int.Parse(a[2]);rocketLimitContracts=int.Parse(a[3]);rocketStops=int.Parse(a[4]);rocketStopContracts=int.Parse(a[5]);rocketMax=int.Parse(a[6]);}}
             path=Path.Combine(root,"RocketBaskets.txt");if(File.Exists(path))foreach(var line in File.ReadAllLines(path)){var a=line.Split('|');if(a.Length==3)rocketBaskets[a[0]]=new RocketBasket{Closing=a[1]=="1",Used=new HashSet<string>(a[2].Split(',').Where(x=>x.Length>0))};}
         }
         private void RocketConfigure(Dictionary<string,string> v) {
             if(PendingOrOpen())throw new Exception("Configura RocketPass con el grupo anterior flat y sin pendientes");
             int trend=int.Parse(v["trend_period"]),limits=int.Parse(v["limit_count"]),stops=int.Parse(v["stop_count"]),lc=int.Parse(v["limit_contracts"]),sc=int.Parse(v["stop_contracts"]),maximum=int.Parse(v["max_contracts"]);
-            if(trend<2||trend>500||limits<0||limits>10||stops<0||stops>10||lc<1||sc<1||maximum>100||int.Parse(v["lots"])+limits*lc+stops*sc>maximum)throw new Exception("Cuadrícula inválida o superior al máximo total de contratos");
+            if(trend!=20||int.Parse(v["timeframe_minutes"])!=5)throw new Exception("RocketPass requiere M5 y EMA 20; actualiza y aplica el grupo");
+            if(limits<0||limits>10||stops<0||stops>10||lc<1||sc<1||maximum>100||int.Parse(v["lots"])+limits*lc+stops*sc>maximum)throw new Exception("Cuadrícula inválida o superior al máximo total de contratos");
             rocketTrend=trend;rocketLimits=limits;rocketStops=stops;rocketLimitContracts=lc;rocketStopContracts=sc;rocketMax=maximum;rocketDirection=v["direction"];
             if(!new[]{"AUTO","LONG","SHORT"}.Contains(rocketDirection))throw new Exception("Dirección inválida");
             rocketBaskets.Clear();RocketSave();
             File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"RocketGrid.txt"),new[]{rocketTrend.ToString(),rocketDirection,rocketLimits.ToString(),lc.ToString(),rocketStops.ToString(),sc.ToString(),maximum.ToString(),"v1"});
         }
         private void RocketOnBar(double close) {
-            rocketCloses.Add(close);if(rocketCloses.Count>501)rocketCloses.RemoveAt(0);
-            if(rocketCloses.Count<=rocketTrend||!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
-            double previous=rocketCloses[rocketCloses.Count-rocketTrend-1];
-            EvaluateEntrySignals(rocketDirection=="LONG"||(rocketDirection=="AUTO"&&close>previous),rocketDirection=="SHORT"||(rocketDirection=="AUTO"&&close<previous));
+            if(timeframeMinutes!=5)return;
+            if(rocketCloses.Count==0)rocketEma=double.NaN;
+            if(rocketCloses.Count<rocketTrend){rocketCloses.Add(close);if(rocketCloses.Count<rocketTrend)return;rocketEma=rocketCloses.Average();}
+            else rocketEma=RocketMath.NextEma(rocketEma,close,rocketTrend);
+            if(!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
+            int signal=RocketMath.EmaSignal(close,rocketEma,rocketDirection);
+            Print("RocketPass M5 · cierre="+N(close)+" · EMA20="+N(rocketEma)+" · señal="+signal);
+            EvaluateEntrySignals(signal==1,signal==-1);
         }
         private bool RocketGridOrder(Order o) {return o!=null&&(o.Name.StartsWith("ROCKET_LIMIT_")||o.Name.StartsWith("ROCKET_STOP_"));}
         private void RocketCancelGrid(Account acc) {var orders=acc.Orders.Cast<Order>().Where(o=>Instrument!=null&&o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o)).ToArray();if(orders.Length>0)QueueCancel(acc,orders);}
@@ -618,7 +634,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     try {
                         string[] saved=File.ReadAllLines(scope);
                         if(saved.Length>=3) {
-                            Instrument=NinjaTrader.Cbi.Instrument.GetInstrument(saved[0]);timeframeMinutes=Math.Max(1,Math.Min(60,int.Parse(saved[1])));
+                            Instrument=NinjaTrader.Cbi.Instrument.GetInstrument(saved[0]);timeframeMinutes=5;
                             groupAccounts=saved[2].Split(',').Where(a=>allowedAccounts.Contains(a)).ToArray();
                             if(Instrument!=null) {
                                 Instrument.MarketData.Update+=ServiceMarketData;
@@ -653,9 +669,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 RocketMonitor();long slot=lastTick.Ticks/(TimeSpan.TicksPerMinute*timeframeMinutes);
                 if(candleSlot<0){candleSlot=slot;candleOpen=candleClose=e.Price;return;}
                 if(slot==candleSlot){candleClose=e.Price;return;}
-                double open=candleOpen,close=candleClose;candleSlot=slot;candleOpen=candleClose=e.Price;CurrentBar++;
+                long rocketClosedSlot=candleSlot;double open=candleOpen,close=candleClose;candleSlot=slot;candleOpen=candleClose=e.Price;CurrentBar++;
                 CheckBridgeHealth();
-                RocketOnBar(close);
+                if(slot==rocketClosedSlot+1)RocketOnBar(close);else{rocketCloses.Clear();rocketEma=double.NaN;CurrentBar=0;Print("RocketPass: interrupción de velas M5; reiniciando EMA 20 sin operar la vela antigua");}
             }
         }
         private void ServiceTick(object unused) {
@@ -688,7 +704,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             ",\"wins\":"+(settings==null?0:settings.TradesWon)+",\"losses\":"+(settings==null?0:settings.TradesLost)+",\"closed_trades\":"+(settings==null?0:settings.TradesClosed)+"}";
                     }
                     string events;lock(serviceEvents)events=string.Join(",",serviceEvents.Select(J));
-                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.7.0-pending\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
+                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.8.0-ema20\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
                         ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+

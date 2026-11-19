@@ -15,7 +15,13 @@ class Check {
   var shortExits=RocketMath.Protection(20000,2,2,2000,1500,-1,.25);
   Assert(shortExits[0]==20500&&shortExits[1]==19625,"short geometry");
   bool rejected=false;try{RocketMath.Levels(20000,20000.5,.25,10);}catch(ArgumentException){rejected=true;}Assert(rejected,"reject levels that do not fit tick size");
-  Console.WriteLine("Rocket native math: 6 checks passed");return 0;
+  Assert(RocketMath.NextEma(100,121,20)==102,"EMA20 alpha 2/21");
+  Assert(RocketMath.EmaSignal(121,102,"AUTO")==1,"closed bar above EMA buys");
+  Assert(RocketMath.EmaSignal(99,102,"AUTO")==-1,"closed bar below EMA sells");
+  Assert(RocketMath.EmaSignal(102,102,"AUTO")==0,"equal close has no signal");
+  Assert(RocketMath.EmaSignal(99,102,"LONG")==0,"long-only respects EMA filter");
+  Assert(RocketMath.EmaSignal(121,102,"SHORT")==0,"short-only respects EMA filter");
+  Console.WriteLine("Rocket native math: 12 checks passed");return 0;
  }
 }
 

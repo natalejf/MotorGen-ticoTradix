@@ -159,7 +159,9 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
         try:snapshot=store.get('ninja_snapshot',key)
         except KeyError:snapshot={}
         snapshot=dict(snapshot,accounts=visible_accounts(snapshot))
-        if action in ('authorize-evaluation','release') and snapshot.get('version')!='1.7.0-pending':
+        if namespace=='rocket' and action in ('configure','reset','start') and snapshot.get('version')!='1.8.0-ema20':
+            raise HTTPException(409,'Actualiza RocketPass a 1.8.0-ema20 para usar cierre M5 frente a EMA 20')
+        if action in ('authorize-evaluation','release') and snapshot.get('version') not in ('1.7.0-pending','1.8.0-ema20'):
             raise HTTPException(409,'Actualiza el AddOn a 1.7.0-pending para autorizar o liberar cuentas')
         if time.time()-snapshot.get('at',0)>10 or not snapshot.get('realtime') or not snapshot.get('account_available'):
             raise HTTPException(409,'Conecta el AddOn de NinjaTrader y sus cuentas')
@@ -179,11 +181,13 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
                 raise HTTPException(409,'Aplica y confirma primero la configuración de esta instancia')
             if not applied.get('settings',{}).get('accounts'):
                 raise HTTPException(409,'Aplica un grupo antes de activar entradas')
+            if namespace=='rocket' and (applied['settings'].get('timeframe_minutes')!=5 or applied['settings'].get('trend_period')!=20):
+                raise HTTPException(409,'Reaplica el grupo con M5 y EMA 20 antes de reanudar')
             if group_id and applied.get('group_id')!=group_id:raise HTTPException(409,'El grupo seleccionado todavía no está aplicado')
             if not snapshot.get('data_ready'):raise HTTPException(409,'Esperando ticks recientes del instrumento')
         params=(settings or Settings()).model_dump() if action in ('configure','reset','close-stop','authorize-evaluation') else {}
         if action=='close-stop':
-            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy','1.7.0-pending'):
+            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy','1.7.0-pending','1.8.0-ema20'):
                 raise HTTPException(409,'Compila el AddOn actualizado: esta versión anterior no garantiza el cierre exclusivo de PropPass')
             try:applied=store.get('ninja_config_ack',key)
             except KeyError:raise HTTPException(409,'No hay grupo PropPass aplicado para cerrar')

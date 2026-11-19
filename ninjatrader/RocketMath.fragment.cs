@@ -1,4 +1,14 @@
         private static class RocketMath {
+            public static double NextEma(double previous,double close,int period) {
+                if(period<1||double.IsNaN(close)||double.IsInfinity(close))throw new ArgumentException("EMA inválida");
+                return previous+(2.0/(period+1))*(close-previous);
+            }
+            public static int EmaSignal(double close,double ema,string direction) {
+                if(double.IsNaN(ema))return 0;
+                if(close>ema&&direction!="SHORT")return 1;
+                if(close<ema&&direction!="LONG")return -1;
+                return 0;
+            }
             public static double[] Levels(double entry,double edge,double tick,int count) {
                 if(count<0||count>10||tick<=0||double.IsNaN(entry)||double.IsNaN(edge))throw new ArgumentException("Cuadrícula inválida");
                 if(count==0)return new double[0];
