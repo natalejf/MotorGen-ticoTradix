@@ -15,11 +15,11 @@
         private double lastRealtimePrice;
         private readonly HashSet<Account> subscribedAccounts=new HashSet<Account>();
         private Account[] ConnectedAccounts() {Account[] all;lock(Account.All)all=Account.All.ToArray();return all.Where(a=>a.ConnectionStatus==ConnectionStatus.Connected || a.Provider==Provider.Simulator || a.Provider==Provider.Playback).ToArray();}
-        private bool CanExecute(Account a) {return a!=null&&(a.Provider==Provider.Simulator||a.Provider==Provider.Playback);}
+        private bool CanExecute(Account a) {return a!=null&&(a.Provider==Provider.Simulator||a.Provider==Provider.Playback||a.ConnectionStatus==ConnectionStatus.Connected&&evaluationAccounts.Contains(a.Name));}
         private string[] allowedAccounts {get{return ConnectedAccounts().Where(CanExecute).Select(a=>a.Name).ToArray();}}
         private void RefreshAccounts() {foreach(var a in ConnectedAccounts())if(subscribedAccounts.Add(a))a.ExecutionUpdate+=OnGlobalExecutionUpdate;}
-        private void OnGlobalExecutionUpdate(object sender,ExecutionEventArgs e) {System.Threading.Tasks.Task.Run(()=>{lock(serviceGate){if(State==State.Active){ObserveCandleExecution(e);ProcessAccountExecution(sender,e);}}});}
-        private void QueueSubmit(Account a,Order[] orders) {if(!CanExecute(a))throw new Exception("Solo simuladores locales en esta fase");a.Dispatcher.BeginInvoke(new Action(()=>{try{a.Submit(orders);}catch(Exception ex){Print("Submit rechazado: "+ex.Message);}}));}
+        private void OnGlobalExecutionUpdate(object sender,ExecutionEventArgs e) {System.Threading.Tasks.Task.Run(()=>{lock(serviceGate){if(State==State.Active){EngineExecution(e);ObserveCandleExecution(e);ProcessAccountExecution(sender,e);}}});}
+        private void QueueSubmit(Account a,Order[] orders) {if(!CanExecute(a))throw new Exception("Cuenta sin autorización de ejecución");a.Dispatcher.BeginInvoke(new Action(()=>{try{a.Submit(orders);}catch(Exception ex){Print("Submit rechazado: "+ex.Message);}}));}
         private void QueueCancel(Account a,Order[] orders) {a.Dispatcher.BeginInvoke(new Action(()=>a.Cancel(orders)));}
         private void QueueFlatten(Account a,Instrument[] symbols) {var owned=symbols.Where(i=>CanManageCandle(a,i)).ToArray();if(CanExecute(a)&&owned.Length>0)a.Dispatcher.BeginInvoke(new Action(()=>{Instrument[] current;lock(serviceGate){current=owned.Where(i=>CanManageCandle(a,i)).ToArray();}if(current.Length>0)a.Flatten(current);}));}
         private bool PendingOrOpen() {foreach(string n in groupAccounts){var a=GetAccountCached(n);if(a==null)continue;if(a.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==Instrument.FullName&&p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&(o.OrderState==OrderState.Initialized||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Working||o.OrderState==OrderState.PartFilled||o.OrderState==OrderState.CancelPending)))return true;}return false;}
@@ -47,7 +47,7 @@
                 Directory.CreateDirectory(root);configFilePath=Path.Combine(root,"CandleServiceConfig.txt");
                 string key=Path.Combine(root,"CandleBridge.key");
                 if(File.Exists(key)) {string[] lines=File.ReadAllLines(key);if(lines.Length>=2){connectionId=lines[0].Trim();connectionKey=lines[1].Trim();}}
-                LoadConfiguration();foreach(var item in accountsConfig.Values)item.Enabled=false;
+                LoadEvaluationAccounts();LoadConfiguration();foreach(var item in accountsConfig.Values)item.Enabled=false;
                 string scope=Path.Combine(root,"CandleServiceScope.txt");
                 if(File.Exists(scope)) {
                     try {
@@ -70,11 +70,11 @@
                     }catch(Exception ex){Print("No se pudo recuperar el alcance anterior: "+ex.Message);}
                 }
                 masterTradingEnabled=false;
-                RefreshAccounts();LoadEngineLeases();
+                RefreshAccounts();LoadEngineLeases();try{ReserveAccounts(groupAccounts.Concat(engineLeases.Values.Select(l=>l.Account)));}catch(Exception ex){groupAccounts=new string[0];Print(ex.Message);}
                 serviceTimer=new System.Threading.Timer(ServiceTick,null,1000,1000);
                 Print("Servicio iniciado sin interfaz nativa. Configuración y grupos se gestionan desde la web.");
             } else if(State==State.Terminated) {
-                masterTradingEnabled=false;if(serviceTimer!=null){serviceTimer.Dispose();serviceTimer=null;}
+                ReleaseAccountReservations();masterTradingEnabled=false;if(serviceTimer!=null){serviceTimer.Dispose();serviceTimer=null;}
                 if(Instrument!=null)Instrument.MarketData.Update-=ServiceMarketData;
                 foreach(var acc in subscribedAccounts)acc.ExecutionUpdate-=OnGlobalExecutionUpdate;subscribedAccounts.Clear();
                 foreach(var request in engineBars.Values)request.Dispose();engineBars.Clear();
@@ -126,7 +126,7 @@
                             ",\"wins\":"+(settings==null?0:settings.TradesWon)+",\"losses\":"+(settings==null?0:settings.TradesLost)+",\"closed_trades\":"+(settings==null?0:settings.TradesClosed)+"}";
                     }
                     string events;lock(serviceEvents)events=string.Join(",",serviceEvents.Select(J));
-                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.6.0-copy\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
+                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.7.0-pending\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
                         ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+
@@ -176,6 +176,18 @@
                 string action=parts[3];
                 var values=new Dictionary<string,string>();foreach(string part in parts.Skip(4)){int split=part.IndexOf('=');if(split>0)values[part.Substring(0,split)]=part.Substring(split+1);}
                 if(action=="engine"){EngineCommand(lastAck,values);}
+                else if(action=="authorize-evaluation") {
+                    string[] selected=values["accounts"].Split(',').Where(n=>n.Length>0).ToArray();
+                    if(selected.Any(n=>!ConnectedAccounts().Any(a=>a.Name==n)))throw new Exception("Cuenta no conectada");
+                    if(evaluationAccounts.Except(selected).Any(n=>{var a=GetAccountCached(n);return a!=null&&(a.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(EngineWorking));}))throw new Exception("No retires una autorización con posiciones u órdenes activas");
+                    evaluationAccounts=new HashSet<string>(selected);File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"EvaluationAccounts.txt"),selected);
+                }
+                else if(action=="release") {
+                    if(engineLeases.Count>0)throw new Exception("Detén primero las asignaciones del motor/copy antes de liberar las cuentas");
+                    if(ConnectedAccounts().Where(a=>accountReservations.ContainsKey(a.Name)).Any(a=>a.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(EngineWorking)))throw new Exception("No se liberan cuentas con posiciones u órdenes");
+                    PauseEntries("RELEASED","Cuentas liberadas");foreach(var setting in accountsConfig.Values)setting.Enabled=false;groupAccounts=new string[0];ReleaseAccountReservations();
+                    File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"CandleServiceScope.txt"),new[]{"","1",""});
+                }
                 else if(action=="pause")PauseEntries("MANUAL","Pausa solicitada desde la web");
                 else if(action=="account_pause"||action=="account_resume") {
                     string name=values["account"];AccountRiskSettings s;
@@ -208,7 +220,7 @@
                         Instrument.MarketData.Update+=ServiceMarketData;
                     }
                     Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
-                    groupAccounts=selected;
+                    ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
                     lock(accountsConfig) {
                         foreach(var settings in accountsConfig.Values)settings.Enabled=false;
                         foreach(string name in selected) {

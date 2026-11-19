@@ -94,6 +94,28 @@ namespace NinjaTrader.NinjaScript.AddOns {
             }
         }
 
+        private HashSet<string> evaluationAccounts=new HashSet<string>();
+        private readonly Dictionary<string,FileStream> accountReservations=new Dictionary<string,FileStream>();
+        private void LoadEvaluationAccounts() {
+            string path=Path.Combine(Path.GetDirectoryName(configFilePath),"EvaluationAccounts.txt");
+            if(File.Exists(path))evaluationAccounts=new HashSet<string>(File.ReadAllLines(path).Where(x=>x.Length>0));
+        }
+        private void ReleaseAccountReservations() {foreach(var f in accountReservations.Values)f.Dispose();accountReservations.Clear();}
+        private void ReserveAccounts(IEnumerable<string> names) {
+            var selected=new HashSet<string>(names);var added=new List<string>();
+            string folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Stratix","AccountReservations");Directory.CreateDirectory(folder);
+            try {
+                foreach(string name in selected.Where(x=>!accountReservations.ContainsKey(x))) {
+                    string hash;using(var sha=System.Security.Cryptography.SHA256.Create())hash=BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(name))).Replace("-","");
+                    try{accountReservations[name]=new FileStream(Path.Combine(folder,hash+".lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);added.Add(name);}
+                    catch(IOException){throw new Exception("La cuenta "+name+" está reservada a otro servicio (PropPass/RocketPass/copy). Libérala desde ese servicio, flat y sin órdenes.");}
+                }
+            }catch{foreach(string name in added){accountReservations[name].Dispose();accountReservations.Remove(name);}throw;}
+            foreach(string name in accountReservations.Keys.Where(x=>!selected.Contains(x)).ToArray()) {
+                var a=GetAccountCached(name);if(a!=null&&(a.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(EngineWorking)))continue;
+                accountReservations[name].Dispose();accountReservations.Remove(name);
+            }
+        }
         private sealed class BridgeHealth {
             public const double TimeoutSeconds=10;
             public DateTime LastSuccess;
@@ -123,6 +145,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
             public double Sl,Tp,SlDistance,TpDistance,AwaitPrice;public Order Entry,Stop,Target,Exit;
             public string AwaitId="",AwaitKind="";public DateTime AwaitAt;public long Expiration;
             public int CloseQuantity;public bool CancelForClose;
+            public bool CopyMode;public int CopyQuantity,CopySide;public double CopyAverage;
         }
         private readonly Dictionary<string,EngineLease> engineLeases=new Dictionary<string,EngineLease>();
         private readonly Dictionary<string,string> engineReplies=new Dictionary<string,string>();
@@ -135,8 +158,16 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private readonly Dictionary<string,long> copyObservedTimes=new Dictionary<string,long>();
         private readonly Dictionary<string,int> copyObservedDirections=new Dictionary<string,int>();
         private long copyNextTicket=DateTime.UtcNow.Ticks/100;
+        private readonly Dictionary<string,DateTime> copyNativeFilledAt=new Dictionary<string,DateTime>();
+        private readonly Dictionary<string,long> copyNativeOrders=new Dictionary<string,long>();
+        private long CopyOrderTicket(Order o) {long value;if(!copyNativeOrders.TryGetValue(o.OrderId,out value)){value=++copyNextTicket;copyNativeOrders[o.OrderId]=value;}return value;}
         private string CopyObserve(Account acc) {
-            var rows=new List<string>();var active=new HashSet<string>();
+            var rows=new List<string>();var active=new HashSet<string>();var pending=new List<string>();var quotes=new List<string>();
+            foreach(var o in acc.Orders.Cast<Order>().Where(o=>EngineWorking(o)&&(o.OrderAction==OrderAction.Buy||o.OrderAction==OrderAction.SellShort)&&!acc.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==o.Instrument.FullName&&p.MarketPosition==MarketPosition.Short&&o.OrderAction==OrderAction.Buy)&&(o.OrderType==OrderType.Limit||o.OrderType==OrderType.StopMarket))) {
+                long ticket=CopyOrderTicket(o);bool buy=o.OrderAction==OrderAction.Buy;
+                pending.Add("{\"ticket\":"+ticket+",\"symbol\":"+J(o.Instrument.FullName)+",\"type\":"+(buy?(o.OrderType==OrderType.Limit?2:4):(o.OrderType==OrderType.Limit?3:5))+",\"volume\":"+(o.Quantity-o.Filled)+",\"price_open\":"+N(o.OrderType==OrderType.Limit?o.LimitPrice:o.StopPrice)+",\"sl\":0,\"tp\":0,\"time\":"+(long)(o.Time.ToUniversalTime()-new DateTime(1970,1,1)).TotalSeconds+"}");
+            }
+            foreach(var instrument in acc.Orders.Cast<Order>().Where(EngineWorking).Select(o=>o.Instrument).Concat(acc.Positions.Cast<Position>().Select(p=>p.Instrument)).GroupBy(i=>i.FullName).Select(g=>g.First())){quotes.Add(J(instrument.FullName)+":{\"bid\":"+N(instrument.MarketData.Bid.Price)+",\"ask\":"+N(instrument.MarketData.Ask.Price)+"}");}
             foreach(var p in acc.Positions.Cast<Position>().Where(p=>p.MarketPosition!=MarketPosition.Flat)) {
                 string key=acc.Name+":"+p.Instrument.FullName;active.Add(key);
                 int side=p.MarketPosition==MarketPosition.Long?0:1;
@@ -145,20 +176,21 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     copyObservedTimes[key]=(long)(DateTime.UtcNow-new DateTime(1970,1,1)).TotalSeconds;
                 }
                 var exits=acc.Orders.Cast<Order>().Where(o=>o.Instrument.FullName==p.Instrument.FullName&&EngineWorking(o)&&
-                    (side==0?o.OrderAction==OrderAction.Sell:o.OrderAction==OrderAction.BuyToCover)).ToArray();
+                    (side==0?o.OrderAction==OrderAction.Sell:(o.OrderAction==OrderAction.BuyToCover||o.OrderAction==OrderAction.Buy))).ToArray();
                 var stops=exits.Where(o=>o.OrderType==OrderType.StopMarket||o.OrderType==OrderType.StopLimit).ToArray();
                 var targets=exits.Where(o=>o.OrderType==OrderType.Limit).ToArray();
                 double sl=stops.Length==1?stops[0].StopPrice:0,tp=targets.Length==1?targets[0].LimitPrice:0;
-                rows.Add("{\"ticket\":"+copyObservedTickets[key]+",\"symbol\":"+J(p.Instrument.FullName)+",\"type\":"+side+",\"volume\":"+p.Quantity+",\"price_open\":"+N(p.AveragePrice)+",\"sl\":"+N(sl)+",\"tp\":"+N(tp)+",\"magic\":0,\"comment\":\"NT8 master\",\"time\":"+copyObservedTimes[key]+"}");
+                var sourceOrders=acc.Orders.Cast<Order>().Where(o=>o.Instrument.FullName==p.Instrument.FullName&&o.Filled>0&&copyNativeOrders.ContainsKey(o.OrderId)&&copyNativeFilledAt.ContainsKey(o.OrderId)&&copyNativeFilledAt[o.OrderId]>=new DateTime(1970,1,1).AddSeconds(copyObservedTimes[key]-3)&&((side==0&&o.OrderAction==OrderAction.Buy)||(side==1&&o.OrderAction==OrderAction.SellShort))).Select(o=>CopyOrderTicket(o).ToString()).ToArray();
+                rows.Add("{\"ticket\":"+copyObservedTickets[key]+",\"symbol\":"+J(p.Instrument.FullName)+",\"type\":"+side+",\"volume\":"+p.Quantity+",\"price_open\":"+N(p.AveragePrice)+",\"sl\":"+N(sl)+",\"tp\":"+N(tp)+",\"source_orders\":["+string.Join(",",sourceOrders)+"],\"magic\":0,\"comment\":\"NT8 master\",\"time\":"+copyObservedTimes[key]+"}");
             }
             foreach(string key in copyObservedTickets.Keys.Where(k=>k.StartsWith(acc.Name+":")&&!active.Contains(k)).ToArray()) {
                 copyObservedTickets.Remove(key);copyObservedTimes.Remove(key);copyObservedDirections.Remove(key);
             }
             double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
-            return "{\"balance\":"+N(cash)+",\"equity\":"+N(cash+open)+",\"positions\":["+string.Join(",",rows)+"]}";
+            return "{\"balance\":"+N(cash)+",\"equity\":"+N(cash+open)+",\"positions\":["+string.Join(",",rows)+"],\"orders\":["+string.Join(",",pending)+"],\"quotes\":{"+string.Join(",",quotes)+"}}";
         }
         private string EngineResults() {return "["+string.Join(",",engineReplies.Select(k=>"{\"id\":"+J(k.Key)+",\"value\":"+k.Value+"}"))+"]";}
-        private void EngineReply(string id,string value) {lock(serviceGate){engineReplies[id]=value;engineReplyOrder.Enqueue(id);while(engineReplyOrder.Count>2){string old=engineReplyOrder.Dequeue();if(old!=id)engineReplies.Remove(old);}}}
+        private void EngineReply(string id,string value) {lock(serviceGate){engineReplies[id]=value;engineReplyOrder.Enqueue(id);while(engineReplyOrder.Count>64||engineReplies.Values.Sum(x=>x.Length)>350000){string old=engineReplyOrder.Dequeue();if(old!=id)engineReplies.Remove(old);}}}
         private void EngineError(string id,string reason) {EngineReply(id,"{\"error\":"+J(reason)+"}");Print("Motor NT8: "+reason);}
         private void EngineTrack(string symbol) {
             if(engineFeeds.ContainsKey(symbol))return;
@@ -177,18 +209,36 @@ namespace NinjaTrader.NinjaScript.AddOns {
             catch(Exception ex){EngineError(parts[0],ex.Message);return false;}
         }
         private bool EngineWorking(Order o) {return o!=null&&(o.OrderState==OrderState.Initialized||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Working||o.OrderState==OrderState.PartFilled||o.OrderState==OrderState.CancelPending||o.OrderState==OrderState.ChangePending);}
-        private Position EnginePosition(EngineLease l) {return GetAccountCached(l.Account).Positions.Cast<Position>().FirstOrDefault(p=>p.Instrument.FullName==l.Symbol&&p.MarketPosition!=MarketPosition.Flat);}
+        private class EngineHolding {public int Quantity;public double AveragePrice;public MarketPosition MarketPosition;}
+        private EngineHolding EnginePosition(EngineLease l) {
+            if(l.CopyMode)return l.CopyQuantity<=0?null:new EngineHolding{Quantity=l.CopyQuantity,AveragePrice=l.CopyAverage,MarketPosition=l.CopySide==0?MarketPosition.Long:MarketPosition.Short};
+            var p=GetAccountCached(l.Account).Positions.Cast<Position>().FirstOrDefault(x=>x.Instrument.FullName==l.Symbol&&x.MarketPosition!=MarketPosition.Flat);
+            return p==null?null:new EngineHolding{Quantity=p.Quantity,AveragePrice=p.AveragePrice,MarketPosition=p.MarketPosition};
+        }
+        private readonly HashSet<string> engineExecutionSeen=new HashSet<string>();
+        private void EngineExecution(ExecutionEventArgs e) {
+            if(e.Execution==null||e.Execution.Order==null||!engineExecutionSeen.Add(e.Execution.ExecutionId))return;
+            var order=e.Execution.Order;copyNativeFilledAt[order.OrderId]=DateTime.UtcNow;
+            foreach(var l in engineLeases.Values.Where(x=>x.CopyMode&&x.Account==e.Execution.Account.Name)) {
+                if(order.Name=="STXG_ENTRY_"+l.Id) {
+                    int before=l.CopyQuantity;l.CopyQuantity+=e.Execution.Quantity;l.CopyAverage=(l.CopyAverage*before+e.Execution.Price*e.Execution.Quantity)/l.CopyQuantity;
+                    l.CopySide=order.OrderAction==OrderAction.Buy?0:1;SaveEngineLeases();break;
+                }
+                if(order.Name.StartsWith("STXG_")&&order.Name.EndsWith("_"+l.Id)) {l.CopyQuantity=Math.Max(0,l.CopyQuantity-e.Execution.Quantity);SaveEngineLeases();break;}
+            }
+        }
         private Order[] EngineProtection(EngineLease l) {return new[]{l.Stop,l.Target}.Where(EngineWorking).ToArray();}
-        private string EngineResult(EngineLease l,int retcode,double qty,string detail) {return "{\"retcode\":"+retcode+",\"order\":"+l.Ticket+",\"volume\":"+N(qty)+",\"comment\":"+J(detail)+"}";}
+        private string EngineResult(EngineLease l,int retcode,double qty,string detail) {return "{\"native_order_id\":"+J(l.Entry==null?"":l.Entry.OrderId)+",\"retcode\":"+retcode+",\"order\":"+l.Ticket+",\"volume\":"+N(qty)+",\"comment\":"+J(detail)+"}";}
         private void SaveEngineLeases() {
             if(string.IsNullOrEmpty(configFilePath))return;
-            File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"EngineLeases.txt"),engineLeases.Values.Select(l=>string.Join("|",new[]{l.Id,l.Account,l.Symbol,l.Ticket.ToString(),l.Magic.ToString(),N(l.Sl),N(l.Tp),N(l.SlDistance),N(l.TpDistance),l.Opened.ToString(),l.Comment,l.Parent})));
+            File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"EngineLeases.txt"),engineLeases.Values.Select(l=>string.Join("|",new[]{l.Id,l.Account,l.Symbol,l.Ticket.ToString(),l.Magic.ToString(),N(l.Sl),N(l.Tp),N(l.SlDistance),N(l.TpDistance),l.Opened.ToString(),l.Comment,l.Parent,l.CopyMode?"1":"0",l.CopyQuantity.ToString(),N(l.CopyAverage),l.CopySide.ToString()})));
         }
         private void LoadEngineLeases() {
             string file=Path.Combine(Path.GetDirectoryName(configFilePath),"EngineLeases.txt");if(!File.Exists(file))return;
             foreach(string line in File.ReadAllLines(file))try {
-                var p=line.Split('|');if(p.Length!=11&&p.Length!=12)continue;EngineTrack(p[2]);
-                var l=new EngineLease{Id=p[0],Parent=p.Length==12?p[11]:p[0],Account=p[1],Symbol=p[2],Instrument=engineFeeds[p[2]],Ticket=long.Parse(p[3]),Magic=long.Parse(p[4]),Sl=double.Parse(p[5],System.Globalization.CultureInfo.InvariantCulture),Tp=double.Parse(p[6],System.Globalization.CultureInfo.InvariantCulture),SlDistance=double.Parse(p[7],System.Globalization.CultureInfo.InvariantCulture),TpDistance=double.Parse(p[8],System.Globalization.CultureInfo.InvariantCulture),Opened=long.Parse(p[9]),Comment=p[10]};
+                var p=line.Split('|');if(p.Length!=11&&p.Length!=12&&p.Length!=16)continue;EngineTrack(p[2]);
+                var l=new EngineLease{Id=p[0],Parent=p.Length>=12?p[11]:p[0],Account=p[1],Symbol=p[2],Instrument=engineFeeds[p[2]],Ticket=long.Parse(p[3]),Magic=long.Parse(p[4]),Sl=double.Parse(p[5],System.Globalization.CultureInfo.InvariantCulture),Tp=double.Parse(p[6],System.Globalization.CultureInfo.InvariantCulture),SlDistance=double.Parse(p[7],System.Globalization.CultureInfo.InvariantCulture),TpDistance=double.Parse(p[8],System.Globalization.CultureInfo.InvariantCulture),Opened=long.Parse(p[9]),Comment=p[10]};
+                if(p.Length==16){l.CopyMode=p[12]=="1";l.CopyQuantity=int.Parse(p[13]);l.CopyAverage=double.Parse(p[14],System.Globalization.CultureInfo.InvariantCulture);l.CopySide=int.Parse(p[15]);}
                 var acc=GetAccountCached(l.Account);if(acc==null||!CanExecute(acc))continue;
                 l.Stop=acc.Orders.Cast<Order>().FirstOrDefault(o=>o.Name=="STXG_SL_"+l.Id&&EngineWorking(o));l.Target=acc.Orders.Cast<Order>().FirstOrDefault(o=>o.Name=="STXG_TP_"+l.Id&&EngineWorking(o));
                 l.Entry=acc.Orders.Cast<Order>().FirstOrDefault(o=>o.Name=="STXG_ENTRY_"+l.Id&&EngineWorking(o));
@@ -202,7 +252,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
             double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
             string position=p==null?"[]":"[{\"ticket\":"+l.Ticket+",\"symbol\":"+J(l.Symbol)+",\"type\":"+(p.MarketPosition==MarketPosition.Long?0:1)+",\"volume\":"+p.Quantity+",\"price_open\":"+N(p.AveragePrice)+",\"sl\":"+N(l.Sl)+",\"tp\":"+N(l.Tp)+",\"magic\":"+l.Magic+",\"comment\":"+J(l.Comment)+",\"time\":"+l.Opened+"}]";
             string protections="["+string.Join(",",new[]{l.Stop,l.Target}.Where(o=>o!=null).Select(o=>"{\"name\":"+J(o.Name)+",\"state\":"+J(o.OrderState.ToString())+",\"quantity\":"+o.Quantity+",\"stop\":"+N(o.StopPrice)+",\"limit\":"+N(o.LimitPrice)+"}"))+"]";
-            string orders=EngineWorking(l.Entry)?"[{\"ticket\":"+l.Ticket+",\"magic\":"+l.Magic+",\"symbol\":"+J(l.Symbol)+",\"comment\":"+J(l.Comment)+",\"price_open\":"+N(l.Entry.OrderType==OrderType.Limit?l.Entry.LimitPrice:l.Entry.StopPrice)+",\"sl\":"+N(l.Sl)+",\"tp\":"+N(l.Tp)+"}]":"[]";
+            string orders=EngineWorking(l.Entry)?"[{\"ticket\":"+l.Ticket+",\"magic\":"+l.Magic+",\"type\":"+(l.Entry.OrderAction==OrderAction.Buy?(l.Entry.OrderType==OrderType.Limit?2:4):(l.Entry.OrderType==OrderType.Limit?3:5))+",\"volume\":"+(l.Entry.Quantity-l.Entry.Filled)+",\"expiration\":"+l.Expiration+",\"symbol\":"+J(l.Symbol)+",\"comment\":"+J(l.Comment)+",\"price_open\":"+N(l.Entry.OrderType==OrderType.Limit?l.Entry.LimitPrice:l.Entry.StopPrice)+",\"sl\":"+N(l.Sl)+",\"tp\":"+N(l.Tp)+"}]":"[]";
             var lastExit=new[]{l.Stop,l.Target,l.Exit}.FirstOrDefault(o=>o!=null&&o.OrderState==OrderState.Filled);
             string exit=lastExit==null?"null":"{\"name\":"+J(lastExit.Name)+",\"price\":"+N(lastExit.AverageFillPrice)+",\"quantity\":"+lastExit.Filled+",\"stop_price\":"+N(lastExit.StopPrice)+"}";
             DateTime t;engineTickTimes.TryGetValue(l.Symbol,out t);
@@ -226,15 +276,19 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 if(method=="observe"){EngineReply(id,CopyObserve(acc));return;}
                 EngineTrack(symbol);
                 if(method=="claim") {
+                    bool copy=v.ContainsKey("copy_mode")&&v["copy_mode"]=="1";
                     EngineLease old;if(engineLeases.TryGetValue(sid,out old)){if(old.Account!=account||old.Symbol!=symbol||old.Parent!=parent)throw new Exception("La sesión cambió de identidad");EngineReply(id,"{\"ok\":true}");return;}
                     AccountRiskSettings settings;if(groupAccounts.Contains(account)&&accountsConfig.TryGetValue(account,out settings)&&settings.Enabled&&settings.Status=="EN PROCESO")throw new Exception("La cuenta está reservada a PropPass");
-                    if(engineLeases.Values.Any(lease=>lease.Account==account&&(lease.Parent!=parent||lease.Symbol==symbol)))throw new Exception("La cuenta pertenece a otra sesión o el contrato ya está asignado");
-                    if(acc.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||acc.Orders.Cast<Order>().Any(EngineWorking))throw new Exception("Asigna con la cuenta flat y sin órdenes");
-                    engineLeases[sid]=new EngineLease{Id=sid,Parent=parent,Account=account,Symbol=symbol,Instrument=engineFeeds[symbol],Magic=long.Parse(v["magic"])};SaveEngineLeases();EngineReply(id,"{\"ok\":true}");return;
+                    if(engineLeases.Values.Any(lease=>lease.Account==account&&(lease.Parent!=parent||lease.Symbol==symbol&&(!copy||!lease.CopyMode))))throw new Exception("La cuenta pertenece a otra sesión o el contrato ya está asignado");
+                    if(!copy||!engineLeases.Values.Any(x=>x.Account==account&&x.Parent==parent&&x.CopyMode)) {
+                        if(acc.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||acc.Orders.Cast<Order>().Any(EngineWorking))throw new Exception("Asigna con la cuenta flat y sin órdenes");
+                    } else if(acc.Orders.Cast<Order>().Any(o=>EngineWorking(o)&&!engineLeases.Values.Any(x=>x.Account==account&&(o.Name.EndsWith("_"+x.Id)))))throw new Exception("Hay órdenes ajenas a la copia");
+                    ReserveAccounts(accountReservations.Keys.Concat(new[]{account}).ToArray());
+                    engineLeases[sid]=new EngineLease{Id=sid,Parent=parent,Account=account,Symbol=symbol,Instrument=engineFeeds[symbol],Magic=long.Parse(v["magic"]),CopyMode=copy};SaveEngineLeases();EngineReply(id,"{\"ok\":true}");return;
                 }
                 EngineLease l;if(!engineLeases.TryGetValue(sid,out l)||l.Account!=account||l.Symbol!=symbol)throw new Exception("La sesión no posee esta cuenta/instrumento");
                 if(method=="state"){EngineReply(id,EngineState(l));return;}
-                if(method=="release"){if(EnginePosition(l)!=null||EngineWorking(l.Entry)||EngineProtection(l).Length>0)throw new Exception("No se libera una sesión con posiciones/órdenes");engineLeases.Remove(sid);SaveEngineLeases();EngineReply(id,"{\"ok\":true}");return;}
+                if(method=="release"){if(EnginePosition(l)!=null||EngineWorking(l.Entry)||EngineProtection(l).Length>0)throw new Exception("No se libera una sesión con posiciones/órdenes");engineLeases.Remove(sid);if(!engineLeases.Values.Any(x=>x.Account==account)&&!groupAccounts.Contains(account))ReserveAccounts(accountReservations.Keys.Where(x=>x!=account).ToArray());SaveEngineLeases();EngineReply(id,"{\"ok\":true}");return;}
                 if(method=="bars") {
                     int minutes=int.Parse(v["minutes"]),count=int.Parse(v["count"]);if(!new[]{30,60,240,1440}.Contains(minutes)||count<200||count>1000)throw new Exception("Histórico solicitado inválido");
                     string key=symbol+":"+minutes;BarsRequest request;
@@ -251,7 +305,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     double entry=Math.Round(number("price")/tick)*tick;l.Sl=Math.Round(number("sl")/tick)*tick;l.Tp=Math.Round(number("tp")/tick)*tick;
                     bool buyEntry=l.Entry.OrderAction==OrderAction.Buy;
                     if(l.Sl<=0||l.Tp<=0||(buyEntry?l.Sl>=entry||l.Tp<=entry:l.Sl<=entry||l.Tp>=entry))throw new Exception("Protecciones pendientes inválidas");
-                    l.SlDistance=Math.Abs(entry-l.Sl);l.TpDistance=Math.Abs(entry-l.Tp);
+                    l.SlDistance=Math.Abs(entry-l.Sl);l.TpDistance=Math.Abs(entry-l.Tp);if(v.ContainsKey("expiration"))l.Expiration=long.Parse(v["expiration"]);
                     if(l.Entry.OrderType==OrderType.Limit)l.Entry.LimitPriceChanged=entry;else l.Entry.StopPriceChanged=entry;
                     acc.Dispatcher.BeginInvoke(new Action(()=>acc.Change(new[]{l.Entry})));SaveEngineLeases();
                     l.AwaitId=id;l.AwaitKind="pending_modify";l.AwaitPrice=entry;l.AwaitAt=DateTime.UtcNow;return;
@@ -270,17 +324,18 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 }
                 if(pos!=null||EngineWorking(l.Entry)||EngineProtection(l).Length>0)throw new Exception("Ya existe posición o entrada/protección pendiente");
                 l.Stop=l.Target=l.Exit=null;
-                int type=int.Parse(v["type"]);bool buy=type==0||type==2||type==4;double price=number("price"),sl=number("sl"),tp=number("tp");
+                int type=int.Parse(v["type"]);bool buy=type==0||type==2||type==4;
+                if(l.CopyMode&&engineLeases.Values.Any(x=>x.Id!=l.Id&&x.Account==account&&x.Symbol==symbol&&((x.CopyQuantity>0&&(x.CopySide==0)!=buy)||(EngineWorking(x.Entry)&&(x.Entry.OrderAction==OrderAction.Buy)!=buy))))throw new Exception("NT8 netting: no se admiten copias simultáneas opuestas en el mismo contrato");double price=number("price"),sl=number("sl"),tp=number("tp");
                 if(sl<=0||tp<=0||(buy?sl>=price||tp<=price:sl<=price||tp>=price))throw new Exception("SL/TP inválidos");
-                l.Ticket=DateTime.UtcNow.Ticks;l.Comment=v["comment"];l.Opened=(long)(DateTime.UtcNow-new DateTime(1970,1,1)).TotalSeconds;l.SlDistance=Math.Abs(price-sl);l.TpDistance=Math.Abs(tp-price);l.Sl=sl;l.Tp=tp;
+                l.Ticket=++copyNextTicket;l.Comment=v["comment"];l.Opened=(long)(DateTime.UtcNow-new DateTime(1970,1,1)).TotalSeconds;l.SlDistance=Math.Abs(price-sl);l.TpDistance=Math.Abs(tp-price);l.Sl=sl;l.Tp=tp;
                 l.Expiration=v.ContainsKey("expiration")?long.Parse(v["expiration"]):0;
                 OrderType orderType=action==1?OrderType.Market:(type==2||type==3?OrderType.Limit:OrderType.StopMarket);
-                l.Entry=acc.CreateOrder(l.Instrument,buy?OrderAction.Buy:OrderAction.Sell,orderType,OrderEntry.Automated,TimeInForce.Gtc,qty,orderType==OrderType.Limit?Math.Round(price/tick)*tick:0,orderType==OrderType.StopMarket?Math.Round(price/tick)*tick:0,"","STXG_ENTRY_"+sid,DateTime.MinValue,null);
+                l.Entry=acc.CreateOrder(l.Instrument,buy?OrderAction.Buy:OrderAction.SellShort,orderType,OrderEntry.Automated,TimeInForce.Gtc,qty,orderType==OrderType.Limit?Math.Round(price/tick)*tick:0,orderType==OrderType.StopMarket?Math.Round(price/tick)*tick:0,"","STXG_ENTRY_"+sid,DateTime.MinValue,null);
                 l.Phase="ENTRY_PENDING";SaveEngineLeases();QueueSubmit(acc,new[]{l.Entry});Print("Motor NT8 · entrada "+account+" "+symbol+" "+qty+" "+orderType);
                 l.AwaitId=id;l.AwaitKind=action==5?"pending":"entry";l.AwaitAt=DateTime.UtcNow;
             }catch(Exception ex){EngineError(id,ex.Message);}
         }
-        private void EngineEnsureProtection(EngineLease l,Position p) {
+        private void EngineEnsureProtection(EngineLease l,EngineHolding p) {
             var acc=GetAccountCached(l.Account);double tick=l.Instrument.MasterInstrument.TickSize;
             if(l.Fault.Length>0)return;
             double bid=l.Instrument.MarketData.Bid.Price,ask=l.Instrument.MarketData.Ask.Price;
@@ -307,9 +362,22 @@ namespace NinjaTrader.NinjaScript.AddOns {
             l.Target=acc.CreateOrder(l.Instrument,action,OrderType.Limit,OrderEntry.Automated,TimeInForce.Gtc,p.Quantity,l.Tp,0,oco,"STXG_TP_"+l.Id,DateTime.MinValue,null);
             QueueSubmit(acc,new[]{l.Stop,l.Target});
         }
+        private readonly Dictionary<string,DateTime> copyMismatchSince=new Dictionary<string,DateTime>();
         private void MonitorEngine() {
+            foreach(var group in engineLeases.Values.Where(x=>x.CopyMode).GroupBy(x=>x.Account+"|"+x.Symbol)) {
+                var first=group.First();var account=GetAccountCached(first.Account);if(account==null)continue;
+                var physical=account.Positions.Cast<Position>().FirstOrDefault(x=>x.Instrument.FullName==first.Symbol&&x.MarketPosition!=MarketPosition.Flat);
+                int actual=physical==null?0:physical.Quantity*(physical.MarketPosition==MarketPosition.Long?1:-1);
+                int expected=group.Sum(x=>x.CopyQuantity*(x.CopySide==0?1:-1));
+                if(actual==expected){copyMismatchSince.Remove(group.Key);continue;}
+                DateTime since;if(!copyMismatchSince.TryGetValue(group.Key,out since)){copyMismatchSince[group.Key]=DateTime.UtcNow;continue;}
+                if((DateTime.UtcNow-since).TotalSeconds<3)continue;
+                foreach(var lease in group){lease.Fault="Posición externa o cierre manual: copia pausada; reconciliar en el terminal";if(actual==0)lease.CopyQuantity=0;var owned=new[]{lease.Entry,lease.Stop,lease.Target}.Where(EngineWorking).ToArray();if(owned.Length>0)QueueCancel(account,owned);}
+                SaveEngineLeases();
+            }
             foreach(var l in engineLeases.Values.ToArray())try {
                 var acc=GetAccountCached(l.Account);if(acc==null)continue;var p=EnginePosition(l);
+                if(l.CopyMode&&l.Fault.Length>0)continue;
                 if(EngineWorking(l.Entry)&&l.Expiration>0&&(DateTime.UtcNow-new DateTime(1970,1,1)).TotalSeconds>=l.Expiration)QueueCancel(acc,new[]{l.Entry});
                 if(l.CancelForClose&&EngineProtection(l).Length==0) {
                     l.CancelForClose=false;l.Stop=l.Target=null;
@@ -391,11 +459,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private double lastRealtimePrice;
         private readonly HashSet<Account> subscribedAccounts=new HashSet<Account>();
         private Account[] ConnectedAccounts() {Account[] all;lock(Account.All)all=Account.All.ToArray();return all.Where(a=>a.ConnectionStatus==ConnectionStatus.Connected || a.Provider==Provider.Simulator || a.Provider==Provider.Playback).ToArray();}
-        private bool CanExecute(Account a) {return a!=null&&(a.Provider==Provider.Simulator||a.Provider==Provider.Playback);}
+        private bool CanExecute(Account a) {return a!=null&&(a.Provider==Provider.Simulator||a.Provider==Provider.Playback||a.ConnectionStatus==ConnectionStatus.Connected&&evaluationAccounts.Contains(a.Name));}
         private string[] allowedAccounts {get{return ConnectedAccounts().Where(CanExecute).Select(a=>a.Name).ToArray();}}
         private void RefreshAccounts() {foreach(var a in ConnectedAccounts())if(subscribedAccounts.Add(a))a.ExecutionUpdate+=OnGlobalExecutionUpdate;}
-        private void OnGlobalExecutionUpdate(object sender,ExecutionEventArgs e) {System.Threading.Tasks.Task.Run(()=>{lock(serviceGate){if(State==State.Active){ObserveCandleExecution(e);ProcessAccountExecution(sender,e);}}});}
-        private void QueueSubmit(Account a,Order[] orders) {if(!CanExecute(a))throw new Exception("Solo simuladores locales en esta fase");a.Dispatcher.BeginInvoke(new Action(()=>{try{a.Submit(orders);}catch(Exception ex){Print("Submit rechazado: "+ex.Message);}}));}
+        private void OnGlobalExecutionUpdate(object sender,ExecutionEventArgs e) {System.Threading.Tasks.Task.Run(()=>{lock(serviceGate){if(State==State.Active){EngineExecution(e);ObserveCandleExecution(e);ProcessAccountExecution(sender,e);}}});}
+        private void QueueSubmit(Account a,Order[] orders) {if(!CanExecute(a))throw new Exception("Cuenta sin autorización de ejecución");a.Dispatcher.BeginInvoke(new Action(()=>{try{a.Submit(orders);}catch(Exception ex){Print("Submit rechazado: "+ex.Message);}}));}
         private void QueueCancel(Account a,Order[] orders) {a.Dispatcher.BeginInvoke(new Action(()=>a.Cancel(orders)));}
         private void QueueFlatten(Account a,Instrument[] symbols) {var owned=symbols.Where(i=>CanManageCandle(a,i)).ToArray();if(CanExecute(a)&&owned.Length>0)a.Dispatcher.BeginInvoke(new Action(()=>{Instrument[] current;lock(serviceGate){current=owned.Where(i=>CanManageCandle(a,i)).ToArray();}if(current.Length>0)a.Flatten(current);}));}
         private bool PendingOrOpen() {foreach(string n in groupAccounts){var a=GetAccountCached(n);if(a==null)continue;if(a.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==Instrument.FullName&&p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&(o.OrderState==OrderState.Initialized||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Working||o.OrderState==OrderState.PartFilled||o.OrderState==OrderState.CancelPending)))return true;}return false;}
@@ -423,7 +491,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 Directory.CreateDirectory(root);configFilePath=Path.Combine(root,"CandleServiceConfig.txt");
                 string key=Path.Combine(root,"CandleBridge.key");
                 if(File.Exists(key)) {string[] lines=File.ReadAllLines(key);if(lines.Length>=2){connectionId=lines[0].Trim();connectionKey=lines[1].Trim();}}
-                LoadConfiguration();foreach(var item in accountsConfig.Values)item.Enabled=false;
+                LoadEvaluationAccounts();LoadConfiguration();foreach(var item in accountsConfig.Values)item.Enabled=false;
                 string scope=Path.Combine(root,"CandleServiceScope.txt");
                 if(File.Exists(scope)) {
                     try {
@@ -446,11 +514,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     }catch(Exception ex){Print("No se pudo recuperar el alcance anterior: "+ex.Message);}
                 }
                 masterTradingEnabled=false;
-                RefreshAccounts();LoadEngineLeases();
+                RefreshAccounts();LoadEngineLeases();try{ReserveAccounts(groupAccounts.Concat(engineLeases.Values.Select(l=>l.Account)));}catch(Exception ex){groupAccounts=new string[0];Print(ex.Message);}
                 serviceTimer=new System.Threading.Timer(ServiceTick,null,1000,1000);
                 Print("Servicio iniciado sin interfaz nativa. Configuración y grupos se gestionan desde la web.");
             } else if(State==State.Terminated) {
-                masterTradingEnabled=false;if(serviceTimer!=null){serviceTimer.Dispose();serviceTimer=null;}
+                ReleaseAccountReservations();masterTradingEnabled=false;if(serviceTimer!=null){serviceTimer.Dispose();serviceTimer=null;}
                 if(Instrument!=null)Instrument.MarketData.Update-=ServiceMarketData;
                 foreach(var acc in subscribedAccounts)acc.ExecutionUpdate-=OnGlobalExecutionUpdate;subscribedAccounts.Clear();
                 foreach(var request in engineBars.Values)request.Dispose();engineBars.Clear();
@@ -502,7 +570,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             ",\"wins\":"+(settings==null?0:settings.TradesWon)+",\"losses\":"+(settings==null?0:settings.TradesLost)+",\"closed_trades\":"+(settings==null?0:settings.TradesClosed)+"}";
                     }
                     string events;lock(serviceEvents)events=string.Join(",",serviceEvents.Select(J));
-                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.6.0-copy\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
+                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.7.0-pending\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
                         ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+
@@ -552,6 +620,18 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 string action=parts[3];
                 var values=new Dictionary<string,string>();foreach(string part in parts.Skip(4)){int split=part.IndexOf('=');if(split>0)values[part.Substring(0,split)]=part.Substring(split+1);}
                 if(action=="engine"){EngineCommand(lastAck,values);}
+                else if(action=="authorize-evaluation") {
+                    string[] selected=values["accounts"].Split(',').Where(n=>n.Length>0).ToArray();
+                    if(selected.Any(n=>!ConnectedAccounts().Any(a=>a.Name==n)))throw new Exception("Cuenta no conectada");
+                    if(evaluationAccounts.Except(selected).Any(n=>{var a=GetAccountCached(n);return a!=null&&(a.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(EngineWorking));}))throw new Exception("No retires una autorización con posiciones u órdenes activas");
+                    evaluationAccounts=new HashSet<string>(selected);File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"EvaluationAccounts.txt"),selected);
+                }
+                else if(action=="release") {
+                    if(engineLeases.Count>0)throw new Exception("Detén primero las asignaciones del motor/copy antes de liberar las cuentas");
+                    if(ConnectedAccounts().Where(a=>accountReservations.ContainsKey(a.Name)).Any(a=>a.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(EngineWorking)))throw new Exception("No se liberan cuentas con posiciones u órdenes");
+                    PauseEntries("RELEASED","Cuentas liberadas");foreach(var setting in accountsConfig.Values)setting.Enabled=false;groupAccounts=new string[0];ReleaseAccountReservations();
+                    File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"CandleServiceScope.txt"),new[]{"","1",""});
+                }
                 else if(action=="pause")PauseEntries("MANUAL","Pausa solicitada desde la web");
                 else if(action=="account_pause"||action=="account_resume") {
                     string name=values["account"];AccountRiskSettings s;
@@ -584,7 +664,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         Instrument.MarketData.Update+=ServiceMarketData;
                     }
                     Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
-                    groupAccounts=selected;
+                    ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
                     lock(accountsConfig) {
                         foreach(var settings in accountsConfig.Values)settings.Enabled=false;
                         foreach(string name in selected) {

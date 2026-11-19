@@ -144,6 +144,10 @@ class MT5Worker:
                 store.finish_action(key, 'REJECTED', result_dict)
                 store.log(self.account['id'], deployment['id'], f'Orden rechazada: {result.retcode} {result.comment}')
                 return None
+            if request.get('action')==pending_action and result.volume<=0:
+                from backend.ea_bridge import EAResult
+                result=EAResult(**dict(result_dict,volume=request['volume']))
+                result_dict=result._asdict()
             store.finish_action(key, 'EXECUTED', result_dict)
             store.log(self.account['id'], deployment['id'], f'{deployment.get("name","STX")} · Ejecución {getattr(self.mt5,"platform","MT5")}: {request["comment"]}; acción={request["action"]}; retcode={result.retcode}; orden={result.order}; volumen={result.volume}')
             return result
@@ -177,8 +181,8 @@ class MT5Worker:
         price = tick.ask if direction == 'BUY' else tick.bid
         if pending:
             if entry_order_type not in ('LIMIT','STOP'):raise RuntimeError('Tipo de entrada no admitido')
-            if not (getattr(info,'expiration_mode',0)&4):raise RuntimeError('El símbolo/EA no anuncia expiración de pendientes; actualiza el conector')
-            if expiration<=tick.time:raise RuntimeError('La orden pendiente ya está vencida')
+            if expiration and not (getattr(info,'expiration_mode',0)&4):raise RuntimeError('El símbolo/EA no anuncia expiración de pendientes; actualiza el conector')
+            if expiration and expiration<=tick.time:raise RuntimeError('La orden pendiente ya está vencida')
             price=round(float(entry_price),info.digits)
             distance=info.trade_stops_level*info.point
             reference=tick.ask if direction=='BUY' else tick.bid
@@ -249,7 +253,7 @@ class MT5Worker:
             type_time=self.mt5.ORDER_TIME_GTC,type_filling=self.filling(info))
         if pending:
             request.update(action=5,type={('BUY','LIMIT'):2,('SELL','LIMIT'):3,('BUY','STOP'):4,('SELL','STOP'):5}[(direction,entry_order_type)],
-                type_time=2,expiration=int(expiration),type_filling=2)
+                type_time=2 if expiration else 0,expiration=int(expiration),type_filling=2)
         return self.send(deployment,key,request)
 
     def close_position(self, deployment, position, fraction=1., reason='close'):
@@ -285,7 +289,12 @@ class MT5Worker:
         buy = position.type == self.mt5.POSITION_TYPE_BUY
         if (buy and (sl >= tick.bid-distance or tp <= tick.bid+distance)) or (not buy and (sl <= tick.ask+distance or tp >= tick.ask-distance)):
             return
-        self.send(deployment, f'{deployment["id"]}:{position.ticket}:modify:{sl}:{tp}',
+        revision_key=f'{deployment["id"]}:{position.ticket}'
+        try:revision=store.get('protection_revision',revision_key)
+        except KeyError:revision={'number':0,'desired':None}
+        if revision['desired']!=[sl,tp]:
+            revision=dict(number=revision['number']+1,desired=[sl,tp]);store.put('protection_revision',revision_key,revision)
+        self.send(deployment, f'{deployment["id"]}:{position.ticket}:modify:{revision["number"]}',
                   dict(action=self.mt5.TRADE_ACTION_SLTP, position=int(position.ticket),symbol=position.symbol,sl=sl,tp=tp))
 
     def risk_allowed(self, deployment, info):
@@ -471,6 +480,8 @@ class MT5Worker:
             if not deployment.get('copy_source_symbol'):store.put('runtime',deployment['id'],runtime)
         if not may_open:
             runtime['baseline_master']=list(set(runtime['baseline_master']).union(master))
+        from backend.pending_copy import synchronize_pending
+        pending_sources=synchronize_pending(self,deployment,runtime,source,may_open)
         positions = self.positions()
         for ticket, ref in list(runtime['positions'].items()):
             local = next((p for p in positions if p.magic==deployment['magic'] and p.comment==ref['comment']),None)
@@ -494,7 +505,7 @@ class MT5Worker:
                     self.close_position(deployment,local,fraction,reason=f'master-volume-{origin["volume"]}')
         if may_open:
             for ticket, origin in master.items():
-                if ticket in runtime['positions'] or ticket in runtime['baseline_master']:
+                if ticket in runtime['positions'] or ticket in runtime['baseline_master'] or ticket in pending_sources:
                     continue
                 if len(self.positions()) >= deployment['max_positions']:
                     break
@@ -540,6 +551,7 @@ class MT5Worker:
                 if result:
                     matched=next((p for p in self.positions() if p.magic==deployment['magic'] and p.comment==comment),None)
                     runtime['positions'][ticket] = dict(comment=comment,source_ticket=ticket,target_order=result.order,
+                        target_native_order_id=getattr(result,'native_order_id',None),
                         target_ticket=matched.ticket if matched else None,
                         source_symbol=origin['symbol'],target_symbol=symbol,initial_master_volume=origin['volume'],
                         initial_local_volume=result.volume,translated=bool(translated),target_entry=matched.price_open if matched and translated else target_entry,
@@ -553,10 +565,16 @@ class MT5Worker:
             raise LeaseLost('Ya existe otro conector para esta cuenta')
         account, _ = self.verify()
         positions = self.positions()
+        pending_orders=list(self.mt5.orders_get() or [])
         store.put('snapshot',self.account['id'],dict(at=time.time(),verified_demo=True,
                   login=account.login,server=account.server,balance=account.balance,equity=account.equity,
                   currency=account.currency,positions=[{k:getattr(p,k) for k in
-                  ('ticket','symbol','type','volume','price_open','sl','tp','magic','comment','time')} for p in positions]))
+                  ('ticket','symbol','type','volume','price_open','sl','tp','magic','comment','time')}
+                  | {'identifier':getattr(p,'identifier',p.ticket),'source_order':getattr(p,'identifier',p.ticket)} for p in positions],
+                  orders=[vars(o) if hasattr(o,'__dict__') else o._asdict() for o in pending_orders],
+                  quotes={symbol:vars(t) if hasattr(t,'__dict__') else t._asdict() for symbol in
+                    {p.symbol for p in positions}.union(o.symbol for o in pending_orders)
+                    if (t:=self.mt5.symbol_info_tick(symbol)) is not None}))
         for deployment in store.listing('deployment'):
             if deployment['account_id'] != self.account['id'] or deployment['state']=='STOPPED':
                 continue

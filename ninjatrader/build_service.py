@@ -46,7 +46,7 @@ def main():
     core=core.replace('            settings.Direction = direction;', '            candleOwnedAccounts.Add(acc.Name);\n            settings.Direction = direction;',1)
     core=core.replace('!groupAccounts.Contains(kvp.Key) || removedAccounts', '!CanManageCandle(GetAccountCached(kvp.Key),Instrument) || !groupAccounts.Contains(kvp.Key) || removedAccounts')
     core=core.replace('!groupAccounts.Contains(kvp.Key) || removedAccounts', 'engineLeases.Values.Any(l=>l.Account==kvp.Key) || !groupAccounts.Contains(kvp.Key) || removedAccounts')
-    result=imports+'\nnamespace NinjaTrader.NinjaScript.AddOns {\n public class StratixCandleService : AddOnBase {\n'+account+ROOT.joinpath('BridgeHealth.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('EngineBridge.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('CandleOwnership.fragment.cs').read_text(encoding='utf-8')+fragment+config+core+'\n }\n}\n'
+    result=imports+'\nnamespace NinjaTrader.NinjaScript.AddOns {\n public class StratixCandleService : AddOnBase {\n'+account+ROOT.joinpath('EvaluationAccounts.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('BridgeHealth.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('EngineBridge.fragment.cs').read_text(encoding='utf-8')+ROOT.joinpath('CandleOwnership.fragment.cs').read_text(encoding='utf-8')+fragment+config+core+'\n }\n}\n'
     if 'ChartControl' in result or 'Draw.HorizontalLine' in result:raise RuntimeError('Quedó una dependencia del gráfico')
     ROOT.joinpath('StratixCandleService.cs').write_text(result,encoding='utf-8')
     ROOT.joinpath('service_manifest.json').write_text(json.dumps(dict(source=str(SOURCE),sha256=hashlib.sha256(raw).hexdigest(),

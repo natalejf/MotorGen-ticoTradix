@@ -10,6 +10,7 @@ Los grupos usan el diseño de PropPass y aplican tamaño y límites a sus copias
 **No está habilitada la ejecución en cuentas reales o de fondeo conectadas a un
 proveedor externo.** El AddOn compila con las referencias locales de NinjaTrader,
 pero todavía requiere validación de ejecución en ambos terminales conectados.
+PropPass y RocketPass permiten autorizar explícitamente cuentas de examen; consulta ROCKETPASS.md. El copy continúa limitado a demo/simulación.
 Las pruebas automatizadas usan brókers simulados; no se enviaron operaciones a
 tus terminales. Esto no equivale aún a un copiador comercial validado en producción.
 
@@ -24,7 +25,7 @@ tus terminales. Esto no equivale aún a un copiador comercial validado en produc
 3. **NinjaTrader:** descarga el AddOn actualizado desde Futuros → Conexiones →
    Descargar AddOn. Actualiza `StratixCandleService.cs` en el editor NinjaScript
    (AddOns), compila con F5 y reinicia el AddOn/NinjaTrader según tu instalación.
-   Debe informar versión **1.6.0-copy**. Conserva el vínculo existente o vincúlalo
+   Debe informar versión **1.7.0-pending**. Conserva el vínculo existente o vincúlalo
    desde Conexiones si todavía no lo tienes. Usa cuentas Simulator/Playback.
 4. En **Cuentas → Añadir NinjaTrader al copy**, selecciona cada cuenta que vayas
    a utilizar como master o seguidora. Este registro no envía órdenes.
@@ -90,10 +91,17 @@ las posiciones, detén la copia y crea una nueva. El registro explica el bloqueo
 
 ## Límites actuales que debes conocer
 
-- Se copian posiciones ejecutadas, no el ciclo de órdenes pendientes antes de su
-  ejecución. Una orden pendiente se detecta cuando ya generó una posición.
-- NT8 usa posiciones netas: una operación copiada por instrumento en cada
-  seguidora. No se mezclan operaciones manuales con el motor en esa cuenta.
+- Se copian Buy/Sell Limit y Buy/Sell Stop Market, sus cambios de precio,
+  protecciones y cancelaciones. El cambio de ticket al ejecutarse se reconcilia
+  con la posición resultante. Stop Limit (doble precio stop/limit) aún no se admite.
+- Si una pendiente NT8 no publica las protecciones ATM antes de ejecutarse,
+  configura SL/TP propios en la seguidora MT5. Sin SL/TP ni protecciones propias
+  no se envía la entrada pendiente. Los pips propios se expresan en el símbolo
+  destino. La prueba con tus ATM concretos sigue pendiente.
+- NT8 usa posiciones netas. Cada copia tiene su relación de órdenes y una
+  cantidad virtual propia dentro de la posición neta. No se permiten señales
+  opuestas simultáneas sobre un mismo contrato, ni operaciones manuales mezcladas
+  con el motor en esa cuenta. El límite de entradas incluye pendientes.
 - Las ampliaciones sobre una posición neta NT8 ya abierta no se agregan a la
   seguidora; para esta versión, abre una entrada y luego reduce o cierra.
 - La observación nativa es periódica. Un cierre y reapertura completos entre dos
@@ -104,6 +112,9 @@ las posiciones, detén la copia y crea una nueva. El registro explica el bloqueo
 - Las equivalencias son explícitas; no se adivinan sufijos ni vencimientos.
 - Si falta conexión, el servidor local no puede gestionar salidas dinámicas.
   Las protecciones ya aceptadas permanecen en el bróker.
+
+Para RocketPass, cuentas de examen y el plan de prueba cruzada, consulta
+[ROCKETPASS.md](ROCKETPASS.md).
 
 ## GitHub y vista online
 

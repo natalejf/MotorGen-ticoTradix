@@ -888,6 +888,8 @@ from backend.ninja_bridge import install_routes as install_ninja_routes
 from backend.ninja_execution import install_routes as install_ninja_execution
 install_ninja_execution(app)
 install_ninja_routes(app)
+from backend.rocket_bridge import install_routes as install_rocket_routes
+install_rocket_routes(app)
 
 # Mount static frontend files if folder exists
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

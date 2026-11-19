@@ -49,7 +49,7 @@ string Positions() {
          ",\"type\":"+Int(PositionGetInteger(POSITION_TYPE))+",\"volume\":"+Num(PositionGetDouble(POSITION_VOLUME))+
          ",\"price_open\":"+Num(PositionGetDouble(POSITION_PRICE_OPEN))+",\"sl\":"+Num(PositionGetDouble(POSITION_SL))+
          ",\"tp\":"+Num(PositionGetDouble(POSITION_TP))+",\"magic\":"+Int(PositionGetInteger(POSITION_MAGIC))+
-         ",\"comment\":"+Quote(PositionGetString(POSITION_COMMENT))+",\"time\":"+Int(PositionGetInteger(POSITION_TIME))+"}";
+         ",\"comment\":"+Quote(PositionGetString(POSITION_COMMENT))+",\"identifier\":"+Int(PositionGetInteger(POSITION_IDENTIFIER))+",\"time\":"+Int(PositionGetInteger(POSITION_TIME))+"}";
    }
    return out+"]";
 }
@@ -62,7 +62,7 @@ string Orders() {
          ",\"type\":"+Int(OrderGetInteger(ORDER_TYPE))+",\"volume\":"+Num(OrderGetDouble(ORDER_VOLUME_CURRENT))+
          ",\"price_open\":"+Num(OrderGetDouble(ORDER_PRICE_OPEN))+",\"sl\":"+Num(OrderGetDouble(ORDER_SL))+
          ",\"tp\":"+Num(OrderGetDouble(ORDER_TP))+",\"magic\":"+Int(OrderGetInteger(ORDER_MAGIC))+
-         ",\"comment\":"+Quote(OrderGetString(ORDER_COMMENT))+",\"time\":"+Int(OrderGetInteger(ORDER_TIME_SETUP))+"}";
+         ",\"comment\":"+Quote(OrderGetString(ORDER_COMMENT))+",\"expiration\":"+Int(OrderGetInteger(ORDER_TIME_EXPIRATION))+",\"type_time\":"+Int(OrderGetInteger(ORDER_TYPE_TIME))+",\"time\":"+Int(OrderGetInteger(ORDER_TIME_SETUP))+"}";
    }
    return out+"]";
 }

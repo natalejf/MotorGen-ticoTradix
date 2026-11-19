@@ -18,3 +18,5 @@ data/macro/
 data/copy_trading.sqlite3*
 data/copy_logs/
 data/history/
+reports/RocketMathHarness.cs
+reports/RocketMathHarness.exe

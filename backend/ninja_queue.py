@@ -141,6 +141,6 @@ class NinjaQueue:
         except HTTPException as error:
             q.update(state='PAUSED',detail=str(error.detail));self.save(key,q)
 
-    def install(self,app):
-        @app.post('/api/ninja/queues/{key}/groups/{group_id}')
+    def install(self,app,prefix='/api/ninja'):
+        @app.post(prefix+'/queues/{key}/groups/{group_id}')
         def activate(key:str,group_id:str):return self.add(key,group_id)

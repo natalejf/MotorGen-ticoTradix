@@ -33,10 +33,14 @@ class NinjaWorker(MT5Worker):
                          next(iter(record['symbol_map'].values())),record['magic']),dict(id=record['account_id']))
         self.session=record['id'];self.claimed=False;self.error_at=0
         self.brokers=[]
+        broker_type=NinjaBroker
+        if record['source_type']=='account':
+            from backend.ninja_copy_broker import NinjaCopyBroker
+            broker_type=NinjaCopyBroker
         for index,item in enumerate(record['strategies']):
             symbol=record['symbol_map'][item['strategy']['symbol']]
             child=record['id'] if len(record['strategies'])==1 else uuid.uuid5(uuid.UUID(record['id']),str(index)).hex
-            self.brokers.append(NinjaBroker(record['connection'],record['account_name'],child,symbol,record['magic']+index,parent=record['id']))
+            self.brokers.append(broker_type(record['connection'],record['account_name'],child,symbol,record['magic']+index,parent=record['id']))
 
     def verify(self):
         snapshot=store.get('ninja_snapshot',self.mt5.connection)
@@ -138,7 +142,7 @@ def install_routes(app):
         with assignment_lock:
             try:snapshot=store.get('ninja_snapshot',req.connection)
             except KeyError:raise HTTPException(409,'Conecta NinjaTrader primero')
-            if time.time()-snapshot.get('at',0)>10 or snapshot.get('version') not in ('1.5.4-portfolio','1.6.0-copy'):
+            if time.time()-snapshot.get('at',0)>10 or snapshot.get('version') not in ('1.5.4-portfolio','1.6.0-copy','1.7.0-pending'):
                 raise HTTPException(409,'Conecta el AddOn 1.5.4-portfolio actualizado y compilado en NinjaTrader')
             row=next((a for a in snapshot['accounts'] if a['name']==req.account),{})
             if not row.get('execution_allowed') or row.get('provider') not in ('Simulator','Playback'):

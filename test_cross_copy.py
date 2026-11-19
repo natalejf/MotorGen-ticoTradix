@@ -88,7 +88,7 @@ def test_paused_signal_is_not_imported_when_resuming():
 
 def test_manual_native_registration_and_copy_validation():
     client=TestClient(app)
-    store.put('ninja_snapshot','bridge',dict(at=time.time(),instance='one',version='1.6.0-copy',accounts=[dict(name='Sim101',provider='Simulator',execution_allowed=True)]))
+    store.put('ninja_snapshot','bridge',dict(at=time.time(),instance='one',version='1.7.0-pending',accounts=[dict(name='Sim101',provider='Simulator',execution_allowed=True)]))
     registered=client.post('/api/copy/native-accounts',json=dict(connection='bridge',account='Sim101'))
     assert registered.status_code==200
     native=registered.json()
@@ -100,12 +100,12 @@ def test_manual_native_registration_and_copy_validation():
     response=client.post('/api/copy/deployments',json=dict(body,quantity_ratio=10))
     assert response.status_code==200,response.text
     record=response.json()
-    assert record['platform']=='NT8' and record['state']=='PAUSED' and record['max_positions']==1
+    assert record['platform']=='NT8' and record['state']=='PAUSED' and record['max_positions']==5
     assert client.patch('/api/copy/deployments/'+record['id']+'/settings',json={'symbol_map':{'NAS100':'NQ DEC26'}}).status_code==409
 
 
 def test_real_native_account_rejected():
-    store.put('ninja_snapshot','bridge',dict(at=time.time(),instance='one',version='1.6.0-copy',accounts=[dict(name='Live',provider='Broker',execution_allowed=True)]))
+    store.put('ninja_snapshot','bridge',dict(at=time.time(),instance='one',version='1.7.0-pending',accounts=[dict(name='Live',provider='Broker',execution_allowed=True)]))
     assert TestClient(app).post('/api/copy/native-accounts',json=dict(connection='bridge',account='Live')).status_code==409
 
 
@@ -124,6 +124,8 @@ def test_native_worker_executes_copy_and_keeps_leg_runtime(monkeypatch):
         def rpc(self,method):return {'ok':True}
         def orders_get(self):return []
     monkeypatch.setattr(ninja_execution,'NinjaBroker',Native)
+    from backend import ninja_copy_broker
+    monkeypatch.setattr(ninja_copy_broker,'NinjaCopyBroker',Native)
     store.put('ninja_snapshot','bridge',dict(at=time.time(),instance='one',accounts=[dict(name='Sim101',provider='Simulator',execution_allowed=True)]))
     d=deployment();d.update(source_type='account',source_id='master',platform='NT8',connection='bridge',
         account_name='Sim101',instance='one',cross_platform=True,risk_mode='RISK_PERCENT',

@@ -9,7 +9,7 @@ from backend import copy_trading as store
 
 observers = {}
 observer_lock = threading.Lock()
-COPY_VERSION = '1.6.0-copy'
+COPY_VERSION = '1.7.0-pending'
 
 
 class NativeAccount(BaseModel):
@@ -36,7 +36,6 @@ def configure_copy(record, target, source):
             raise HTTPException(409,'Actualiza el AddOn a '+COPY_VERSION)
         record.update(platform='NT8',connection=target['connection'],account_name=target['account_name'],
                       instance=snapshot['instance'],ui_account_id=target['id'])
-        record['max_positions']=1
         record['strategies']=[dict(strategy=dict(symbol=symbol),weight=1) for symbol in record['symbol_map']]
 
 
@@ -51,6 +50,9 @@ def observe(account):
         try:
             native = store.get('ninja_snapshot',account['connection'])
             if native.get('version') != COPY_VERSION:raise RuntimeError('Actualiza AddOn a '+COPY_VERSION)
+            row=next((a for a in native.get('accounts',[]) if a['name']==account['account_name']),{})
+            if row.get('provider') not in ('Simulator','Playback') or not row.get('execution_allowed'):
+                raise RuntimeError('La master del copy de pruebas debe seguir siendo Simulator/Playback')
             value = broker.rpc('observe')
             store.put('snapshot',account['id'],dict(value,at=time.time(),verified_demo=True,
                       platform='NT8',currency='USD',source_instance=native['instance']))
@@ -82,7 +84,13 @@ def install_routes(app):
         try:runtime=store.get('runtime',key)
         except KeyError:runtime={}
         legs=list(runtime.get('copy_legs',{}).values()) or [runtime]
-        return [dict(ref,source_ticket=ticket) for leg in legs for ticket,ref in leg.get('positions',{}).items()]
+        rows=[]
+        for leg in legs:
+            confirmed={ref.get('comment') for ref in leg.get('positions',{}).values()}
+            rows.extend(dict(ref,source_ticket=ticket,copy_state='POSITION') for ticket,ref in leg.get('positions',{}).items())
+            rows.extend(dict(ref,source_ticket=ticket,copy_state='FINALIZED' if ref.get('terminal') else 'PENDING')
+                        for ticket,ref in leg.get('pending_copies',{}).items() if ref.get('comment') not in confirmed)
+        return rows
 
     @app.post('/api/copy/native-accounts')
     def register(req:NativeAccount):

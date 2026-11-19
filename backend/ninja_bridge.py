@@ -51,6 +51,10 @@ class Group(BaseModel):
     settings:Settings
 
 
+class EvaluationAuthorization(BaseModel):
+    accounts:list[AccountName]=Field(default_factory=list,max_length=200)
+
+
 def required(key):
     try:return store.get('ninja_connection',key)
     except KeyError:raise HTTPException(404,'Conexión NinjaTrader inexistente')
@@ -72,16 +76,22 @@ def visible_accounts(snapshot):
     return rows
 
 
-def install_routes(app):
+def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Group):
+    from backend.namespaced_store import NamespacedStore
+    store=globals()['store'] if namespace=='ninja' else NamespacedStore(namespace)
+    Settings=settings_model;Group=group_model;prefix='/api/'+namespace
+    def required(key):
+        try:return store.get('ninja_connection',key)
+        except KeyError:raise HTTPException(404,'Conexión inexistente')
     @app.middleware('http')
     async def local_controls(request,call_next):
-        if request.url.path.startswith('/api/ninja/'):
+        if request.url.path.startswith(prefix+'/'):
             origin=request.headers.get('origin')
             if origin and origin.rstrip('/')!=str(request.base_url).rstrip('/'):
                 return JSONResponse({'detail':'Control NinjaTrader solo desde esta aplicación'},status_code=403)
         return await call_next(request)
 
-    @app.get('/api/ninja/status')
+    @app.get(prefix+'/status')
     def status():
         result=[]
         for connection in store.listing('ninja_connection'):
@@ -98,21 +108,21 @@ def install_routes(app):
             result.append(dict(id=connection['id'],name=connection['name'],account=None,
                 connected=time.time()-snapshot.get('at',0)<10,snapshot=snapshot,active_group_id=applied.get('group_id'),applied_settings=applied.get('settings'),
                 queue=queue_state,commands=[json.loads(r['body']) for r in rows]))
-        return dict(platform='NinjaTrader 8',mode='SIM_ACCOUNTS_ONLY',copy_execution_enabled=False,
+        return dict(platform='NinjaTrader 8',mode='EXPLICIT_EVALUATION_ALLOWLIST',copy_execution_enabled=False,
                     connections=result,groups=store.listing('ninja_group'))
 
-    @app.post('/api/ninja/groups')
+    @app.post(prefix+'/groups')
     def create_group(group:Group):
         key=uuid.uuid4().hex
         return store.put('ninja_group',key,dict(id=key,**group.model_dump()))
 
-    @app.put('/api/ninja/groups/{key}')
+    @app.put(prefix+'/groups/{key}')
     def update_group(key:str,group:Group):
         try:store.get('ninja_group',key)
         except KeyError:raise HTTPException(404,'Grupo inexistente')
         return queue.update_template(dict(id=key,**group.model_dump()))
 
-    @app.delete('/api/ninja/groups/{key}')
+    @app.delete(prefix+'/groups/{key}')
     def delete_group(key:str):
         for pending in store.listing('ninja_queue'):
             if pending.get('state') not in ('COMPLETED','STOPPED') and any(i['group_id']==key for i in pending['items']):raise HTTPException(409,'El grupo pertenece a una cola pendiente; no se puede eliminar')
@@ -125,31 +135,34 @@ def install_routes(app):
         with store.connect() as db:db.execute("DELETE FROM records WHERE kind='ninja_group' AND id=?",(key,))
         return {'deleted':True}
 
-    @app.post('/api/ninja/connections')
+    @app.post(prefix+'/connections')
     async def create(new_device:bool=False):
         if store.listing('ninja_connection') and not new_device:
             raise HTTPException(409,'Ya hay un vínculo guardado. Abre NinjaTrader para reutilizarlo; crea otro vínculo solo para otro equipo.')
         key=uuid.uuid4().hex;token=secrets.token_urlsafe(32)
-        store.put('ninja_connection',key,dict(id=key,name='Servicio Candle · simulación',
+        store.put('ninja_connection',key,dict(id=key,name=('PropPass' if namespace=='ninja' else 'RocketPass')+' · NinjaTrader',
                   hash=hashlib.sha256(token.encode()).hexdigest(),created=time.time()))
         return dict(id=key,token=token,url='http://127.0.0.1:8000',account='Sim101')
 
-    @app.get('/api/ninja/download')
+    @app.get(prefix+'/download')
     def download():
-        return FileResponse(store.ROOT/'ninjatrader'/'StratixCandleService.cs',filename='StratixCandleService.cs')
+        filename='StratixCandleService.cs' if namespace=='ninja' else 'RocketPassService.cs'
+        return FileResponse(store.ROOT/'ninjatrader'/filename,filename=filename)
 
     def enqueue(key,action,settings=None,group_id=None,account_name=None,from_queue=False):
         required(key)
         q=queue.get(key)
         if not from_queue and q and q['state']=='RUNNING' and action in ('configure','reset','start'):
             raise HTTPException(409,'Hay una cola activa: no se puede saltar ni reiniciar el grupo actual')
-        if not from_queue and action in ('pause','close-stop'):queue.pause(key)
-        if action not in ('configure','start','pause','reset','close-stop','account_pause','account_resume'):raise HTTPException(400,'Acción no admitida')
+        if not from_queue and action in ('pause','close-stop','release'):queue.pause(key)
+        if action not in ('configure','start','pause','reset','close-stop','account_pause','account_resume','authorize-evaluation','release'):raise HTTPException(400,'Acción no admitida')
         try:snapshot=store.get('ninja_snapshot',key)
         except KeyError:snapshot={}
         snapshot=dict(snapshot,accounts=visible_accounts(snapshot))
+        if action in ('authorize-evaluation','release') and snapshot.get('version')!='1.7.0-pending':
+            raise HTTPException(409,'Actualiza el AddOn a 1.7.0-pending para autorizar o liberar cuentas')
         if time.time()-snapshot.get('at',0)>10 or not snapshot.get('realtime') or not snapshot.get('account_available'):
-            raise HTTPException(409,'Conecta el AddOn de NinjaTrader con sus cuentas simuladas')
+            raise HTTPException(409,'Conecta el AddOn de NinjaTrader y sus cuentas')
         if action!='pause' and snapshot.get('kind')!='candle_service_v1':
             raise HTTPException(409,'Retira el controlador del gráfico y carga el AddOn sin interfaz')
         if action in ('configure','start','reset') and snapshot.get('position_quantity',0):
@@ -164,11 +177,13 @@ def install_routes(app):
             except KeyError:applied={}
             if applied.get('instance')!=snapshot.get('instance'):
                 raise HTTPException(409,'Aplica y confirma primero la configuración de esta instancia')
+            if not applied.get('settings',{}).get('accounts'):
+                raise HTTPException(409,'Aplica un grupo antes de activar entradas')
             if group_id and applied.get('group_id')!=group_id:raise HTTPException(409,'El grupo seleccionado todavía no está aplicado')
             if not snapshot.get('data_ready'):raise HTTPException(409,'Esperando ticks recientes del instrumento')
-        params=(settings or Settings()).model_dump() if action in ('configure','reset','close-stop') else {}
+        params=(settings or Settings()).model_dump() if action in ('configure','reset','close-stop','authorize-evaluation') else {}
         if action=='close-stop':
-            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy'):
+            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy','1.7.0-pending'):
                 raise HTTPException(409,'Compila el AddOn actualizado: esta versión anterior no garantiza el cierre exclusivo de PropPass')
             try:applied=store.get('ninja_config_ack',key)
             except KeyError:raise HTTPException(409,'No hay grupo PropPass aplicado para cerrar')
@@ -184,13 +199,13 @@ def install_routes(app):
                 raise HTTPException(409,'Cuenta finalizada por target o stop; reinicia explícitamente su seguimiento')
             params={'account':account_name}
         if 'accounts' in params:
-            if not params['accounts']:params['accounts']=[a['name'] for a in snapshot.get('accounts',[]) if a.get('execution_allowed',True)][:1]
-            if not params['accounts']:raise HTTPException(409,'No hay cuentas disponibles para aplicar la configuración')
+            if not params['accounts'] and action!='authorize-evaluation':params['accounts']=[a['name'] for a in snapshot.get('accounts',[]) if a.get('execution_allowed',True)][:1]
+            if not params['accounts'] and action!='authorize-evaluation':raise HTTPException(409,'No hay cuentas disponibles para aplicar la configuración')
             available={a['name'] for a in snapshot.get('accounts',[]) if isinstance(a,dict) and isinstance(a.get('name'),str) and a.get('connected',True)}
             if set(params['accounts'])-available:raise HTTPException(409,'Una cuenta del grupo no está disponible en NinjaTrader')
             params['accounts']=list(dict.fromkeys(params['accounts']))
             rows={a['name']:a for a in snapshot.get('accounts',[]) if isinstance(a,dict) and 'name' in a}
-            if any(rows[n].get('execution_allowed') is False for n in params['accounts']):raise HTTPException(409,'Cuenta detectada, pero esta fase de pruebas solo ejecuta en simuladores locales')
+            if action!='authorize-evaluation' and any(rows[n].get('execution_allowed') is False for n in params['accounts']):raise HTTPException(409,'Cuenta detectada, pero esta fase de pruebas solo ejecuta en simuladores locales')
         if params.get('exit_only_profit'):
             raise HTTPException(422,'ExitOnlyInProfit está declarado en el archivo pero no implementa una regla de salida; no se habilita desde la web')
         for field in ('start_time','end_time'):
@@ -203,16 +218,19 @@ def install_routes(app):
 
     from backend.ninja_queue import NinjaQueue
     queue=NinjaQueue(store,enqueue,Settings)
-    queue.install(app)
+    queue.install(app,prefix)
 
-    @app.post('/api/ninja/connections/{key}/{action}')
+    @app.post(prefix+'/connections/{key}/evaluation-accounts')
+    def authorize_evaluation(key:str,req:EvaluationAuthorization):return enqueue(key,'authorize-evaluation',req)
+
+    @app.post(prefix+'/connections/{key}/{action}')
     def command(key:str,action:str,settings:Settings|None=None):return enqueue(key,action,settings)
 
-    @app.post('/api/ninja/connections/{key}/accounts/{account_name}/{action}')
+    @app.post(prefix+'/connections/{key}/accounts/{account_name}/{action}')
     def account_control(key:str,account_name:AccountName,action:Literal['pause','resume']):
         return enqueue(key,'account_'+action,account_name=account_name)
 
-    @app.post('/api/ninja/connections/{key}/groups/{group_id}/{action}')
+    @app.post(prefix+'/connections/{key}/groups/{group_id}/{action}')
     def group_control(key:str,group_id:str,action:str):
         try:group=store.get('ninja_group',group_id)
         except KeyError:raise HTTPException(404,'Grupo inexistente')
@@ -229,7 +247,7 @@ def install_routes(app):
         if action=='start':return enqueue(key,'start',group_id=group_id)
         raise HTTPException(400,'Acción de grupo no admitida')
 
-    @app.post('/api/ninja/bridge/{key}/pulse',response_class=PlainTextResponse)
+    @app.post(prefix+'/bridge/{key}/pulse',response_class=PlainTextResponse)
     async def pulse(key:str,request:Request,x_stratix_key:str=Header(default='')):
         connection=required(key)
         if not hmac.compare_digest(connection['hash'],hashlib.sha256(x_stratix_key.encode()).hexdigest()):
@@ -256,11 +274,12 @@ def install_routes(app):
             db.execute('INSERT OR REPLACE INTO records VALUES(?,?,?)',('ninja_snapshot',key,json.dumps(dict(value,at=time.time()),allow_nan=False)))
         ack=value.get('last_ack')
         from backend import ninja_rpc
-        ninja_rpc.accept_results(key,instance,value.get('engine_results',[]))
-        from backend.ninja_execution import ensure_workers
-        ensure_workers(key)
-        from backend.cross_copy import ensure_observers
-        ensure_observers(key)
+        if namespace=='ninja':
+            ninja_rpc.accept_results(key,instance,value.get('engine_results',[]))
+            from backend.ninja_execution import ensure_workers
+            ensure_workers(key)
+            from backend.cross_copy import ensure_observers
+            ensure_observers(key)
         if isinstance(ack,str) and ack:
             try:cmd=store.get('ninja_command',ack)
             except KeyError:cmd={}
@@ -270,6 +289,12 @@ def install_routes(app):
                 store.put('ninja_command',ack,cmd)
                 if cmd['state']=='APPLIED' and cmd['action'] in ('configure','reset'):
                     store.put('ninja_config_ack',key,dict(instance=instance,settings=cmd['settings'],group_id=cmd.get('group_id')))
+                if cmd['state']=='APPLIED' and cmd['action']=='release':
+                    store.put('ninja_config_ack',key,dict(instance=instance,settings={'accounts':[]},group_id=None))
+                    released=queue.get(key)
+                    if released:
+                        released.update(state='STOPPED',phase='RELEASED',detail='Cuentas liberadas; aplica un grupo para iniciar una nueva cola')
+                        queue.save(key,released)
                 if cmd['state']=='APPLIED' and cmd['action'] in ('account_pause','account_resume'):
                     try:
                         applied=store.get('ninja_config_ack',key);group=store.get('ninja_group',applied['group_id'])
@@ -294,4 +319,4 @@ def install_routes(app):
                 fields += [f'{field}:{account}='+wire(v) for account,overrides in cmd['settings'].get('account_overrides',{}).items()
                            for field,v in overrides.items() if v is not None]
                 return '|'.join([cmd['id'],instance,str(int(cmd['expires'])),cmd['action']]+fields)
-        return ninja_rpc.poll(key,instance)
+        return ninja_rpc.poll(key,instance) if namespace=='ninja' else ''
