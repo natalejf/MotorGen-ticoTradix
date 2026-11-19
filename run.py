@@ -52,6 +52,15 @@ def main(argv=None):
     try:
         import uvicorn
         from backend.api import app
+    except ImportError as exc:
+        import traceback
+        log=ROOT/"reports"/"startup_error.log"
+        log.parent.mkdir(exist_ok=True)
+        log.write_text(traceback.format_exc(),encoding="utf-8")
+        print(f"ERROR: Falta modulo o dependencia ({exc}).",flush=True)
+        print("Ejecuta: pip install -r requirements.txt",flush=True)
+        print("Detalle: "+str(log),flush=True)
+        return 1
     except Exception:
         import traceback
         log=ROOT/"reports"/"startup_error.log"
