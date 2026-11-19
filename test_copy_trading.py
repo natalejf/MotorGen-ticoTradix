@@ -68,6 +68,9 @@ class FakeMT5:
     def positions_get(self):
         return self.opened
 
+    def orders_get(self,*args,**kwargs):
+        return []
+
     def symbol_select(self,*args):
         return True
 

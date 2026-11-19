@@ -1,11 +1,11 @@
-{
-  "algorithm_source": "C:\\Users\\yo\\OneDrive\\Documentos\\NinjaTrader 8\\bin\\Custom\\Strategies\\TrendLimitGridBot.cs",
-  "algorithm_sha256": "ef570af394ea8d58ab6cb7f21a845636193c12daf9cb3277d6575cf0400311e3",
-  "original_unchanged": true,
-  "shell_sha256": "ad28e7f061a4ba02c7d2764ea7ecbd858e7bf363cc062663fa171c543d1bbd34",
-  "execution": "SIM_OR_EXPLICIT_EVALUATION_ALLOWLIST",
-  "compile_status": "PENDING",
-  "native_compile_status": "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
-  "compile_checked_at": "2026-11-19T02:31:53.5385487Z",
-  "integrated_sha256": "460dde0f05e68d467e49760feef7008d3015d1578d8bec7b846509361b38f29d"
+﻿{
+    "algorithm_source":  "C:\\Users\\yo\\OneDrive\\Documentos\\NinjaTrader 8\\bin\\Custom\\Strategies\\TrendLimitGridBot.cs",
+    "algorithm_sha256":  "ef570af394ea8d58ab6cb7f21a845636193c12daf9cb3277d6575cf0400311e3",
+    "original_unchanged":  true,
+    "shell_sha256":  "362cf28c44cb5a3274a3eb0877e306e5fd981eb6c1dda7179d3394b4a1f76c24",
+    "execution":  "SIM_OR_EXPLICIT_EVALUATION_ALLOWLIST",
+    "compile_status":  "PENDING",
+    "native_compile_status":  "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
+    "compile_checked_at":  "2026-11-19T16:57:45.0041772Z",
+    "integrated_sha256":  "96004afa9cbbe92a71a2c9c0a7ed5ce73cfe4831cb8f408a73b8adf0f1bd0455"
 }

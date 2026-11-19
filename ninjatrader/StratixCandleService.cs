@@ -562,7 +562,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         AccountRiskSettings settings;accountsConfig.TryGetValue(name,out settings);
                         var working=acc.Orders.Cast<Order>().Where(o=>(Instrument!=null&&o.Instrument.FullName==Instrument.FullName||engineLeases.Values.Any(l=>l.Account==name&&l.Symbol==o.Instrument.FullName))&&(o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled)).Select(o=>"{\"name\":"+J(o.Name)+",\"type\":"+J(o.OrderType.ToString())+",\"state\":"+J(o.OrderState.ToString())+",\"quantity\":"+o.Quantity+",\"limit\":"+N(o.LimitPrice)+",\"stop\":"+N(o.StopPrice)+"}");
                         double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
-                        double daily=settings==null?acc.Get(AccountItem.RealizedProfitLoss,Currency.UsDollar)+open:cash+open-settings.DailyStartBalance-(settings.NinjaTraderHandlesCommissions?0:settings.DailyCommissions);
+                        double openPnl=(pos!=null&&pos.MarketPosition!=MarketPosition.Flat&&candleOwnedAccounts.Contains(name))?open:0.0;
+                        double daily=settings==null?0.0:(settings.SessionRealizedPnl+openPnl);
                         rows.Add("{\"name\":"+J(name)+",\"connected\":true,\"execution_allowed\":"+B(CanExecute(acc))+",\"provider\":"+J(acc.Provider.ToString())+",\"enabled\":"+B(settings!=null&&settings.Enabled)+",\"position_quantity\":"+qty+
                             ",\"direction\":"+J(pos==null?"Flat":pos.MarketPosition.ToString())+",\"balance\":"+N(acc.Get(AccountItem.CashValue,Currency.UsDollar))+
                             ",\"unrealized\":"+N(acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar))+
@@ -581,7 +582,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         ",\"position_quantity\":"+quantity+",\"accounts\":["+string.Join(",",rows)+"],\"events\":["+events+"]"+
                         ",\"last_ack\":"+J(lastAck)+",\"ack_status\":"+J(ackStatus)+",\"ack_detail\":"+J(ackDetail)+"}";
                 }
-                if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey))return;
+                if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey)) {
+                    string pairing=Path.Combine(Path.GetDirectoryName(configFilePath),"CandleBridge.key");
+                    if(File.Exists(pairing)){string[] lines=File.ReadAllLines(pairing);if(lines.Length>=2){connectionId=lines[0].Trim();connectionKey=lines[1].Trim();}}
+                    if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey))return;
+                }
                 if(System.Threading.Interlocked.CompareExchange(ref pulseBusy,1,0)!=0)return;
                 System.Threading.Tasks.Task.Run(()=>SendPulse(payload));
             } catch(Exception ex) {PauseEntries("SERVICE_ERROR",ex.Message);}
@@ -593,7 +598,15 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private void CheckBridgeHealth() {
             if(masterTradingEnabled&&bridgeHealth.Check(DateTime.UtcNow)) {masterTradingEnabled=false;Print("ENTRADAS PAUSADAS ["+bridgeHealth.PauseCode+"]: "+bridgeHealth.PauseReason+". Reanuda explícitamente desde PropPass.");}
         }
+        private Instrument PrepareCandleFeed(string command) {
+            var parts=command.Split('|');
+            if(parts.Length<4||parts[1]!=instance||(parts[3]!="configure"&&parts[3]!="reset"))return null;
+            var symbol=parts.Skip(4).FirstOrDefault(x=>x.StartsWith("symbol="));
+            if(symbol==null)throw new Exception("Falta instrumento");
+            return NinjaTrader.Cbi.Instrument.GetInstrument(symbol.Substring(7));
+        }
         private void SendPulse(string payload) {
+            Instrument prepared=null,previous=null;bool subscribed=false;
             try {
                 var request=(System.Net.HttpWebRequest)System.Net.WebRequest.Create("http://127.0.0.1:8000/api/ninja/bridge/"+Uri.EscapeDataString(connectionId)+"/pulse");
                 request.Method="POST";request.ContentType="application/json";request.Timeout=2000;request.ReadWriteTimeout=2000;
@@ -602,7 +615,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 using(var stream=request.GetRequestStream())stream.Write(bytes,0,bytes.Length);
                 string command;using(var response=request.GetResponse())using(var reader=new StreamReader(response.GetResponseStream()))command=reader.ReadToEnd();
                 if(!string.IsNullOrWhiteSpace(command)&&!PrepareEngineFeed(command))command="";
-                lock(serviceGate){if(State!=State.Active)return;CheckBridgeHealth();bool recovered=bridgeHealth.Failures>0;bridgeHealth.Success(DateTime.UtcNow);if(recovered)Print(bridgeHealth.Paused?"Conexión recuperada; las entradas siguen pausadas. Motivo: "+bridgeHealth.PauseReason:"Conexión recuperada de un fallo transitorio; las entradas conservaron su estado.");if(!string.IsNullOrWhiteSpace(command))ApplyServiceCommand(command);}
+                prepared=string.IsNullOrWhiteSpace(command)?null:PrepareCandleFeed(command);
+                previous=Instrument;
+                // A subscription can wait for its callback: never hold serviceGate here.
+                if(prepared!=null&&prepared!=previous){prepared.MarketData.Update+=ServiceMarketData;subscribed=true;}
+                lock(serviceGate){if(State!=State.Active)return;CheckBridgeHealth();bool recovered=bridgeHealth.Failures>0;bridgeHealth.Success(DateTime.UtcNow);if(recovered)Print(bridgeHealth.Paused?"Conexión recuperada; las entradas siguen pausadas. Motivo: "+bridgeHealth.PauseReason:"Conexión recuperada de un fallo transitorio; las entradas conservaron su estado.");if(!string.IsNullOrWhiteSpace(command))ApplyServiceCommand(command,prepared);}
             }catch(Exception ex) {lock(serviceGate) {
                     if(State!=State.Active)return;
                     var web=ex as System.Net.WebException;var response=web==null?null:web.Response as System.Net.HttpWebResponse;
@@ -613,9 +630,12 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     if(masterTradingEnabled&&BridgeHealth.FatalHttp(status))PauseEntries("COMMUNICATION_REJECTED","El servidor rechazó el conector: "+error);
                     else CheckBridgeHealth();
                 }}
-            finally{System.Threading.Interlocked.Exchange(ref pulseBusy,0);}
+            finally{
+                if(subscribed){if(Instrument!=prepared)prepared.MarketData.Update-=ServiceMarketData;else if(previous!=null)previous.MarketData.Update-=ServiceMarketData;}
+                System.Threading.Interlocked.Exchange(ref pulseBusy,0);
+            }
         }
-        private void ApplyServiceCommand(string command) {
+        private void ApplyServiceCommand(string command,Instrument prepared) {
             string[] parts=command.Split('|');if(parts.Length<4||parts[0]==lastAck)return;
             lastAck=parts[0];ackStatus="REJECTED";
             try {
@@ -651,7 +671,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     SaveConfiguration();
                 }
                 else if(action=="configure" || action=="reset") {
-                    if(masterTradingEnabled)throw new Exception("Pausa primero las entradas");
+                    if(masterTradingEnabled && action=="configure")throw new Exception("Pausa primero las entradas");
+                    if(action=="reset")masterTradingEnabled=false;
                     string[] selected=values["accounts"].Split(',');
                     if(values["accounts"].Split(',').Any(n=>engineLeases.Values.Any(l=>l.Account==n)))throw new Exception("Una cuenta seleccionada pertenece a un algoritmo del motor; detén esa asignación primero");
                     foreach(string name in selected) {
@@ -659,12 +680,10 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         if(acc!=null && acc.Orders.Cast<Order>().Any(o=>o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled))throw new Exception("Hay órdenes pendientes en la cuenta simulada");
                     }
                     if(selected.Length==0||selected.Any(a=>!allowedAccounts.Contains(a)||GetAccountCached(a)==null))throw new Exception("Solo cuentas simuladas autorizadas y disponibles");
-                    Instrument next=NinjaTrader.Cbi.Instrument.GetInstrument(values["symbol"]);if(next==null)throw new Exception("Instrumento no disponible");
+                    Instrument next=prepared;if(next==null)throw new Exception("Instrumento no disponible");
                     int minutes=int.Parse(values["timeframe_minutes"]);if(minutes<1||minutes>60)throw new Exception("Temporalidad inválida");
                     if(Instrument==null||Instrument.FullName!=next.FullName||minutes!=timeframeMinutes) {
-                        if(Instrument!=null)Instrument.MarketData.Update-=ServiceMarketData;
                         Instrument=next;timeframeMinutes=minutes;candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
-                        Instrument.MarketData.Update+=ServiceMarketData;
                     }
                     Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
                     ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
@@ -675,13 +694,16 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             Func<string,double> perAccount=field=>values.ContainsKey(field+":"+name)?double.Parse(values[field+":"+name],System.Globalization.CultureInfo.InvariantCulture):number(field);
                             s.Lots=(int)perAccount("lots");s.TpUsd=perAccount("tp_usd");s.SlUsd=perAccount("sl_usd");s.Target=number("target");s.MaxLoss=number("max_loss");
                             s.DailyProfitLimit=perAccount("daily_profit_limit");s.DailyLossLimit=perAccount("daily_loss_limit");
-                            s.StartBalance=number("start_balance");s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
+                            var cachedAcc=GetAccountCached(name);
+                            double curCash=cachedAcc!=null?cachedAcc.Get(AccountItem.CashValue,Currency.UsDollar):number("start_balance");
+                            s.StartBalance=curCash;s.DailyStartBalance=curCash;
+                            s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
                             s.Enabled=!values.ContainsKey("enabled:"+name)||values["enabled:"+name]!="0";s.Locked=true;removedAccounts.Remove(name);
                             if(action=="reset") {
                                 s.Status="EN PROCESO";s.Direction="FLAT";s.DailyStatus="EN PROCESO";s.SessionRealizedPnl=0;s.DailyCommissions=0;
-                                s.DailyStartBalance=GetAccountCached(name).Get(AccountItem.CashValue,Currency.UsDollar);
+                                s.DailyStartBalance=curCash;s.StartBalance=curCash;
                                 s.LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");s.LastEntryBar=-1;s.LastEntryTime=DateTime.MinValue;
-                                s.TradesClosed=s.TradesWon=s.TradesLost=0;
+                                s.TradesClosed=s.TradesWon=s.TradesLost=0;s.Enabled=true;
                             }
                         }
                     }
@@ -1416,8 +1438,10 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             dailyPnlRealized = realPnlAcc;
                         }
 
+                        bool hasActivity = pos != null || settings.SessionRealizedPnl != 0 || settings.TradesClosed > 0;
+
                         // Límite de Pérdida Diaria
-                        if (settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
+                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
                         {
                             settings.DailyStatus = "LOSS_LIMIT_REACHED";
                             settings.Enabled = false;
@@ -1430,7 +1454,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         }
 
                         // Objetivo de Ganancia Diaria (Max Profit / Target)
-                        if (settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
+                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
                         {
                             settings.DailyStatus = "TARGET_REACHED";
                             settings.Status = "PASS";

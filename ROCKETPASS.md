@@ -11,7 +11,9 @@ Una entrada inicial abre los contratos configurados. Para una compra:
 - Los **Buy Limit** se distribuyen entre la entrada y el SL global.
 - Los **Buy Stop Market** se distribuyen entre la entrada y el TP global.
 - En una venta, se invierten los lados de la cuadrícula.
-- Cada lado permite de 0 a 10 niveles, con contratos por nivel independientes.
+- Cada lado permite de 0 a 10 niveles. Por defecto hay tres limits y tres stops.
+- «Mismos contratos que la entrada inicial» usa el tamaño inicial de cada cuenta;
+  desmárcalo para elegir contratos enteros independientes por nivel.
 - Los niveles pendientes se redistribuyen con el precio promedio y el volumen
   actuales. Los niveles ejecutados o cancelados no se vuelven a enviar.
 - SL y TP protegen la cesta completa. Sus distancias cambian con el promedio y
@@ -34,21 +36,18 @@ precios distintos dentro del rango permitido por el tick.
 
 ## Señal y gestión de cuentas
 
-La señal automática usa **velas M5 cerradas y EMA 20 de sus cierres**:
-compra si el último cierre queda por encima de la EMA y vende si queda por debajo.
-Si son iguales, no entra. No exige un cruce: cada nuevo cierre puede dar señal,
-pero solo abre una cesta si el grupo está flat y sin pendientes.
-«Solo compras» y «Solo ventas» filtran esa señal; no fuerzan una entrada contraria
-al filtro EMA. Un cambio de lado respecto a la EMA no cierra una cesta abierta;
-sus salidas siguen siendo el TP/SL global y los límites de cuenta.
+La señal automática cuenta **las últimas 40 velas M5 cerradas**. Una vela es
+alcista si cierre > apertura y bajista si cierre < apertura. Los doji no suman.
+Compra cuando hay más alcistas, vende cuando hay más bajistas y no entra con
+empate. No pondera el tamaño de las velas. Solo compras/ventas filtra esa mayoría.
+Un cambio de tendencia no cierra una cesta; sus salidas siguen siendo globales.
 
-La EMA se inicializa con el promedio de los primeros 20 cierres M5 y después se
-actualiza con alfa 2/21. El servicio reúne velas desde ticks en vivo: sin historial
-precargado necesita 20 velas cerradas (unos 100 minutos desde el inicio).
-Cambiar de instrumento o perder una secuencia de velas reinicia el calentamiento.
-Nunca utiliza la vela M5 en formación. Requiere **RocketPass 1.8.0-ema20**;
-los grupos guardados se actualizan como plantilla y deben volver a aplicarse
-con la cuenta flat para cambiar la configuración nativa.
+Requiere **RocketPass 1.9.0-vote40**. El servicio solicita el historial M5 de
+NinjaTrader, excluye la vela en formación y prepara las últimas 40 cerradas.
+Al activar, evalúa la tendencia histórica disponible con datos y conexión
+recientes; después actualiza la señal en cada nuevo cierre M5. Si no hay historial suficiente, muestra el calentamiento
+incompleto y espera datos; no inventa velas. Los grupos guardados deben volver
+a aplicarse con las cuentas flat tras actualizar el AddOn.
 
 Cada cuenta tiene objetivo y pérdida máxima; además puedes configurar límites
 diarios. Al alcanzar un objetivo o pérdida límite, se cancelan las pendientes,
@@ -63,7 +62,7 @@ ni de TP fijado al precio inicial; el TP de RocketPass es global por importe.
 
 ## Instalación y separación respecto a PropPass
 
-1. El EA MT5 y PropPass usan **1.7.0-pending**; actualiza RocketPass a **1.8.0-ema20**.
+1. El EA MT5 y PropPass usan **1.7.0-pending**; actualiza RocketPass a **1.9.0-vote40**.
    El EX5 del repositorio también está recompilado.
 2. Descarga `RocketPassService.cs` desde **RocketPass → Conexiones** y añádelo
    a AddOns en NinjaScript. Compila en NinjaTrader con F5.

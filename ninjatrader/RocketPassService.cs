@@ -446,18 +446,17 @@ namespace NinjaTrader.NinjaScript.AddOns {
             QueueFlatten(account,new[]{instrument});
         }
         private static class RocketMath {
-            public static double NextEma(double previous,double close,int period) {
-                if(period<1||double.IsNaN(close)||double.IsInfinity(close))throw new ArgumentException("EMA inválida");
-                return previous+(2.0/(period+1))*(close-previous);
-            }
-            public static int EmaSignal(double close,double ema,string direction) {
-                if(double.IsNaN(ema))return 0;
-                if(close>ema&&direction!="SHORT")return 1;
-                if(close<ema&&direction!="LONG")return -1;
+            public static int VoteSignal(System.Collections.Generic.IEnumerable<int> candles,string direction) {
+                var votes=candles.ToArray();
+                if(votes.Length!=40)return 0;
+                if(votes.Any(v=>v < -1 || v > 1))throw new ArgumentException("Vela inválida");
+                int balance=votes.Count(v=>v>0)-votes.Count(v=>v<0);
+                if(balance>0&&direction!="SHORT")return 1;
+                if(balance<0&&direction!="LONG")return -1;
                 return 0;
             }
             public static double[] Levels(double entry,double edge,double tick,int count) {
-                if(count<0||count>10||tick<=0||double.IsNaN(entry)||double.IsNaN(edge))throw new ArgumentException("Cuadrícula inválida");
+                if(count<0||count>10||tick<=0||double.IsNaN(entry)||double.IsNaN(edge))throw new ArgumentException("CuadrÃ­cula invÃ¡lida");
                 if(count==0)return new double[0];
                 if(Math.Abs(edge-entry)/tick<count+1)throw new ArgumentException("No caben niveles distintos entre entrada y salida con el tick del contrato");
                 var levels=Enumerable.Range(1,count).Select(i=>Math.Round((entry+(edge-entry)*i/(count+1))/tick)*tick).ToArray();
@@ -465,15 +464,15 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 return levels;
             }
             public static double[] Protection(double average,int quantity,double point,double loss,double profit,int side,double tick) {
-                if(quantity<=0||point<=0||tick<=0||loss<=0||profit<=0||Math.Abs(side)!=1)throw new ArgumentException("Riesgo de cesta inválido");
+                if(quantity<=0||point<=0||tick<=0||loss<=0||profit<=0||Math.Abs(side)!=1)throw new ArgumentException("Riesgo de cesta invÃ¡lido");
                 return new[]{Math.Round((average-side*loss/(quantity*point))/tick)*tick,Math.Round((average+side*profit/(quantity*point))/tick)*tick};
             }
         }
 
-        private int rocketTrend=20,rocketLimits=5,rocketLimitContracts=2,rocketStops=0,rocketStopContracts=2,rocketMax=30;
+        private int rocketTrend=40,rocketLimits=3,rocketLimitContracts=2,rocketStops=3,rocketStopContracts=2,rocketMax=30;
         private string rocketDirection="AUTO";
-        private readonly List<double> rocketCloses=new List<double>();
-        private double rocketEma=double.NaN;
+        private bool rocketSameSize=true;
+        private readonly List<int> rocketVotes=new List<int>();
         private class RocketBasket {public bool Closing;public DateTime FlatAt;public int Quantity;public double Average;public HashSet<string> Used=new HashSet<string>();public Dictionary<string,Order> Grid=new Dictionary<string,Order>();}
         private readonly Dictionary<string,RocketBasket> rocketBaskets=new Dictionary<string,RocketBasket>();
         private void RocketSave() {
@@ -482,27 +481,84 @@ namespace NinjaTrader.NinjaScript.AddOns {
         }
         private void RocketLoad() {
             string root=Path.GetDirectoryName(configFilePath),path=Path.Combine(root,"RocketGrid.txt");
-            if(File.Exists(path)){var a=File.ReadAllLines(path);if(a.Length==8){rocketTrend=20;rocketDirection=a[1];rocketLimits=int.Parse(a[2]);rocketLimitContracts=int.Parse(a[3]);rocketStops=int.Parse(a[4]);rocketStopContracts=int.Parse(a[5]);rocketMax=int.Parse(a[6]);}}
+            if(File.Exists(path)){var a=File.ReadAllLines(path);if(a.Length==8){rocketTrend=40;rocketDirection=a[1];rocketLimits=int.Parse(a[2]);rocketLimitContracts=int.Parse(a[3]);rocketStops=int.Parse(a[4]);rocketStopContracts=int.Parse(a[5]);rocketMax=int.Parse(a[6]);rocketSameSize=a[7]=="same";}}
             path=Path.Combine(root,"RocketBaskets.txt");if(File.Exists(path))foreach(var line in File.ReadAllLines(path)){var a=line.Split('|');if(a.Length==3)rocketBaskets[a[0]]=new RocketBasket{Closing=a[1]=="1",Used=new HashSet<string>(a[2].Split(',').Where(x=>x.Length>0))};}
         }
         private void RocketConfigure(Dictionary<string,string> v) {
             if(PendingOrOpen())throw new Exception("Configura RocketPass con el grupo anterior flat y sin pendientes");
             int trend=int.Parse(v["trend_period"]),limits=int.Parse(v["limit_count"]),stops=int.Parse(v["stop_count"]),lc=int.Parse(v["limit_contracts"]),sc=int.Parse(v["stop_contracts"]),maximum=int.Parse(v["max_contracts"]);
-            if(trend!=20||int.Parse(v["timeframe_minutes"])!=5)throw new Exception("RocketPass requiere M5 y EMA 20; actualiza y aplica el grupo");
+            if(trend!=40||int.Parse(v["timeframe_minutes"])!=5)throw new Exception("RocketPass requiere M5 y conteo de 40 velas; actualiza y aplica el grupo");
             if(limits<0||limits>10||stops<0||stops>10||lc<1||sc<1||maximum>100||int.Parse(v["lots"])+limits*lc+stops*sc>maximum)throw new Exception("Cuadrícula inválida o superior al máximo total de contratos");
-            rocketTrend=trend;rocketLimits=limits;rocketStops=stops;rocketLimitContracts=lc;rocketStopContracts=sc;rocketMax=maximum;rocketDirection=v["direction"];
+            rocketSameSize=v.ContainsKey("grid_same_as_initial")&&v["grid_same_as_initial"]=="1";rocketTrend=trend;rocketLimits=limits;rocketStops=stops;rocketLimitContracts=lc;rocketStopContracts=sc;rocketMax=maximum;rocketDirection=v["direction"];
             if(!new[]{"AUTO","LONG","SHORT"}.Contains(rocketDirection))throw new Exception("Dirección inválida");
             rocketBaskets.Clear();RocketSave();
-            File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"RocketGrid.txt"),new[]{rocketTrend.ToString(),rocketDirection,rocketLimits.ToString(),lc.ToString(),rocketStops.ToString(),sc.ToString(),maximum.ToString(),"v1"});
+            File.WriteAllLines(Path.Combine(Path.GetDirectoryName(configFilePath),"RocketGrid.txt"),new[]{rocketTrend.ToString(),rocketDirection,rocketLimits.ToString(),lc.ToString(),rocketStops.ToString(),sc.ToString(),maximum.ToString(),rocketSameSize?"same":"v1"});
         }
-        private void RocketOnBar(double close) {
-            if(timeframeMinutes!=5)return;
-            if(rocketCloses.Count==0)rocketEma=double.NaN;
-            if(rocketCloses.Count<rocketTrend){rocketCloses.Add(close);if(rocketCloses.Count<rocketTrend)return;rocketEma=rocketCloses.Average();}
-            else rocketEma=RocketMath.NextEma(rocketEma,close,rocketTrend);
-            if(!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
-            int signal=RocketMath.EmaSignal(close,rocketEma,rocketDirection);
-            Print("RocketPass M5 · cierre="+N(close)+" · EMA20="+N(rocketEma)+" · señal="+signal);
+        private BarsRequest rocketHistory;
+        private EventHandler<BarsUpdateEventArgs> rocketHistoryUpdate;
+        private int rocketHistoryBusy;
+        private DateTime rocketNextHistoryAttempt=DateTime.MinValue;
+        private DateTime rocketLastClosed=DateTime.MinValue;
+        private void RocketStopFeed() {
+            var old=rocketHistory;var handler=rocketHistoryUpdate;rocketHistory=null;rocketHistoryUpdate=null;
+            if(old!=null)System.Threading.Tasks.Task.Run(()=>{old.Update-=handler;old.Dispose();});
+            rocketVotes.Clear();rocketLastClosed=DateTime.MinValue;CurrentBar=0;
+        }
+        private void RocketFeed() {
+            if(Instrument==null||rocketHistory!=null||DateTime.UtcNow<rocketNextHistoryAttempt||System.Threading.Interlocked.CompareExchange(ref rocketHistoryBusy,1,0)!=0)return;
+            var target=Instrument;
+            System.Threading.Tasks.Task.Run(()=>{
+                BarsRequest request=null;
+                try{
+                    request=new BarsRequest(target,42);
+                    request.BarsPeriod=new BarsPeriod{BarsPeriodType=BarsPeriodType.Minute,Value=5};
+                    request.TradingHours=TradingHours.Get("Default 24 x 7");
+                    lock(serviceGate){if(State!=State.Active||Instrument!=target){request.Dispose();return;}rocketHistory=request;}
+                    EventHandler<BarsUpdateEventArgs> handler=(sender,e)=>{lock(serviceGate){if(State==State.Active&&rocketHistory==request)RocketReadUpdate(e);}};
+                    lock(serviceGate){if(rocketHistory!=request)return;rocketHistoryUpdate=handler;}
+                    request.Update+=handler;
+                    request.Request((bars,error,message)=>{
+                        lock(serviceGate){
+                            if(rocketHistory!=request||State!=State.Active)return;
+                            if(error!=ErrorCode.NoError){Print("RocketPass: histórico M5 no disponible: "+error+" "+message);rocketNextHistoryAttempt=DateTime.UtcNow.AddSeconds(30);RocketStopFeed();return;}
+                            RocketReadBars(request,false);
+                            Print("RocketPass: histórico M5 cargado · "+rocketVotes.Count+"/40 velas cerradas; tendencia disponible");
+                        }
+                    });
+                }catch(Exception ex){lock(serviceGate){Print("RocketPass: error de histórico: "+ex.Message);rocketNextHistoryAttempt=DateTime.UtcNow.AddSeconds(30);if(rocketHistory==request)RocketStopFeed();}}
+                finally{System.Threading.Interlocked.Exchange(ref rocketHistoryBusy,0);}
+            });
+        }
+        private void RocketReadUpdate(BarsUpdateEventArgs e) {
+            int last=e.MaxIndex-1;if(last<0)return;
+            DateTime closed=e.BarsSeries.GetTime(last);if(closed<=rocketLastClosed)return;
+            rocketVotes.Clear();
+            for(int i=Math.Max(0,last-39);i<=last;i++){
+                double open=e.BarsSeries.GetOpen(i),close=e.BarsSeries.GetClose(i);
+                rocketVotes.Add(close>open?1:close<open?-1:0);
+            }
+            rocketLastClosed=closed;CurrentBar=rocketVotes.Count;
+            Print("RocketPass: cierre M5 actualizado · alcistas="+rocketVotes.Count(v=>v>0)+" · bajistas="+rocketVotes.Count(v=>v<0));
+            RocketTryEntry();
+        }
+        private void RocketReadBars(BarsRequest request,bool live) {
+            if(request.Bars==null||request.Bars.Count<2)return;
+            int last=request.Bars.Count-2; // Exclude the forming bar in both history and real time.
+            DateTime closed=request.Bars.GetTime(last);if(closed<=rocketLastClosed)return;
+            bool hadHistory=rocketLastClosed!=DateTime.MinValue;
+            rocketVotes.Clear();
+            for(int i=Math.Max(0,last-39);i<=last;i++){
+                double open=request.Bars.GetOpen(i),close=request.Bars.GetClose(i);
+                rocketVotes.Add(close>open?1:close<open?-1:0);
+            }
+            rocketLastClosed=closed;CurrentBar=rocketVotes.Count;
+            if(live&&hadHistory)RocketTryEntry();
+        }
+        private void RocketTryEntry() {
+            if(rocketVotes.Count<40||!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
+            CheckBridgeHealth();if(!masterTradingEnabled||(DateTime.UtcNow-lastTick).TotalSeconds>15)return;
+            int signal=RocketMath.VoteSignal(rocketVotes,rocketDirection);
+            Print("RocketPass M5 · últimas 40 · alcistas="+rocketVotes.Count(v=>v>0)+" · bajistas="+rocketVotes.Count(v=>v<0)+" · señal="+signal);
             EvaluateEntrySignals(signal==1,signal==-1);
         }
         private bool RocketGridOrder(Order o) {return o!=null&&(o.Name.StartsWith("ROCKET_LIMIT_")||o.Name.StartsWith("ROCKET_STOP_"));}
@@ -524,10 +580,22 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 if(!CanManageCandle(acc,Instrument)){RocketCancelGrid(acc);if(p!=null&&candleOwnedAccounts.Contains(name))PauseEntries("OWNERSHIP_CONFLICT","RocketPass no gestionará una posición mezclada: "+name);continue;}
                 double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),equity=cash+acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
                 string day=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");
-                if(s.LastResetDate!=day){s.LastResetDate=day;s.DailyStartBalance=cash;s.DailyCommissions=0;s.DailyStatus="EN PROCESO";SaveConfiguration();}
-                double daily=equity-s.DailyStartBalance;
-                if((s.Target>0&&equity>=s.StartBalance+s.Target)||(s.DailyProfitLimit>0&&daily>=s.DailyProfitLimit)){s.Status="PASS";s.DailyStatus="TARGET_REACHED";s.Enabled=false;b.Closing=true;}
-                if((s.MaxLoss>0&&equity<=s.StartBalance-s.MaxLoss)||(s.DailyLossLimit>0&&daily<=-s.DailyLossLimit)){s.Status="BURNED";s.DailyStatus="LOSS_LIMIT_REACHED";s.Enabled=false;b.Closing=true;}
+                if(s.DailyStartBalance<=0 || s.LastResetDate!=day){s.LastResetDate=day;s.DailyStartBalance=cash;s.StartBalance=cash;s.DailyCommissions=0;s.DailyStatus="EN PROCESO";SaveConfiguration();}
+                double dailyFloating=equity-s.DailyStartBalance;
+                double dailyRealized=cash-s.DailyStartBalance;
+                if(dailyRealized<=0&&s.SessionRealizedPnl>0)dailyRealized=s.SessionRealizedPnl;
+                if(dailyRealized>=0&&s.SessionRealizedPnl<0)dailyRealized=s.SessionRealizedPnl;
+                bool hasActivity=p!=null||s.SessionRealizedPnl!=0||s.TradesClosed>0;
+                if(hasActivity&&s.DailyStatus=="EN PROCESO") {
+                    if((s.Target>0&&(dailyRealized>=s.Target||dailyFloating>=s.Target))||(s.DailyProfitLimit>0&&(dailyRealized>=s.DailyProfitLimit||dailyFloating>=s.DailyProfitLimit))){
+                        s.Status="PASS";s.DailyStatus="TARGET_REACHED";s.Enabled=false;b.Closing=true;
+                        Print("RocketPass: [TARGET] Cuenta "+name+" alcanzó objetivo ($"+dailyRealized.ToString("F2")+"). Deshabilitada, continuando con la siguiente cuenta...");
+                    }
+                    else if((s.MaxLoss>0&&(dailyRealized<=-s.MaxLoss||dailyFloating<=-s.MaxLoss))||(s.DailyLossLimit>0&&(dailyRealized<=-s.DailyLossLimit||dailyFloating<=-s.DailyLossLimit))){
+                        s.Status="BURNED";s.DailyStatus="LOSS_LIMIT_REACHED";s.Enabled=false;b.Closing=true;
+                        Print("RocketPass: [STOP/MAX LOSS] Cuenta "+name+" alcanzó pérdida máxima ($"+dailyRealized.ToString("F2")+"). Deshabilitada, continuando con la siguiente cuenta...");
+                    }
+                }
                 if(b.Closing){
                     RocketCancelGrid(acc);var entries=acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o));
                     if(!entries&&p!=null){CancelTpSlOrders(acc,s);if(!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o)))QueueFlatten(acc,new[]{Instrument});}
@@ -538,8 +606,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 if(p.Quantity>rocketMax){s.Enabled=false;b.Closing=true;PauseEntries("MAX_CONTRACTS","Se superó el máximo de contratos RocketPass");RocketSave();continue;}
                 double point=Instrument.MasterInstrument.PointValue,tick=Instrument.MasterInstrument.TickSize;int sign=p.MarketPosition==MarketPosition.Long?1:-1;
                 double loss=s.SlUsd,profit=s.TpUsd;
-                if(s.MaxLoss>0)loss=Math.Min(loss,cash-(s.StartBalance-s.MaxLoss));if(s.DailyLossLimit>0)loss=Math.Min(loss,cash-(s.DailyStartBalance-s.DailyLossLimit));
-                if(s.Target>0)profit=Math.Min(profit,s.StartBalance+s.Target-cash);if(s.DailyProfitLimit>0)profit=Math.Min(profit,s.DailyStartBalance+s.DailyProfitLimit-cash);
+                if(s.MaxLoss>0)loss=Math.Min(loss,Math.Max(1.0,s.MaxLoss+dailyRealized));if(s.DailyLossLimit>0)loss=Math.Min(loss,Math.Max(1.0,s.DailyLossLimit+dailyRealized));
+                if(s.Target>0)profit=Math.Min(profit,Math.Max(1.0,s.Target-dailyRealized));if(s.DailyProfitLimit>0)profit=Math.Min(profit,Math.Max(1.0,s.DailyProfitLimit-dailyRealized));
                 if(loss<=0||profit<=0){b.Closing=true;RocketSave();continue;}
                 var protection=RocketMath.Protection(p.AveragePrice,p.Quantity,point,loss,profit,sign,tick);double sl=protection[0],tp=protection[1];
                 double quote=sign==1?Instrument.MarketData.Bid.Price:Instrument.MarketData.Ask.Price;
@@ -548,8 +616,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 if(!masterTradingEnabled||!s.Enabled){RocketCancelGrid(acc);continue;}
                 bool changed=b.Quantity!=p.Quantity||b.Average!=p.AveragePrice;b.Quantity=p.Quantity;b.Average=p.AveragePrice;
                 s.AvgEntryPrice=p.AveragePrice;s.TotalPositionSize=p.Quantity;s.Direction=sign==1?"LONG":"SHORT";
-                RocketLevels(acc,b,p,sl,false,rocketLimits,rocketLimitContracts,changed);
-                RocketLevels(acc,b,p,tp,true,rocketStops,rocketStopContracts,changed);
+                RocketLevels(acc,b,p,sl,false,rocketLimits,rocketSameSize?s.Lots:rocketLimitContracts,changed);
+                RocketLevels(acc,b,p,tp,true,rocketStops,rocketSameSize?s.Lots:rocketStopContracts,changed);
             }catch(Exception ex){PauseEntries("ROCKET_ERROR",ex.Message);}
         }
         private void RocketProtection(Account acc,AccountRiskSettings s,Position p,double sl,double tp) {
@@ -568,17 +636,19 @@ namespace NinjaTrader.NinjaScript.AddOns {
             double tick=Instrument.MasterInstrument.TickSize;int sign=p.MarketPosition==MarketPosition.Long?1:-1;
             var prices=RocketMath.Levels(p.AveragePrice,edge,tick,remaining.Length);
             for(int i=0;i<remaining.Length;i++){
-                string name=remaining[i];double price=prices[i];
+                string name=remaining[i];double fraction=(i+1.0)/(remaining.Length+1.0);
+                double price=Math.Round((p.AveragePrice+(edge-p.AveragePrice)*fraction)/tick)*tick;
+                if(price<=Math.Min(p.AveragePrice,edge)||price>=Math.Max(p.AveragePrice,edge))throw new Exception("Un nivel RocketPass no puede coincidir con entrada, SL ni TP");
                 double quote=sign==1?Instrument.MarketData.Ask.Price:Instrument.MarketData.Bid.Price;
                 if(quote<=0||(favor?sign*(price-quote)<=tick:sign*(quote-price)<=tick))continue;
                 Order o;if(b.Grid.TryGetValue(name,out o)){
                     if(o.Filled>0){b.Used.Add(name);RocketSave();continue;}
                     if(o.OrderState==OrderState.Rejected||o.OrderState==OrderState.Cancelled){b.Used.Add(name);RocketSave();continue;}
-                    if(changed&&(o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted)&&(favor?o.StopPrice:o.LimitPrice)!=price){if(favor)o.StopPriceChanged=price;else o.LimitPriceChanged=price;acc.Dispatcher.BeginInvoke(new Action(()=>acc.Change(new[]{o})));}
+                    if((o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted)&&(favor?o.StopPrice:o.LimitPrice)!=price&&(favor?o.StopPriceChanged:o.LimitPriceChanged)!=price){if(favor)o.StopPriceChanged=price;else o.LimitPriceChanged=price;var change=o;acc.Dispatcher.BeginInvoke(new Action(()=>acc.Change(new[]{change})));Print("RocketPass · reposición "+name+" · precio="+N(price));}
                     continue;
                 }
                 int pending=b.Grid.Values.Where(EngineWorking).Sum(x=>x.Quantity-x.Filled);if(p.Quantity+pending+contracts>rocketMax)continue;
-                o=acc.CreateOrder(Instrument,sign==1?OrderAction.Buy:OrderAction.SellShort,favor?OrderType.StopMarket:OrderType.Limit,OrderEntry.Automated,TimeInForce.Gtc,contracts,favor?0:price,favor?price:0,"",name,DateTime.MinValue,null);b.Grid[name]=o;QueueSubmit(acc,new[]{o});
+                o=acc.CreateOrder(Instrument,sign==1?OrderAction.Buy:OrderAction.SellShort,favor?OrderType.StopMarket:OrderType.Limit,OrderEntry.Automated,TimeInForce.Gtc,contracts,favor?0:price,favor?price:0,"",name,DateTime.MinValue,null);b.Grid[name]=o;QueueSubmit(acc,new[]{o});Print("RocketPass · "+name+" · entrada="+N(p.AveragePrice)+" · salida="+N(edge)+" · fracción="+N(fraction)+" · precio="+N(price));
             }
         }
 
@@ -658,7 +728,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 serviceTimer=new System.Threading.Timer(ServiceTick,null,1000,1000);
                 Print("Servicio iniciado sin interfaz nativa. Configuración y grupos se gestionan desde la web.");
             } else if(State==State.Terminated) {
-                ReleaseAccountReservations();masterTradingEnabled=false;if(serviceTimer!=null){serviceTimer.Dispose();serviceTimer=null;}
+                RocketStopFeed();ReleaseAccountReservations();masterTradingEnabled=false;if(serviceTimer!=null){serviceTimer.Dispose();serviceTimer=null;}
                 if(Instrument!=null)Instrument.MarketData.Update-=ServiceMarketData;
                 foreach(var acc in subscribedAccounts)acc.ExecutionUpdate-=OnGlobalExecutionUpdate;subscribedAccounts.Clear();
                 foreach(var request in engineBars.Values)request.Dispose();engineBars.Clear();
@@ -672,9 +742,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 RocketMonitor();long slot=lastTick.Ticks/(TimeSpan.TicksPerMinute*timeframeMinutes);
                 if(candleSlot<0){candleSlot=slot;candleOpen=candleClose=e.Price;return;}
                 if(slot==candleSlot){candleClose=e.Price;return;}
-                long rocketClosedSlot=candleSlot;double open=candleOpen,close=candleClose;candleSlot=slot;candleOpen=candleClose=e.Price;CurrentBar++;
+                long rocketClosedSlot=candleSlot;double open=candleOpen,close=candleClose;candleSlot=slot;candleOpen=candleClose=e.Price;CurrentBar=rocketVotes.Count;
                 CheckBridgeHealth();
-                if(slot==rocketClosedSlot+1)RocketOnBar(close);else{rocketCloses.Clear();rocketEma=double.NaN;CurrentBar=0;Print("RocketPass: interrupción de velas M5; reiniciando EMA 20 sin operar la vela antigua");}
+                RocketFeed();
             }
         }
         private void ServiceTick(object unused) {
@@ -683,7 +753,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
             try {
                 lock(serviceGate) {
                     CheckBridgeHealth();
-                    RefreshAccounts();RefreshCandleOwnership();MonitorEngine();RocketMonitor();
+                    RefreshAccounts();RefreshCandleOwnership();MonitorEngine();RocketMonitor();RocketFeed();RocketTryEntry();
                     if(masterTradingEnabled && !accountsConfig.Values.Any(s=>s.Enabled&&s.Status=="EN PROCESO"&&s.DailyStatus=="EN PROCESO")) {
                         PauseEntries("NO_ELIGIBLE_ACCOUNTS","Todas las cuentas alcanzaron sus límites o quedaron inactivas");
                     }
@@ -696,7 +766,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         AccountRiskSettings settings;accountsConfig.TryGetValue(name,out settings);
                         var working=acc.Orders.Cast<Order>().Where(o=>(Instrument!=null&&o.Instrument.FullName==Instrument.FullName||engineLeases.Values.Any(l=>l.Account==name&&l.Symbol==o.Instrument.FullName))&&(o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled)).Select(o=>"{\"name\":"+J(o.Name)+",\"type\":"+J(o.OrderType.ToString())+",\"state\":"+J(o.OrderState.ToString())+",\"quantity\":"+o.Quantity+",\"limit\":"+N(o.LimitPrice)+",\"stop\":"+N(o.StopPrice)+"}");
                         double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
-                        double daily=settings==null?acc.Get(AccountItem.RealizedProfitLoss,Currency.UsDollar)+open:cash+open-settings.DailyStartBalance-(settings.NinjaTraderHandlesCommissions?0:settings.DailyCommissions);
+                        double openPnl=(pos!=null&&pos.MarketPosition!=MarketPosition.Flat&&candleOwnedAccounts.Contains(name))?open:0.0;
+                        double daily=settings==null?0.0:(settings.SessionRealizedPnl+openPnl);
                         rows.Add("{\"name\":"+J(name)+",\"connected\":true,\"execution_allowed\":"+B(CanExecute(acc))+",\"provider\":"+J(acc.Provider.ToString())+",\"enabled\":"+B(settings!=null&&settings.Enabled)+",\"position_quantity\":"+qty+
                             ",\"direction\":"+J(pos==null?"Flat":pos.MarketPosition.ToString())+",\"balance\":"+N(acc.Get(AccountItem.CashValue,Currency.UsDollar))+
                             ",\"unrealized\":"+N(acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar))+
@@ -707,7 +778,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             ",\"wins\":"+(settings==null?0:settings.TradesWon)+",\"losses\":"+(settings==null?0:settings.TradesLost)+",\"closed_trades\":"+(settings==null?0:settings.TradesClosed)+"}";
                     }
                     string events;lock(serviceEvents)events=string.Join(",",serviceEvents.Select(J));
-                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.8.0-ema20\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
+                    payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.9.0-vote40\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
                         ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+
@@ -715,7 +786,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         ",\"position_quantity\":"+quantity+",\"accounts\":["+string.Join(",",rows)+"],\"events\":["+events+"]"+
                         ",\"last_ack\":"+J(lastAck)+",\"ack_status\":"+J(ackStatus)+",\"ack_detail\":"+J(ackDetail)+"}";
                 }
-                if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey))return;
+                if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey)) {
+                    string pairing=Path.Combine(Path.GetDirectoryName(configFilePath),"RocketBridge.key");
+                    if(File.Exists(pairing)){string[] lines=File.ReadAllLines(pairing);if(lines.Length>=2){connectionId=lines[0].Trim();connectionKey=lines[1].Trim();}}
+                    if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey))return;
+                }
                 if(System.Threading.Interlocked.CompareExchange(ref pulseBusy,1,0)!=0)return;
                 System.Threading.Tasks.Task.Run(()=>SendPulse(payload));
             } catch(Exception ex) {PauseEntries("SERVICE_ERROR",ex.Message);}
@@ -727,7 +802,15 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private void CheckBridgeHealth() {
             if(masterTradingEnabled&&bridgeHealth.Check(DateTime.UtcNow)) {masterTradingEnabled=false;Print("ENTRADAS PAUSADAS ["+bridgeHealth.PauseCode+"]: "+bridgeHealth.PauseReason+". Reanuda explícitamente desde RocketPass.");}
         }
+        private Instrument PrepareCandleFeed(string command) {
+            var parts=command.Split('|');
+            if(parts.Length<4||parts[1]!=instance||(parts[3]!="configure"&&parts[3]!="reset"))return null;
+            var symbol=parts.Skip(4).FirstOrDefault(x=>x.StartsWith("symbol="));
+            if(symbol==null)throw new Exception("Falta instrumento");
+            return NinjaTrader.Cbi.Instrument.GetInstrument(symbol.Substring(7));
+        }
         private void SendPulse(string payload) {
+            Instrument prepared=null,previous=null;bool subscribed=false;
             try {
                 var request=(System.Net.HttpWebRequest)System.Net.WebRequest.Create("http://127.0.0.1:8000/api/rocket/bridge/"+Uri.EscapeDataString(connectionId)+"/pulse");
                 request.Method="POST";request.ContentType="application/json";request.Timeout=2000;request.ReadWriteTimeout=2000;
@@ -736,7 +819,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 using(var stream=request.GetRequestStream())stream.Write(bytes,0,bytes.Length);
                 string command;using(var response=request.GetResponse())using(var reader=new StreamReader(response.GetResponseStream()))command=reader.ReadToEnd();
                 if(!string.IsNullOrWhiteSpace(command)&&!PrepareEngineFeed(command))command="";
-                lock(serviceGate){if(State!=State.Active)return;CheckBridgeHealth();bool recovered=bridgeHealth.Failures>0;bridgeHealth.Success(DateTime.UtcNow);if(recovered)Print(bridgeHealth.Paused?"Conexión recuperada; las entradas siguen pausadas. Motivo: "+bridgeHealth.PauseReason:"Conexión recuperada de un fallo transitorio; las entradas conservaron su estado.");if(!string.IsNullOrWhiteSpace(command))ApplyServiceCommand(command);}
+                prepared=string.IsNullOrWhiteSpace(command)?null:PrepareCandleFeed(command);
+                previous=Instrument;
+                // A subscription can wait for its callback: never hold serviceGate here.
+                if(prepared!=null&&prepared!=previous){prepared.MarketData.Update+=ServiceMarketData;subscribed=true;}
+                lock(serviceGate){if(State!=State.Active)return;CheckBridgeHealth();bool recovered=bridgeHealth.Failures>0;bridgeHealth.Success(DateTime.UtcNow);if(recovered)Print(bridgeHealth.Paused?"Conexión recuperada; las entradas siguen pausadas. Motivo: "+bridgeHealth.PauseReason:"Conexión recuperada de un fallo transitorio; las entradas conservaron su estado.");if(!string.IsNullOrWhiteSpace(command))ApplyServiceCommand(command,prepared);}
             }catch(Exception ex) {lock(serviceGate) {
                     if(State!=State.Active)return;
                     var web=ex as System.Net.WebException;var response=web==null?null:web.Response as System.Net.HttpWebResponse;
@@ -747,9 +834,12 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     if(masterTradingEnabled&&BridgeHealth.FatalHttp(status))PauseEntries("COMMUNICATION_REJECTED","El servidor rechazó el conector: "+error);
                     else CheckBridgeHealth();
                 }}
-            finally{System.Threading.Interlocked.Exchange(ref pulseBusy,0);}
+            finally{
+                if(subscribed){if(Instrument!=prepared)prepared.MarketData.Update-=ServiceMarketData;else if(previous!=null)previous.MarketData.Update-=ServiceMarketData;}
+                System.Threading.Interlocked.Exchange(ref pulseBusy,0);
+            }
         }
-        private void ApplyServiceCommand(string command) {
+        private void ApplyServiceCommand(string command,Instrument prepared) {
             string[] parts=command.Split('|');if(parts.Length<4||parts[0]==lastAck)return;
             lastAck=parts[0];ackStatus="REJECTED";
             try {
@@ -785,7 +875,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     SaveConfiguration();
                 }
                 else if(action=="configure" || action=="reset") {
-                    if(masterTradingEnabled)throw new Exception("Pausa primero las entradas");
+                    if(masterTradingEnabled && action=="configure")throw new Exception("Pausa primero las entradas");
+                    if(action=="reset")masterTradingEnabled=false;
                     string[] selected=values["accounts"].Split(',');
                     if(values["accounts"].Split(',').Any(n=>engineLeases.Values.Any(l=>l.Account==n)))throw new Exception("Una cuenta seleccionada pertenece a un algoritmo del motor; detén esa asignación primero");
                     foreach(string name in selected) {
@@ -793,12 +884,10 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         if(acc!=null && acc.Orders.Cast<Order>().Any(o=>o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled))throw new Exception("Hay órdenes pendientes en la cuenta simulada");
                     }
                     if(selected.Length==0||selected.Any(a=>!allowedAccounts.Contains(a)||GetAccountCached(a)==null))throw new Exception("Solo cuentas simuladas autorizadas y disponibles");
-                    Instrument next=NinjaTrader.Cbi.Instrument.GetInstrument(values["symbol"]);if(next==null)throw new Exception("Instrumento no disponible");
+                    Instrument next=prepared;if(next==null)throw new Exception("Instrumento no disponible");
                     int minutes=int.Parse(values["timeframe_minutes"]);if(minutes<1||minutes>60)throw new Exception("Temporalidad inválida");
                     if(Instrument==null||Instrument.FullName!=next.FullName||minutes!=timeframeMinutes) {
-                        if(Instrument!=null)Instrument.MarketData.Update-=ServiceMarketData;
-                        Instrument=next;timeframeMinutes=minutes;rocketCloses.Clear();candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
-                        Instrument.MarketData.Update+=ServiceMarketData;
+                        Instrument=next;timeframeMinutes=minutes;RocketStopFeed();candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
                     }
                     Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
                     RocketConfigure(values);ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
@@ -809,13 +898,16 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             Func<string,double> perAccount=field=>values.ContainsKey(field+":"+name)?double.Parse(values[field+":"+name],System.Globalization.CultureInfo.InvariantCulture):number(field);
                             s.Lots=(int)perAccount("lots");s.TpUsd=perAccount("tp_usd");s.SlUsd=perAccount("sl_usd");s.Target=number("target");s.MaxLoss=number("max_loss");
                             s.DailyProfitLimit=perAccount("daily_profit_limit");s.DailyLossLimit=perAccount("daily_loss_limit");
-                            s.StartBalance=number("start_balance");s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
+                            var cachedAcc=GetAccountCached(name);
+                            double curCash=cachedAcc!=null?cachedAcc.Get(AccountItem.CashValue,Currency.UsDollar):number("start_balance");
+                            s.StartBalance=curCash;s.DailyStartBalance=curCash;
+                            s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
                             s.Enabled=!values.ContainsKey("enabled:"+name)||values["enabled:"+name]!="0";s.Locked=true;removedAccounts.Remove(name);
                             if(action=="reset") {
                                 s.Status="EN PROCESO";s.Direction="FLAT";s.DailyStatus="EN PROCESO";s.SessionRealizedPnl=0;s.DailyCommissions=0;
-                                s.DailyStartBalance=GetAccountCached(name).Get(AccountItem.CashValue,Currency.UsDollar);
+                                s.DailyStartBalance=curCash;s.StartBalance=curCash;
                                 s.LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");s.LastEntryBar=-1;s.LastEntryTime=DateTime.MinValue;
-                                s.TradesClosed=s.TradesWon=s.TradesLost=0;
+                                s.TradesClosed=s.TradesWon=s.TradesLost=0;s.Enabled=true;
                             }
                         }
                     }
@@ -824,7 +916,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 } else if(action=="start") {
                     if(Instrument==null||(DateTime.UtcNow-lastTick).TotalSeconds>15)throw new Exception("Sin datos recientes del instrumento");
                     if(!accountsConfig.Values.Any(s=>s.Enabled&&s.Status=="EN PROCESO"&&s.DailyStatus=="EN PROCESO"))throw new Exception("No hay cuentas habilitadas dentro de sus límites");
-                    bridgeHealth.Resume(DateTime.UtcNow);masterTradingEnabled=true;
+                    bridgeHealth.Resume(DateTime.UtcNow);masterTradingEnabled=true;RocketTryEntry();
                 } else throw new Exception("Acción desconocida");
                 ackStatus="APPLIED";ackDetail=action;Print("Comando web confirmado: "+action);
             }catch(Exception ex){PauseEntries("COMMAND_REJECTED",ex.Message);ackDetail=ex.Message;Print("Comando rechazado: "+ex.Message);}
@@ -1550,8 +1642,10 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             dailyPnlRealized = realPnlAcc;
                         }
 
+                        bool hasActivity = pos != null || settings.SessionRealizedPnl != 0 || settings.TradesClosed > 0;
+
                         // Límite de Pérdida Diaria
-                        if (settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
+                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
                         {
                             settings.DailyStatus = "LOSS_LIMIT_REACHED";
                             settings.Enabled = false;
@@ -1564,7 +1658,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         }
 
                         // Objetivo de Ganancia Diaria (Max Profit / Target)
-                        if (settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
+                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
                         {
                             settings.DailyStatus = "TARGET_REACHED";
                             settings.Status = "PASS";

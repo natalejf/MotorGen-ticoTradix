@@ -9,7 +9,7 @@ from test_copy_trading import isolated_store
 def native(client,namespace):
     pairing=client.post(f'/api/{namespace}/connections',json={}).json()
     headers={'X-Stratix-Key':pairing['token']}
-    pulse=dict(instance='native1',version='1.8.0-ema20' if namespace=='rocket' else '1.7.0-pending',realtime=True,account_available=True,
+    pulse=dict(instance='native1',version='1.9.0-vote40' if namespace=='rocket' else '1.7.0-pending',realtime=True,account_available=True,
         master_enabled=False,position_quantity=0,kind='candle_service_v1',data_ready=True,
         accounts=[dict(name='Eval-123',provider='Broker',connected=True,execution_allowed=False)])
     assert client.post(f'/api/{namespace}/bridge/{pairing["id"]}/pulse',headers=headers,json=pulse).status_code==200
@@ -51,29 +51,43 @@ def test_rocket_contract_budget_rejects_grid_exceeding_total_cap():
     assert result.status_code==200
     assert result.json()['settings']['max_contracts']==42
     assert result.json()['settings']['timeframe_minutes']==5
-    assert result.json()['settings']['trend_period']==20
+    assert result.json()['settings']['trend_period']==40
 
 
-def test_rocket_rejects_non_m5_or_non_ema20_configuration():
+def test_grid_defaults_and_same_size_follow_initial_contracts_and_overrides():
+    from backend.rocket_bridge import RocketSettings
+    from pydantic import ValidationError
+    import pytest
+    s=RocketSettings(accounts=['Sim101'],lots=4,max_contracts=40)
+    assert (s.limit_count,s.stop_count,s.limit_contracts,s.stop_contracts)==(3,3,4,4)
+    s=RocketSettings(accounts=['Sim101'],lots=4,max_contracts=40,grid_same_as_initial=False,limit_contracts=2,stop_contracts=1)
+    assert (s.limit_contracts,s.stop_contracts)==(2,1)
+    with pytest.raises(ValidationError):
+        RocketSettings(accounts=['Sim101'],lots=4,max_contracts=40,account_overrides={'Sim101':{'lots':6}})
+    with pytest.raises(ValidationError):
+        RocketSettings(accounts=['Sim101'],grid_same_as_initial=False,limit_contracts=4.01)
+
+
+def test_rocket_rejects_non_m5_or_non_vote40_configuration():
     c=TestClient(app)
-    for changes in ({'timeframe_minutes':1},{'trend_period':40}):
+    for changes in ({'timeframe_minutes':1},{'trend_period':20}):
         response=c.post('/api/rocket/groups',json=dict(name='wrong signal',settings=dict(accounts=['Sim101'],**changes)))
         assert response.status_code==422
 
 
-def test_old_rocket_addon_cannot_activate_new_ema_signal():
+def test_old_rocket_addon_cannot_activate_vote_signal():
     c=TestClient(app);p,h,s=native(c,'rocket')
     s['version']='1.7.0-pending'
     c.post('/api/rocket/bridge/'+p['id']+'/pulse',headers=h,json=s)
     result=c.post('/api/rocket/connections/'+p['id']+'/configure',json={'accounts':['Eval-123']})
-    assert result.status_code==409 and '1.8.0-ema20' in result.json()['detail']
+    assert result.status_code==409 and '1.9.0-vote40' in result.json()['detail']
 
 
 def test_rocket_pending_group_does_not_update_proppass_queue():
     c=TestClient(app);p,h,s=native(c,'rocket')
     s['accounts'][0]['execution_allowed']=True
     c.post('/api/rocket/bridge/'+p['id']+'/pulse',headers=h,json=s)
-    group=c.post('/api/rocket/groups',json=dict(name='Rocket A',settings=dict(accounts=['Eval-123'],trend_period=20))).json()
+    group=c.post('/api/rocket/groups',json=dict(name='Rocket A',settings=dict(accounts=['Eval-123'],trend_period=40))).json()
     response=c.post('/api/rocket/queues/'+p['id']+'/groups/'+group['id'],json={})
     assert response.status_code==200,response.text
     assert store.listing('rocket_queue') and not store.listing('ninja_queue')

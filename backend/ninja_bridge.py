@@ -159,15 +159,15 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
         try:snapshot=store.get('ninja_snapshot',key)
         except KeyError:snapshot={}
         snapshot=dict(snapshot,accounts=visible_accounts(snapshot))
-        if namespace=='rocket' and action in ('configure','reset','start') and snapshot.get('version')!='1.8.0-ema20':
-            raise HTTPException(409,'Actualiza RocketPass a 1.8.0-ema20 para usar cierre M5 frente a EMA 20')
-        if action in ('authorize-evaluation','release') and snapshot.get('version') not in ('1.7.0-pending','1.8.0-ema20'):
+        if namespace=='rocket' and action in ('configure','reset','start') and snapshot.get('version')!='1.9.0-vote40':
+            raise HTTPException(409,'Actualiza RocketPass a 1.9.0-vote40 para usar cierre M5 frente a conteo de 40 velas')
+        if action in ('authorize-evaluation','release') and snapshot.get('version') not in ('1.7.0-pending','1.8.0-ema20','1.9.0-vote40'):
             raise HTTPException(409,'Actualiza el AddOn a 1.7.0-pending para autorizar o liberar cuentas')
         if time.time()-snapshot.get('at',0)>10 or not snapshot.get('realtime') or not snapshot.get('account_available'):
             raise HTTPException(409,'Conecta el AddOn de NinjaTrader y sus cuentas')
         if action!='pause' and snapshot.get('kind')!='candle_service_v1':
             raise HTTPException(409,'Retira el controlador del gráfico y carga el AddOn sin interfaz')
-        if action in ('configure','start','reset') and snapshot.get('position_quantity',0):
+        if action in ('configure','reset') and snapshot.get('position_quantity',0):
             raise HTTPException(409,'Configura/activa con Sim101 sin posiciones en este instrumento')
         if action in ('configure','reset') and snapshot.get('master_enabled'):
             raise HTTPException(409,'Pausa entradas y espera confirmación antes de configurar')
@@ -181,13 +181,16 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
                 raise HTTPException(409,'Aplica y confirma primero la configuración de esta instancia')
             if not applied.get('settings',{}).get('accounts'):
                 raise HTTPException(409,'Aplica un grupo antes de activar entradas')
-            if namespace=='rocket' and (applied['settings'].get('timeframe_minutes')!=5 or applied['settings'].get('trend_period')!=20):
-                raise HTTPException(409,'Reaplica el grupo con M5 y EMA 20 antes de reanudar')
+            selected=set(applied['settings']['accounts'])
+            if any(a.get('position_quantity',0) and (a['name'] not in selected or a.get('proppass_position_quantity')!=a['position_quantity']) for a in snapshot.get('accounts',[])):
+                raise HTTPException(409,'No se reanuda una posición que no pertenece al grupo aplicado')
+            if namespace=='rocket' and (applied['settings'].get('timeframe_minutes')!=5 or applied['settings'].get('trend_period')!=40):
+                raise HTTPException(409,'Reaplica el grupo con M5 y conteo de 40 velas antes de reanudar')
             if group_id and applied.get('group_id')!=group_id:raise HTTPException(409,'El grupo seleccionado todavía no está aplicado')
             if not snapshot.get('data_ready'):raise HTTPException(409,'Esperando ticks recientes del instrumento')
         params=(settings or Settings()).model_dump() if action in ('configure','reset','close-stop','authorize-evaluation') else {}
         if action=='close-stop':
-            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy','1.7.0-pending','1.8.0-ema20'):
+            if snapshot.get('version') not in ('1.5.3-portfolio','1.5.4-portfolio','1.6.0-copy','1.7.0-pending','1.8.0-ema20','1.9.0-vote40'):
                 raise HTTPException(409,'Compila el AddOn actualizado: esta versión anterior no garantiza el cierre exclusivo de PropPass')
             try:applied=store.get('ninja_config_ack',key)
             except KeyError:raise HTTPException(409,'No hay grupo PropPass aplicado para cerrar')
@@ -250,6 +253,54 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
             return enqueue(key,'close-stop',Settings(**applied['settings']),group_id)
         if action=='start':return enqueue(key,'start',group_id=group_id)
         raise HTTPException(400,'Acción de grupo no admitida')
+
+    @app.post(prefix+'/groups/{group_id}/reset-state')
+    def reset_group_state(group_id:str):
+        try:group=store.get('ninja_group',group_id)
+        except KeyError:raise HTTPException(404,'Grupo inexistente')
+        group_accounts=set(group.get('settings',{}).get('accounts',[]))
+        for connection in store.listing('ninja_connection'):
+            key=connection['id']
+            q=queue.get(key)
+            if q:
+                changed=False
+                for item in q.get('items',[]):
+                    if item.get('group_id')==group_id:
+                        item['state']='PENDING'
+                        item.pop('completed_at',None)
+                        changed=True
+                if q.get('state')=='COMPLETED' and any(i.get('group_id')==group_id for i in q.get('items',[])):
+                    q['state']='STOPPED'
+                    q['phase']='READY'
+                    q['detail']='Estado reiniciado; cola lista para nueva activación'
+                    changed=True
+                if changed:queue.save(key,q)
+            try:
+                snapshot=store.get('ninja_snapshot',key)
+                if snapshot and 'accounts' in snapshot:
+                    for a in snapshot['accounts']:
+                        if a.get('name') in group_accounts:
+                            a['status']='EN PROCESO'
+                            a['daily_status']='EN PROCESO'
+                            a['daily_pnl']=0.0
+                            a['unrealized']=0.0
+                            a['wins']=0
+                            a['losses']=0
+                            a['closed_trades']=0
+                            a['enabled']=True
+                            a['direction']='Flat'
+                    store.put('ninja_snapshot',key,snapshot)
+            except KeyError:pass
+            try:enqueue(key,'reset',Settings(**group['settings']),group_id,from_queue=True)
+            except Exception:pass
+        settings=copy.deepcopy(group.get('settings',{}))
+        for acc in group_accounts:
+            if 'account_overrides' in settings and acc in settings['account_overrides']:
+                settings['account_overrides'][acc]['enabled']=True
+        group['settings']=settings
+        group['pnl']=0.0
+        store.put('ninja_group',group_id,group)
+        return {'ok':True,'message':'Estado del grupo y cuentas reiniciado a neutral'}
 
     @app.post(prefix+'/bridge/{key}/pulse',response_class=PlainTextResponse)
     async def pulse(key:str,request:Request,x_stratix_key:str=Header(default='')):

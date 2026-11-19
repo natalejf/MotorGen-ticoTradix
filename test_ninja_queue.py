@@ -85,6 +85,7 @@ def test_group_waits_for_own_orders_but_excludes_another_algorithms_position():
 def test_pause_does_not_complete_group_and_resume_does_not_reset_results():
     c,p,h,rows,groups=setup_queue();start_first(c,p,h,rows)
     rows[0]['status']='PASS'
+    rows[1].update(position_quantity=1,proppass_position_quantity=1)
     stop=c.post(f'/api/ninja/connections/{p["id"]}/pause',json={}).json()
     pulse(c,p,h,accounts=rows)
     pulse(c,p,h,accounts=rows,last_ack=stop['id'],ack_status='APPLIED')
@@ -94,9 +95,11 @@ def test_pause_does_not_complete_group_and_resume_does_not_reset_results():
     assert store.get('ninja_queue',p['id'])['state']=='PAUSED'
     assert pulse(c,p,h,accounts=rows).text==''
     c.post(f'/api/ninja/queues/{p["id"]}/groups/{groups[0]["id"]}')
-    wire=pulse(c,p,h,accounts=rows).text
-    assert '|configure|' in wire and '|reset|' not in wire
-    assert 'accounts=Sim0,Sim1,Sim2,Sim3,Sim4' in wire
+    wire=pulse(c,p,h,accounts=rows,position_quantity=1).text
+    assert '|start' in wire and '|reset|' not in wire and '|configure|' not in wire
+    applied=store.get('ninja_config_ack',p['id'])
+    assert applied['settings']['accounts']==['Sim0','Sim1','Sim2','Sim3','Sim4']
+    assert store.get('ninja_queue',p['id'])['index']==0
 
 
 def test_disabled_unfinished_account_blocks_group_completion():

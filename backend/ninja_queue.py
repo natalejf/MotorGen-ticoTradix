@@ -80,11 +80,15 @@ class NinjaQueue:
         existing=next((item for item in q['items'] if item['group_id']==group_id),None)
         if existing and existing['state']=='COMPLETED':raise HTTPException(409,'Grupo completado; reinicia su seguimiento explícitamente para repetirlo')
         if not existing:
-            occupied={name for item in q['items'] for name in item['settings']['accounts']}
-            if occupied.intersection(group['settings']['accounts']):raise HTTPException(409,'Una cuenta ya pertenece a otro grupo de esta cola')
+            occupied={name for item in q['items'] if item.get('state') not in ('COMPLETED','STOPPED') for name in item['settings']['accounts']}
+            if occupied.intersection(group['settings']['accounts']):raise HTTPException(409,'Una cuenta ya pertenece a otro grupo activo de esta cola')
             q['items'].append(dict(group_id=group_id,name=group['name'],settings=copy.deepcopy(group['settings']),state='PENDING'))
         if q['state']=='PAUSED' and q['items'][q['index']]['group_id']==group_id:
-            q.update(state='RUNNING',phase='READY',instance=snapshot['instance'])
+            try:applied=self.store.get('ninja_config_ack',key)
+            except KeyError:applied={}
+            same=(applied.get('instance')==snapshot['instance'] and applied.get('group_id')==group_id
+                  and applied.get('settings')==q['items'][q['index']]['settings'])
+            q.update(state='RUNNING',phase='CONFIGURED' if same else 'READY',instance=snapshot['instance'])
         q['detail']='Grupos en orden de activación; el actual se completa antes de avanzar'
         return self.save(key,q)
 
