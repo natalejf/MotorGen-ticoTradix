@@ -24,7 +24,8 @@
             var rows=new List<string>();var active=new HashSet<string>();var pending=new List<string>();var quotes=new List<string>();
             foreach(var o in acc.Orders.Cast<Order>().Where(o=>EngineWorking(o)&&(o.OrderAction==OrderAction.Buy||o.OrderAction==OrderAction.SellShort)&&!acc.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==o.Instrument.FullName&&p.MarketPosition==MarketPosition.Short&&o.OrderAction==OrderAction.Buy)&&(o.OrderType==OrderType.Limit||o.OrderType==OrderType.StopMarket))) {
                 long ticket=CopyOrderTicket(o);bool buy=o.OrderAction==OrderAction.Buy;
-                pending.Add("{\"ticket\":"+ticket+",\"symbol\":"+J(o.Instrument.FullName)+",\"type\":"+(buy?(o.OrderType==OrderType.Limit?2:4):(o.OrderType==OrderType.Limit?3:5))+",\"volume\":"+(o.Quantity-o.Filled)+",\"price_open\":"+N(o.OrderType==OrderType.Limit?o.LimitPrice:o.StopPrice)+",\"sl\":0,\"tp\":0,\"time\":"+(long)(o.Time.ToUniversalTime()-new DateTime(1970,1,1)).TotalSeconds+"}");
+                var known=engineLeases.Values.FirstOrDefault(l=>l.Account==acc.Name&&l.Entry!=null&&l.Entry.OrderId==o.OrderId);
+                pending.Add("{\"ticket\":"+ticket+",\"symbol\":"+J(o.Instrument.FullName)+",\"type\":"+(buy?(o.OrderType==OrderType.Limit?2:4):(o.OrderType==OrderType.Limit?3:5))+",\"volume\":"+(o.Quantity-o.Filled)+",\"price_open\":"+N(o.OrderType==OrderType.Limit?o.LimitPrice:o.StopPrice)+",\"sl\":"+N(known==null?0:known.Sl)+",\"tp\":"+N(known==null?0:known.Tp)+",\"time\":"+(long)(o.Time.ToUniversalTime()-new DateTime(1970,1,1)).TotalSeconds+"}");
             }
             foreach(var instrument in acc.Orders.Cast<Order>().Where(EngineWorking).Select(o=>o.Instrument).Concat(acc.Positions.Cast<Position>().Select(p=>p.Instrument)).GroupBy(i=>i.FullName).Select(g=>g.First())){quotes.Add(J(instrument.FullName)+":{\"bid\":"+N(instrument.MarketData.Bid.Price)+",\"ask\":"+N(instrument.MarketData.Ask.Price)+"}");}
             foreach(var p in acc.Positions.Cast<Position>().Where(p=>p.MarketPosition!=MarketPosition.Flat)) {
@@ -178,6 +179,8 @@
                 int qty=(int)number("volume");if(qty<1||qty>100||number("volume")!=qty)throw new Exception("Cantidad de contratos inválida");
                 if(v.ContainsKey("position")) {
                     if(pos==null||long.Parse(v["position"])!=l.Ticket||qty>pos.Quantity){EngineReply(id,EngineResult(l,10030,0,"La posición ya terminó o cambió de volumen; no se envió otra salida"));return;}
+                    if(EngineWorking(l.Exit))throw new Exception("Ya existe un cierre en curso; espera su confirmación");
+                    l.Exit=null; // A previous partial close must never acknowledge this new close.
                     l.CloseQuantity=qty;l.CloseReason="CLOSE";l.CancelForClose=true;l.AwaitId=id;l.AwaitKind="close";l.AwaitAt=DateTime.UtcNow;
                     var protection=EngineProtection(l);if(protection.Length>0)QueueCancel(acc,protection);return;
                 }

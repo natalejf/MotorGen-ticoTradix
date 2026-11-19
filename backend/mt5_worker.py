@@ -484,10 +484,14 @@ class MT5Worker:
         pending_sources=synchronize_pending(self,deployment,runtime,source,may_open)
         positions = self.positions()
         for ticket, ref in list(runtime['positions'].items()):
-            local = next((p for p in positions if p.magic==deployment['magic'] and p.comment==ref['comment']),None)
+            local = next((p for p in positions if p.magic==deployment['magic'] and
+                          (str(p.ticket)==str(ref.get('target_ticket')) or
+                           str(getattr(p,'identifier',''))==str(ref.get('target_identifier','unknown')) or
+                           p.comment==ref['comment'])),None)
             if local is None:
                 continue  # Broker/manual closure is respected; never reopen it.
             ref['target_ticket']=local.ticket
+            ref['target_identifier']=getattr(local,'identifier',local.ticket)
             origin = master.get(ticket)
             if origin is None:
                 self.close_position(deployment,local,reason='master-close')
@@ -553,6 +557,7 @@ class MT5Worker:
                     runtime['positions'][ticket] = dict(comment=comment,source_ticket=ticket,target_order=result.order,
                         target_native_order_id=getattr(result,'native_order_id',None),
                         target_ticket=matched.ticket if matched else None,
+                        target_identifier=getattr(matched,'identifier',matched.ticket) if matched else None,
                         source_symbol=origin['symbol'],target_symbol=symbol,initial_master_volume=origin['volume'],
                         initial_local_volume=result.volume,translated=bool(translated),target_entry=matched.price_open if matched and translated else target_entry,
                         source_entry=origin.get('price_open'),price_scale=deployment.get('price_scale',1))

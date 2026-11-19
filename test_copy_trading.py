@@ -216,6 +216,7 @@ def test_master_baseline_new_entry_and_no_reopen_after_manual_close():
     store.put('snapshot','master',dict(at=time.time(),verified_demo=True,positions=[master,master2]))
     worker.account_copy(d,state,True)
     assert len(fake.sent)==1
+
     fake.opened=[]  # Manual/broker close on follower.
     worker.account_copy(d,state,True)
     assert len(fake.sent)==1
@@ -223,6 +224,24 @@ def test_master_baseline_new_entry_and_no_reopen_after_manual_close():
     with pytest.raises(RuntimeError,match='Master'):
         worker.account_copy(d,state,True)
     assert len(fake.sent)==1
+
+
+def test_master_close_survives_broker_rewriting_position_comment_after_partial():
+    fake=FakeMT5();worker=MT5Worker(fake,account());d=deployment()
+    d.update(source_type='account',source_id='master',risk_mode='FIXED_LOT',fixed_lot=.02,risk_percent=1)
+    store.put('deployment',d['id'],d)
+    store.put('snapshot','master',dict(at=time.time(),verified_demo=True,positions=[]))
+    runtime=worker.local_state(d);worker.account_copy(d,runtime,True)
+    origin=dict(ticket=123,symbol='EURUSD',type=0,volume=2,price_open=1.1001,sl=1.09,tp=1.12,time=time.time())
+    store.put('snapshot','master',dict(at=time.time(),verified_demo=True,positions=[origin]))
+    worker.account_copy(d,runtime,True)
+    store.put('snapshot','master',dict(at=time.time(),verified_demo=True,positions=[dict(origin,volume=1)]))
+    worker.account_copy(d,runtime,True)
+    assert fake.opened[0].volume==.01
+    fake.opened[0].comment='broker partial-close reference'
+    store.put('snapshot','master',dict(at=time.time(),verified_demo=True,positions=[]))
+    worker.account_copy(d,runtime,False)
+    assert not fake.opened
 
 
 def test_api_creation_is_paused_and_rejects_unsupported_rules(tmp_path,monkeypatch):

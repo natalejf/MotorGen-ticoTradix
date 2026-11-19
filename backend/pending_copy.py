@@ -45,7 +45,7 @@ def synchronize_pending(worker,d,runtime,source,may_open):
             if not local_order and not local:ref['terminal']=True
             continue
         if local and filled:
-            ref.update(target_ticket=local.ticket,target_entry=local.price_open)
+            ref.update(target_ticket=local.ticket,target_identifier=getattr(local,'identifier',local.ticket),target_entry=local.price_open)
             runtime['positions'].setdefault(str(filled['ticket']),dict(ref,source_entry=filled['price_open'],initial_master_volume=filled['volume']))
             ref['linked']=True
             continue

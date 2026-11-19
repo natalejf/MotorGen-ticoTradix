@@ -2,10 +2,10 @@
   "algorithm_source": "C:\\Users\\yo\\OneDrive\\Documentos\\NinjaTrader 8\\bin\\Custom\\Strategies\\TrendLimitGridBot.cs",
   "algorithm_sha256": "ef570af394ea8d58ab6cb7f21a845636193c12daf9cb3277d6575cf0400311e3",
   "original_unchanged": true,
-  "shell_sha256": "847bc67efadd2dc093b60ed3ef42f45ec273f9f963a7614ed6ec92c5dd3d9072",
+  "shell_sha256": "ad28e7f061a4ba02c7d2764ea7ecbd858e7bf363cc062663fa171c543d1bbd34",
   "execution": "SIM_OR_EXPLICIT_EVALUATION_ALLOWLIST",
   "compile_status": "PENDING",
   "native_compile_status": "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
-  "compile_checked_at": "2026-11-19T01:42:53.4562104Z",
-  "integrated_sha256": "93c6b7d69baa14dc22b3b3dbac617c22d264c3e20ae22b5d261e2179df201b99"
+  "compile_checked_at": "2026-11-19T02:31:53.5385487Z",
+  "integrated_sha256": "460dde0f05e68d467e49760feef7008d3015d1578d8bec7b846509361b38f29d"
 }

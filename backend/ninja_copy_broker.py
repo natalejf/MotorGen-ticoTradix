@@ -31,6 +31,11 @@ class NinjaCopyBroker(NinjaBroker):
         state=dict(super().state());positions=list(state['positions']);orders=list(state['orders'])
         for leg in self.legs():
             value=leg.state();positions.extend(value['positions']);orders.extend(value['orders'])
+            if not value.get('execution_allowed',False):state.update(execution_allowed=False,fault=value.get('fault','Fallo en una copia'))
+            record=store.get('ninja_copy_leg',leg.session)
+            if (record.get('confirmed_at') and time.time()-record['confirmed_at']>5
+                    and not value['positions'] and not value['orders'] and not value.get('fault')):
+                leg.rpc('release');record['state']='RELEASED';store.put('ninja_copy_leg',leg.session,record)
         state.update(positions=positions,orders=orders)
         self.combined=state;self.combined_at=time.monotonic();return state
 
@@ -49,4 +54,7 @@ class NinjaCopyBroker(NinjaBroker):
                 value=candidate.state()
                 if any(p['ticket']==ticket for p in value['positions']+value['orders']):leg=candidate;break
             if leg is None:raise RuntimeError('No se encuentra la orden/posición propia NT8; no se envía a otra sesión')
-        result=leg.order_send(request);self.invalidate();return result
+        result=leg.order_send(request)
+        if opening:
+            record=store.get('ninja_copy_leg',leg.session);record['confirmed_at']=time.time();store.put('ninja_copy_leg',leg.session,record)
+        self.invalidate();return result

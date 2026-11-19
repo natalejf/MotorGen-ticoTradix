@@ -80,8 +80,9 @@ posición se confirma con la posición del bróker; no se asume que sea la orden
 Cada envío tiene una clave única persistida. Un resultado incierto pausa la
 asignación y no se reenvía automáticamente.
 
-Los cierres y parciales se aplican a posiciones identificadas por magic y etiqueta
-de esa copia. Un parcial mantiene la fracción del tamaño inicial, ajustada al paso
+Los cierres y parciales se aplican a posiciones identificadas por magic y ticket,
+identificador estable o etiqueta de esa copia. Así se conserva el vínculo si el
+bróker cambia el comentario después de un parcial. Un parcial mantiene la fracción del tamaño inicial, ajustada al paso
 destino; un contrato indivisible puede permanecer hasta el cierre completo.
 Una posición cerrada manualmente en la seguidora no se reabre.
 
@@ -115,6 +116,9 @@ las posiciones, detén la copia y crea una nueva. El registro explica el bloqueo
 
 Para RocketPass, cuentas de examen y el plan de prueba cruzada, consulta
 [ROCKETPASS.md](ROCKETPASS.md).
+
+Resultados de la sesión con terminales demo y casos todavía pendientes:
+[prueba cruzada](reports/CROSS_PLATFORM_QA.md).
 
 ## GitHub y vista online
 
