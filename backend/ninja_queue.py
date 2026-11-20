@@ -22,7 +22,7 @@ class NinjaQueue:
         return self.store.put('ninja_queue',key,q)
 
     def update_template(self,group):
-        """Update only this group's pending copies; never alter the running group."""
+        """Update group in store and in any pending or paused queues."""
         with self.store.connect() as db:
             keys=[r['id'] for r in db.execute("SELECT id FROM records WHERE kind='ninja_queue' ORDER BY id")]
         changes=[]
@@ -31,12 +31,15 @@ class NinjaQueue:
             for key in keys:
                 q=self.get(key)
                 if not q or q['state'] in ('COMPLETED','STOPPED'):continue
-                item=next((i for i in q['items'] if i['group_id']==group['id'] and i['state']=='PENDING'),None)
+                item=next((i for i in q['items'] if i['group_id']==group['id']),None)
                 if not item:continue
-                other={name for i in q['items'] if i is not item for name in i['settings']['accounts']}
+                if item.get('state')=='COMPLETED':continue
+                other={name for i in q['items'] if i is not item and i.get('state')!='COMPLETED' for name in i['settings']['accounts']}
                 if other.intersection(group['settings']['accounts']):
-                    raise HTTPException(409,'Estas cuentas pertenecen a otro grupo de la cola; no se comparten decisiones')
+                    raise HTTPException(409,'Estas cuentas pertenecen a otro grupo activo de la cola')
                 item.update(name=group['name'],settings=copy.deepcopy(group['settings']))
+                if q['state']=='PAUSED' or q['phase'] in ('ACTIVE','CONFIGURED','READY','APPLYING'):
+                    q['phase']='READY'
                 changes.append((key,q))
             result=self.store.put('ninja_group',group['id'],copy.deepcopy(group))
             for key,q in changes:self.save(key,q)

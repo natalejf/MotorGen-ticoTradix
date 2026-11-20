@@ -68,9 +68,12 @@ def test_grid_defaults_and_same_size_follow_initial_contracts_and_overrides():
         RocketSettings(accounts=['Sim101'],grid_same_as_initial=False,limit_contracts=4.01)
 
 
-def test_rocket_rejects_non_m5_or_non_vote40_configuration():
+def test_rocket_validates_trend_period_and_timeframe_bounds():
     c=TestClient(app)
-    for changes in ({'timeframe_minutes':1},{'trend_period':20}):
+    # Valid configurable values
+    assert c.post('/api/rocket/groups',json=dict(name='valid custom',settings=dict(accounts=['Sim101'],trend_period=30,timeframe_minutes=5))).status_code==200
+    # Out of bounds
+    for changes in ({'timeframe_minutes':0},{'trend_period':2}):
         response=c.post('/api/rocket/groups',json=dict(name='wrong signal',settings=dict(accounts=['Sim101'],**changes)))
         assert response.status_code==422
 

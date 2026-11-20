@@ -457,7 +457,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private static class RocketMath {
             public static int VoteSignal(System.Collections.Generic.IEnumerable<int> candles,string direction) {
                 var votes=candles.ToArray();
-                if(votes.Length!=40)return 0;
+                if(votes.Length==0)return 0;
                 if(votes.Any(v=>v < -1 || v > 1))throw new ArgumentException("Vela inválida");
                 int balance=votes.Count(v=>v>0)-votes.Count(v=>v<0);
                 if(balance>0&&direction!="SHORT")return 1;
@@ -490,13 +490,14 @@ namespace NinjaTrader.NinjaScript.AddOns {
         }
         private void RocketLoad() {
             string root=Path.GetDirectoryName(configFilePath),path=Path.Combine(root,"RocketGrid.txt");
-            if(File.Exists(path)){var a=File.ReadAllLines(path);if(a.Length==8){rocketTrend=40;rocketDirection=a[1];rocketLimits=int.Parse(a[2]);rocketLimitContracts=int.Parse(a[3]);rocketStops=int.Parse(a[4]);rocketStopContracts=int.Parse(a[5]);rocketMax=int.Parse(a[6]);rocketSameSize=a[7]=="same";}}
+            if(File.Exists(path)){var a=File.ReadAllLines(path);if(a.Length==8){rocketTrend=Math.Max(5,int.Parse(a[0]));rocketDirection=a[1];rocketLimits=int.Parse(a[2]);rocketLimitContracts=int.Parse(a[3]);rocketStops=int.Parse(a[4]);rocketStopContracts=int.Parse(a[5]);rocketMax=int.Parse(a[6]);rocketSameSize=a[7]=="same";}}
             path=Path.Combine(root,"RocketBaskets.txt");if(File.Exists(path))foreach(var line in File.ReadAllLines(path)){var a=line.Split('|');if(a.Length==3)rocketBaskets[a[0]]=new RocketBasket{Closing=a[1]=="1",Used=new HashSet<string>(a[2].Split(',').Where(x=>x.Length>0))};}
         }
         private void RocketConfigure(Dictionary<string,string> v) {
             if(PendingOrOpen())throw new Exception("Configura RocketPass con el grupo anterior flat y sin pendientes");
             int trend=int.Parse(v["trend_period"]),limits=int.Parse(v["limit_count"]),stops=int.Parse(v["stop_count"]),lc=int.Parse(v["limit_contracts"]),sc=int.Parse(v["stop_contracts"]),maximum=int.Parse(v["max_contracts"]);
-            if(trend!=40||int.Parse(v["timeframe_minutes"])!=5)throw new Exception("RocketPass requiere M5 y conteo de 40 velas; actualiza y aplica el grupo");
+            int tf=int.Parse(v["timeframe_minutes"]);
+            if(trend<5||trend>300||tf<1||tf>60)throw new Exception("Temporalidad o conteo de velas inválido; actualiza y aplica el grupo");
             if(limits<0||limits>10||stops<0||stops>10||lc<1||sc<1||maximum>100||int.Parse(v["lots"])+limits*lc+stops*sc>maximum)throw new Exception("Cuadrícula inválida o superior al máximo total de contratos");
             rocketSameSize=v.ContainsKey("grid_same_as_initial")&&v["grid_same_as_initial"]=="1";rocketTrend=trend;rocketLimits=limits;rocketStops=stops;rocketLimitContracts=lc;rocketStopContracts=sc;rocketMax=maximum;rocketDirection=v["direction"];
             if(!new[]{"AUTO","LONG","SHORT"}.Contains(rocketDirection))throw new Exception("Dirección inválida");
@@ -519,8 +520,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
             System.Threading.Tasks.Task.Run(()=>{
                 BarsRequest request=null;
                 try{
-                    request=new BarsRequest(target,42);
-                    request.BarsPeriod=new BarsPeriod{BarsPeriodType=BarsPeriodType.Minute,Value=5};
+                    request=new BarsRequest(target,rocketTrend+5);
+                    request.BarsPeriod=new BarsPeriod{BarsPeriodType=BarsPeriodType.Minute,Value=timeframeMinutes};
                     request.TradingHours=TradingHours.Get("Default 24 x 7");
                     lock(serviceGate){if(State!=State.Active||Instrument!=target){request.Dispose();return;}rocketHistory=request;}
                     EventHandler<BarsUpdateEventArgs> handler=(sender,e)=>{lock(serviceGate){if(State==State.Active&&rocketHistory==request)RocketReadUpdate(e);}};
@@ -529,9 +530,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     request.Request((bars,error,message)=>{
                         lock(serviceGate){
                             if(rocketHistory!=request||State!=State.Active)return;
-                            if(error!=ErrorCode.NoError){Print("RocketPass: histórico M5 no disponible: "+error+" "+message);rocketNextHistoryAttempt=DateTime.UtcNow.AddSeconds(30);RocketStopFeed();return;}
+                            if(error!=ErrorCode.NoError){Print("RocketPass: histórico M"+timeframeMinutes+" no disponible: "+error+" "+message);rocketNextHistoryAttempt=DateTime.UtcNow.AddSeconds(30);RocketStopFeed();return;}
                             RocketReadBars(request,false);
-                            Print("RocketPass: histórico M5 cargado · "+rocketVotes.Count+"/40 velas cerradas; tendencia disponible");
+                            Print("RocketPass: histórico M"+timeframeMinutes+" cargado · "+rocketVotes.Count+"/"+rocketTrend+" velas cerradas; tendencia disponible");
                         }
                     });
                 }catch(Exception ex){lock(serviceGate){Print("RocketPass: error de histórico: "+ex.Message);rocketNextHistoryAttempt=DateTime.UtcNow.AddSeconds(30);if(rocketHistory==request)RocketStopFeed();}}
@@ -542,12 +543,12 @@ namespace NinjaTrader.NinjaScript.AddOns {
             int last=e.MaxIndex-1;if(last<0)return;
             DateTime closed=e.BarsSeries.GetTime(last);if(closed<=rocketLastClosed)return;
             rocketVotes.Clear();
-            for(int i=Math.Max(0,last-39);i<=last;i++){
+            for(int i=Math.Max(0,last-(rocketTrend-1));i<=last;i++){
                 double open=e.BarsSeries.GetOpen(i),close=e.BarsSeries.GetClose(i);
                 rocketVotes.Add(close>open?1:close<open?-1:0);
             }
             rocketLastClosed=closed;CurrentBar=rocketVotes.Count;
-            Print("RocketPass: cierre M5 actualizado · alcistas="+rocketVotes.Count(v=>v>0)+" · bajistas="+rocketVotes.Count(v=>v<0));
+            Print("RocketPass: cierre M"+timeframeMinutes+" actualizado · alcistas="+rocketVotes.Count(v=>v>0)+" · bajistas="+rocketVotes.Count(v=>v<0));
             RocketTryEntry();
         }
         private void RocketReadBars(BarsRequest request,bool live) {
@@ -556,7 +557,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
             DateTime closed=request.Bars.GetTime(last);if(closed<=rocketLastClosed)return;
             bool hadHistory=rocketLastClosed!=DateTime.MinValue;
             rocketVotes.Clear();
-            for(int i=Math.Max(0,last-39);i<=last;i++){
+            for(int i=Math.Max(0,last-(rocketTrend-1));i<=last;i++){
                 double open=request.Bars.GetOpen(i),close=request.Bars.GetClose(i);
                 rocketVotes.Add(close>open?1:close<open?-1:0);
             }
@@ -564,10 +565,10 @@ namespace NinjaTrader.NinjaScript.AddOns {
             if(live&&hadHistory)RocketTryEntry();
         }
         private void RocketTryEntry() {
-            if(rocketVotes.Count<40||!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
+            if(rocketVotes.Count<rocketTrend||!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
             CheckBridgeHealth();if(!masterTradingEnabled||(DateTime.UtcNow-lastTick).TotalSeconds>15)return;
             int signal=RocketMath.VoteSignal(rocketVotes,rocketDirection);
-            Print("RocketPass M5 · últimas 40 · alcistas="+rocketVotes.Count(v=>v>0)+" · bajistas="+rocketVotes.Count(v=>v<0)+" · señal="+signal);
+            Print("RocketPass M"+timeframeMinutes+" · últimas "+rocketTrend+" · alcistas="+rocketVotes.Count(v=>v>0)+" · bajistas="+rocketVotes.Count(v=>v<0)+" · señal="+signal);
             EvaluateEntrySignals(signal==1,signal==-1);
         }
         private bool RocketGridOrder(Order o) {return o!=null&&(o.Name.StartsWith("ROCKET_LIMIT_")||o.Name.StartsWith("ROCKET_STOP_"));}
@@ -739,7 +740,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     try {
                         string[] saved=File.ReadAllLines(scope);
                         if(saved.Length>=3) {
-                            Instrument=NinjaTrader.Cbi.Instrument.GetInstrument(saved[0]);timeframeMinutes=5;
+                            Instrument=NinjaTrader.Cbi.Instrument.GetInstrument(saved[0]);timeframeMinutes=Math.Max(1,Math.Min(60,int.Parse(saved[1])));
                             groupAccounts=saved[2].Split(',').Where(a=>allowedAccounts.Contains(a)).ToArray();
                             if(Instrument!=null) {
                                 Instrument.MarketData.Update+=ServiceMarketData;

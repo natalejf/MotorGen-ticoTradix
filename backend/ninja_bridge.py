@@ -120,7 +120,17 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
     def update_group(key:str,group:Group):
         try:store.get('ninja_group',key)
         except KeyError:raise HTTPException(404,'Grupo inexistente')
-        return queue.update_template(dict(id=key,**group.model_dump()))
+        res=queue.update_template(dict(id=key,**group.model_dump()))
+        # Si el conector está pausado con este grupo aplicado, reenviar configure con los nuevos parámetros
+        for conn in store.listing('ninja_connection'):
+            if conn.get('id'):
+                try: snap=store.get('ninja_snapshot',conn['id'])
+                except KeyError: snap={}
+                try: applied=store.get('ninja_config_ack',conn['id'])
+                except KeyError: applied={}
+                if applied.get('group_id')==key and not snap.get('master_enabled'):
+                    queue.enqueue(conn['id'],'configure',group.settings,group_id=key,from_queue=True)
+        return res
 
     @app.delete(prefix+'/groups/{key}')
     def delete_group(key:str):

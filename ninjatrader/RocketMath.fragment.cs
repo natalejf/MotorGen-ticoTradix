@@ -1,7 +1,7 @@
         private static class RocketMath {
             public static int VoteSignal(System.Collections.Generic.IEnumerable<int> candles,string direction) {
                 var votes=candles.ToArray();
-                if(votes.Length!=40)return 0;
+                if(votes.Length==0)return 0;
                 if(votes.Any(v=>v < -1 || v > 1))throw new ArgumentException("Vela inválida");
                 int balance=votes.Count(v=>v>0)-votes.Count(v=>v<0);
                 if(balance>0&&direction!="SHORT")return 1;

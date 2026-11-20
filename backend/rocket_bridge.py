@@ -5,7 +5,7 @@ from backend.ninja_bridge import Settings,Group,install_routes as install_native
 
 
 class RocketSettings(Settings):
-    timeframe_minutes:Literal[5]=5
+    timeframe_minutes:int=Field(default=5,ge=1,le=60)
     symbol:str=Field(default='MNQ 12-26',pattern=r'^[A-Za-z0-9._ -]{1,40}$')
     lots:int=Field(default=2,ge=1,le=100)
     sl_usd:float=Field(default=2000,gt=0,le=100000)
@@ -14,7 +14,7 @@ class RocketSettings(Settings):
     max_loss:float=Field(default=2000,gt=0,le=100000)
     daily_profit_limit:float=Field(default=0,ge=0,le=100000)
     daily_loss_limit:float=Field(default=0,ge=0,le=100000)
-    trend_period:Literal[40]=40
+    trend_period:int=Field(default=40,ge=5,le=300)
     direction:Literal['AUTO','LONG','SHORT']='AUTO'
     limit_count:int=Field(default=3,ge=0,le=10)
     limit_contracts:int=Field(default=2,ge=1,le=100)
