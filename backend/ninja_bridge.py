@@ -298,8 +298,8 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
             selected=set(applied['settings']['accounts'])
             if any(a.get('position_quantity',0) and (a['name'] not in selected or a.get('proppass_position_quantity')!=a['position_quantity']) for a in snapshot.get('accounts',[])):
                 raise HTTPException(409,'No se reanuda una posición que no pertenece al grupo aplicado')
-            if namespace=='rocket' and (applied['settings'].get('timeframe_minutes')!=5 or applied['settings'].get('trend_period')!=40):
-                raise HTTPException(409,'Reaplica el grupo con M5 y conteo de 40 velas antes de reanudar')
+            if namespace=='rocket' and (int(applied['settings'].get('timeframe_minutes',0))<1 or int(applied['settings'].get('trend_period',0))<5):
+                raise HTTPException(409,'Reaplica el grupo con temporalidad y conteo de velas válidos antes de reanudar')
             if group_id and applied.get('group_id')!=group_id:raise HTTPException(409,'El grupo seleccionado todavía no está aplicado')
             if not snapshot.get('data_ready'):raise HTTPException(409,'Esperando ticks recientes del instrumento')
         params=(settings or Settings()).model_dump() if action in ('configure','reset','close-stop','authorize-evaluation') else {}
@@ -373,6 +373,7 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
         try:group=store.get('ninja_group',group_id)
         except KeyError:raise HTTPException(404,'Grupo inexistente')
         group_accounts=set(group.get('settings',{}).get('accounts',[]))
+        reset_warnings=[]
         for connection in store.listing('ninja_connection'):
             key=connection['id']
             q=queue.get(key)
@@ -406,7 +407,10 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
                     store.put('ninja_snapshot',key,snapshot)
             except KeyError:pass
             try:enqueue(key,'reset',Settings(**group['settings']),group_id,from_queue=True)
-            except Exception:pass
+            except HTTPException as exc:
+                reset_warnings.append(str(exc.detail))
+            except Exception as exc:
+                reset_warnings.append(str(exc))
         settings=copy.deepcopy(group.get('settings',{}))
         for acc in group_accounts:
             if 'account_overrides' in settings and acc in settings['account_overrides']:
@@ -414,7 +418,9 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
         group['settings']=settings
         group['pnl']=0.0
         store.put('ninja_group',group_id,group)
-        return {'ok':True,'message':'Estado del grupo y cuentas reiniciado a neutral'}
+        if reset_warnings:
+            return {'ok':True,'warning':'; '.join(reset_warnings),'message':'Estado web reiniciado, pero NinjaTrader reportó: '+'; '.join(reset_warnings)}
+        return {'ok':True,'message':'Estado del grupo y cuentas reiniciado a neutral (confirmado en NinjaTrader)'}
 
     @app.post(prefix+'/bridge/{key}/pulse',response_class=PlainTextResponse)
     async def pulse(key:str,request:Request,x_stratix_key:str=Header(default='')):
