@@ -562,8 +562,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         AccountRiskSettings settings;accountsConfig.TryGetValue(name,out settings);
                         var working=acc.Orders.Cast<Order>().Where(o=>(Instrument!=null&&o.Instrument.FullName==Instrument.FullName||engineLeases.Values.Any(l=>l.Account==name&&l.Symbol==o.Instrument.FullName))&&(o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled)).Select(o=>"{\"name\":"+J(o.Name)+",\"type\":"+J(o.OrderType.ToString())+",\"state\":"+J(o.OrderState.ToString())+",\"quantity\":"+o.Quantity+",\"limit\":"+N(o.LimitPrice)+",\"stop\":"+N(o.StopPrice)+"}");
                         double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
-                        double openPnl=(pos!=null&&pos.MarketPosition!=MarketPosition.Flat&&candleOwnedAccounts.Contains(name))?open:0.0;
-                        double daily=settings==null?0.0:(settings.SessionRealizedPnl+openPnl);
+                        double daily=settings==null?acc.Get(AccountItem.RealizedProfitLoss,Currency.UsDollar)+open:cash+open-settings.DailyStartBalance-(settings.NinjaTraderHandlesCommissions?0:settings.DailyCommissions);
                         rows.Add("{\"name\":"+J(name)+",\"connected\":true,\"execution_allowed\":"+B(CanExecute(acc))+",\"provider\":"+J(acc.Provider.ToString())+",\"enabled\":"+B(settings!=null&&settings.Enabled)+",\"position_quantity\":"+qty+
                             ",\"direction\":"+J(pos==null?"Flat":pos.MarketPosition.ToString())+",\"balance\":"+N(acc.Get(AccountItem.CashValue,Currency.UsDollar))+
                             ",\"unrealized\":"+N(acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar))+
@@ -671,8 +670,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     SaveConfiguration();
                 }
                 else if(action=="configure" || action=="reset") {
-                    if(masterTradingEnabled && action=="configure")throw new Exception("Pausa primero las entradas");
-                    if(action=="reset")masterTradingEnabled=false;
+                    if(masterTradingEnabled)throw new Exception("Pausa primero las entradas");
                     string[] selected=values["accounts"].Split(',');
                     if(values["accounts"].Split(',').Any(n=>engineLeases.Values.Any(l=>l.Account==n)))throw new Exception("Una cuenta seleccionada pertenece a un algoritmo del motor; detén esa asignación primero");
                     foreach(string name in selected) {
@@ -694,16 +692,13 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             Func<string,double> perAccount=field=>values.ContainsKey(field+":"+name)?double.Parse(values[field+":"+name],System.Globalization.CultureInfo.InvariantCulture):number(field);
                             s.Lots=(int)perAccount("lots");s.TpUsd=perAccount("tp_usd");s.SlUsd=perAccount("sl_usd");s.Target=number("target");s.MaxLoss=number("max_loss");
                             s.DailyProfitLimit=perAccount("daily_profit_limit");s.DailyLossLimit=perAccount("daily_loss_limit");
-                            var cachedAcc=GetAccountCached(name);
-                            double curCash=cachedAcc!=null?cachedAcc.Get(AccountItem.CashValue,Currency.UsDollar):number("start_balance");
-                            s.StartBalance=curCash;s.DailyStartBalance=curCash;
-                            s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
+                            s.StartBalance=number("start_balance");s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
                             s.Enabled=!values.ContainsKey("enabled:"+name)||values["enabled:"+name]!="0";s.Locked=true;removedAccounts.Remove(name);
                             if(action=="reset") {
                                 s.Status="EN PROCESO";s.Direction="FLAT";s.DailyStatus="EN PROCESO";s.SessionRealizedPnl=0;s.DailyCommissions=0;
-                                s.DailyStartBalance=curCash;s.StartBalance=curCash;
+                                s.DailyStartBalance=GetAccountCached(name).Get(AccountItem.CashValue,Currency.UsDollar);
                                 s.LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");s.LastEntryBar=-1;s.LastEntryTime=DateTime.MinValue;
-                                s.TradesClosed=s.TradesWon=s.TradesLost=0;s.Enabled=true;
+                                s.TradesClosed=s.TradesWon=s.TradesLost=0;
                             }
                         }
                     }
@@ -1438,10 +1433,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             dailyPnlRealized = realPnlAcc;
                         }
 
-                        bool hasActivity = pos != null || settings.SessionRealizedPnl != 0 || settings.TradesClosed > 0;
-
                         // Límite de Pérdida Diaria
-                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
+                        if (settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
                         {
                             settings.DailyStatus = "LOSS_LIMIT_REACHED";
                             settings.Enabled = false;
@@ -1454,7 +1447,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         }
 
                         // Objetivo de Ganancia Diaria (Max Profit / Target)
-                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
+                        if (settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
                         {
                             settings.DailyStatus = "TARGET_REACHED";
                             settings.Status = "PASS";
