@@ -409,22 +409,31 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private readonly HashSet<string> candleOwnershipConflicts=new HashSet<string>();
         private readonly Dictionary<string,DateTime> candleFlatSince=new Dictionary<string,DateTime>();
         private bool IsCandleOrder(string account,Order order) {
-            return order!=null&&(RocketGridOrder(order)||order.Name=="RocketEntryLong"||order.Name=="RocketEntryShort"||order.Name=="ROCKET_TP_"+account||order.Name=="ROCKET_SL_"+account);
+            if(order==null)return false;
+            string n=order.Name??"";
+            if(string.IsNullOrEmpty(n)||n.Equals("Close",StringComparison.OrdinalIgnoreCase)||n.Equals("Flatten",StringComparison.OrdinalIgnoreCase)||n.IndexOf("Flatten",StringComparison.OrdinalIgnoreCase)>=0)return true;
+            if(n.StartsWith("ROCKET_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("STX",StringComparison.OrdinalIgnoreCase))return true;
+            if(n.StartsWith("Entry",StringComparison.OrdinalIgnoreCase)||n.StartsWith("RocketEntry",StringComparison.OrdinalIgnoreCase))return true;
+            if(n.StartsWith("ROCKET_TP_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("ROCKET_SL_",StringComparison.OrdinalIgnoreCase))return true;
+            return false;
         }
         private bool CanManageCandle(Account account,Instrument instrument) {
             if(account==null||instrument==null||!groupAccounts.Contains(account.Name)||!candleOwnedAccounts.Contains(account.Name)||candleOwnershipConflicts.Contains(account.Name))return false;
             if(engineLeases.Values.Any(l=>l.Account==account.Name))return false;
-            return !account.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==instrument.FullName&&EngineWorking(o)&&!IsCandleOrder(account.Name,o)&&o.Name!="Close");
+            return !account.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==instrument.FullName&&EngineWorking(o)&&!IsCandleOrder(account.Name,o));
         }
         private void ObserveCandleExecution(ExecutionEventArgs e) {
             if(e.Execution==null||e.Execution.Account==null||e.Execution.Order==null||Instrument==null)return;
             var account=e.Execution.Account;var order=e.Execution.Order;
             if(order.Instrument.FullName!=Instrument.FullName||!candleOwnedAccounts.Contains(account.Name)||engineLeases.Values.Any(l=>l.Account==account.Name))return;
-            if(!IsCandleOrder(account.Name,order)&&order.Name!="Close") {
-                candleOwnershipConflicts.Add(account.Name);
-                AccountRiskSettings setting;if(accountsConfig.TryGetValue(account.Name,out setting))setting.Enabled=false;
-                PauseEntries("OWNERSHIP_CONFLICT","Se detectó una operación externa mezclada en "+account.Name+"; RocketPass no cerrará esa cuenta automáticamente");
+            if(IsCandleOrder(account.Name,order))return;
+            AccountRiskSettings setting;
+            if(accountsConfig.TryGetValue(account.Name,out setting)) {
+                if(setting.Status=="PASS"||setting.Status=="BURNED"||setting.DailyStatus=="TARGET_REACHED"||setting.DailyStatus=="LOSS_LIMIT_REACHED") return;
+                setting.Enabled=false;
             }
+            candleOwnershipConflicts.Add(account.Name);
+            PauseEntries("OWNERSHIP_CONFLICT","Se detectó una operación externa mezclada en "+account.Name+"; RocketPass no cerrará esa cuenta automáticamente");
         }
         private void RefreshCandleOwnership() {
             foreach(string name in candleOwnedAccounts.ToArray()) {
@@ -432,7 +441,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 AccountRiskSettings setting;if(accountsConfig.TryGetValue(name,out setting)&&(DateTime.UtcNow-setting.LastEntryTime).TotalSeconds<15)continue;
                 if(!account.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==Instrument.FullName&&p.MarketPosition!=MarketPosition.Flat)&&!account.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o)&&IsCandleOrder(name,o))) {
                     DateTime since;if(!candleFlatSince.TryGetValue(name,out since)){candleFlatSince[name]=DateTime.UtcNow;continue;}
-                    if((DateTime.UtcNow-since).TotalSeconds<15)continue;
+                    if((DateTime.UtcNow-since).TotalSeconds<2)continue;
                     candleOwnedAccounts.Remove(name);candleOwnershipConflicts.Remove(name);
                     candleFlatSince.Remove(name);
                 }else candleFlatSince.Remove(name);
@@ -577,7 +586,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 var p=acc.Positions.Cast<Position>().FirstOrDefault(x=>x.Instrument.FullName==Instrument.FullName&&x.MarketPosition!=MarketPosition.Flat);
                 RocketBasket b;if(!rocketBaskets.TryGetValue(name,out b)){b=new RocketBasket();rocketBaskets[name]=b;}
                 foreach(var o in acc.Orders.Cast<Order>().Where(o=>o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o)))b.Grid[o.Name]=o;
-                if(!CanManageCandle(acc,Instrument)){RocketCancelGrid(acc);if(p!=null&&candleOwnedAccounts.Contains(name))PauseEntries("OWNERSHIP_CONFLICT","RocketPass no gestionará una posición mezclada: "+name);continue;}
+                if(!CanManageCandle(acc,Instrument)){RocketCancelGrid(acc);if(p!=null&&candleOwnedAccounts.Contains(name)&&s.DailyStatus=="EN PROCESO"&&s.Status=="EN PROCESO")PauseEntries("OWNERSHIP_CONFLICT","RocketPass no gestionará una posición mezclada: "+name);continue;}
                 double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),equity=cash+acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
                 string day=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");
                 if(s.DailyStartBalance<=0 || s.LastResetDate!=day){s.LastResetDate=day;s.DailyStartBalance=cash;s.StartBalance=cash;s.DailyCommissions=0;s.DailyStatus="EN PROCESO";SaveConfiguration();}
@@ -599,7 +608,15 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 if(b.Closing){
                     RocketCancelGrid(acc);var entries=acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o));
                     if(!entries&&p!=null){CancelTpSlOrders(acc,s);if(!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o)))QueueFlatten(acc,new[]{Instrument});}
-                    if(!entries&&p==null&&!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o))){if(b.FlatAt==DateTime.MinValue)b.FlatAt=DateTime.UtcNow;if((DateTime.UtcNow-b.FlatAt).TotalSeconds>=2){b.Closing=false;b.FlatAt=DateTime.MinValue;b.Used.Clear();b.Grid.Clear();b.Quantity=0;RocketSave();SaveConfiguration();}}
+                    if(!entries&&p==null&&!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o))){
+                        if(b.FlatAt==DateTime.MinValue)b.FlatAt=DateTime.UtcNow;
+                        if((DateTime.UtcNow-b.FlatAt).TotalSeconds>=1){
+                            b.Closing=false;b.FlatAt=DateTime.MinValue;b.Used.Clear();b.Grid.Clear();b.Quantity=0;
+                            candleOwnedAccounts.Remove(name);candleOwnershipConflicts.Remove(name);candleFlatSince.Remove(name);
+                            RocketSave();SaveConfiguration();
+                            RocketTryEntry();
+                        }
+                    }
                     continue;
                 }
                 if(p==null){RocketCancelGrid(acc);if((DateTime.UtcNow-s.LastEntryTime).TotalSeconds>3){b.Used.Clear();b.Grid.Clear();b.Quantity=0;RocketSave();}continue;}
@@ -676,7 +693,22 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private void QueueSubmit(Account a,Order[] orders) {if(!CanExecute(a))throw new Exception("Cuenta sin autorización de ejecución");a.Dispatcher.BeginInvoke(new Action(()=>{try{a.Submit(orders);}catch(Exception ex){Print("Submit rechazado: "+ex.Message);}}));}
         private void QueueCancel(Account a,Order[] orders) {a.Dispatcher.BeginInvoke(new Action(()=>a.Cancel(orders)));}
         private void QueueFlatten(Account a,Instrument[] symbols) {var owned=symbols.Where(i=>CanManageCandle(a,i)).ToArray();if(CanExecute(a)&&owned.Length>0)a.Dispatcher.BeginInvoke(new Action(()=>{Instrument[] current;lock(serviceGate){current=owned.Where(i=>CanManageCandle(a,i)).ToArray();}if(current.Length>0)a.Flatten(current);}));}
-        private bool PendingOrOpen() {foreach(string n in groupAccounts){var a=GetAccountCached(n);if(a==null)continue;if(a.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==Instrument.FullName&&p.MarketPosition!=MarketPosition.Flat)||a.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&(o.OrderState==OrderState.Initialized||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Working||o.OrderState==OrderState.PartFilled||o.OrderState==OrderState.CancelPending)))return true;}return false;}
+        private bool PendingOrOpen() {
+            foreach(string n in groupAccounts){
+                AccountRiskSettings s;
+                if(accountsConfig.TryGetValue(n,out s)){
+                    if(s.Status=="PASS"||s.Status=="BURNED"||s.DailyStatus=="TARGET_REACHED"||s.DailyStatus=="LOSS_LIMIT_REACHED"){
+                        var accFlat=GetAccountCached(n);if(accFlat==null)continue;
+                        bool hasPos=Instrument!=null&&accFlat.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==Instrument.FullName&&p.MarketPosition!=MarketPosition.Flat);
+                        if(!hasPos)continue;
+                    }
+                }
+                var a=GetAccountCached(n);if(a==null)continue;
+                if(Instrument!=null&&a.Positions.Cast<Position>().Any(p=>p.Instrument.FullName==Instrument.FullName&&p.MarketPosition!=MarketPosition.Flat))return true;
+                if(Instrument!=null&&a.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&(o.OrderState==OrderState.Initialized||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Working||o.OrderState==OrderState.PartFilled||o.OrderState==OrderState.CancelPending)))return true;
+            }
+            return false;
+        }
 
         private readonly List<string> serviceEvents=new List<string>();
         private Dictionary<string,AccountRiskSettings> accountsConfig=new Dictionary<string,AccountRiskSettings>();
@@ -766,8 +798,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         AccountRiskSettings settings;accountsConfig.TryGetValue(name,out settings);
                         var working=acc.Orders.Cast<Order>().Where(o=>(Instrument!=null&&o.Instrument.FullName==Instrument.FullName||engineLeases.Values.Any(l=>l.Account==name&&l.Symbol==o.Instrument.FullName))&&(o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled)).Select(o=>"{\"name\":"+J(o.Name)+",\"type\":"+J(o.OrderType.ToString())+",\"state\":"+J(o.OrderState.ToString())+",\"quantity\":"+o.Quantity+",\"limit\":"+N(o.LimitPrice)+",\"stop\":"+N(o.StopPrice)+"}");
                         double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
-                        double openPnl=(pos!=null&&pos.MarketPosition!=MarketPosition.Flat&&candleOwnedAccounts.Contains(name))?open:0.0;
-                        double daily=settings==null?0.0:(settings.SessionRealizedPnl+openPnl);
+                        double daily=settings==null?acc.Get(AccountItem.RealizedProfitLoss,Currency.UsDollar)+open:cash+open-settings.DailyStartBalance-(settings.NinjaTraderHandlesCommissions?0:settings.DailyCommissions);
                         rows.Add("{\"name\":"+J(name)+",\"connected\":true,\"execution_allowed\":"+B(CanExecute(acc))+",\"provider\":"+J(acc.Provider.ToString())+",\"enabled\":"+B(settings!=null&&settings.Enabled)+",\"position_quantity\":"+qty+
                             ",\"direction\":"+J(pos==null?"Flat":pos.MarketPosition.ToString())+",\"balance\":"+N(acc.Get(AccountItem.CashValue,Currency.UsDollar))+
                             ",\"unrealized\":"+N(acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar))+
@@ -875,8 +906,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     SaveConfiguration();
                 }
                 else if(action=="configure" || action=="reset") {
-                    if(masterTradingEnabled && action=="configure")throw new Exception("Pausa primero las entradas");
-                    if(action=="reset")masterTradingEnabled=false;
+                    if(masterTradingEnabled)throw new Exception("Pausa primero las entradas");
                     string[] selected=values["accounts"].Split(',');
                     if(values["accounts"].Split(',').Any(n=>engineLeases.Values.Any(l=>l.Account==n)))throw new Exception("Una cuenta seleccionada pertenece a un algoritmo del motor; detén esa asignación primero");
                     foreach(string name in selected) {
@@ -898,16 +928,13 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             Func<string,double> perAccount=field=>values.ContainsKey(field+":"+name)?double.Parse(values[field+":"+name],System.Globalization.CultureInfo.InvariantCulture):number(field);
                             s.Lots=(int)perAccount("lots");s.TpUsd=perAccount("tp_usd");s.SlUsd=perAccount("sl_usd");s.Target=number("target");s.MaxLoss=number("max_loss");
                             s.DailyProfitLimit=perAccount("daily_profit_limit");s.DailyLossLimit=perAccount("daily_loss_limit");
-                            var cachedAcc=GetAccountCached(name);
-                            double curCash=cachedAcc!=null?cachedAcc.Get(AccountItem.CashValue,Currency.UsDollar):number("start_balance");
-                            s.StartBalance=curCash;s.DailyStartBalance=curCash;
-                            s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
+                            s.StartBalance=number("start_balance");s.TimeFilterEnabled=values["time_filter"]=="1";s.StartTime=values["start_time"];s.EndTime=values["end_time"];
                             s.Enabled=!values.ContainsKey("enabled:"+name)||values["enabled:"+name]!="0";s.Locked=true;removedAccounts.Remove(name);
                             if(action=="reset") {
                                 s.Status="EN PROCESO";s.Direction="FLAT";s.DailyStatus="EN PROCESO";s.SessionRealizedPnl=0;s.DailyCommissions=0;
-                                s.DailyStartBalance=curCash;s.StartBalance=curCash;
+                                s.DailyStartBalance=GetAccountCached(name).Get(AccountItem.CashValue,Currency.UsDollar);
                                 s.LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");s.LastEntryBar=-1;s.LastEntryTime=DateTime.MinValue;
-                                s.TradesClosed=s.TradesWon=s.TradesLost=0;s.Enabled=true;
+                                s.TradesClosed=s.TradesWon=s.TradesLost=0;
                             }
                         }
                     }
@@ -1642,10 +1669,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                             dailyPnlRealized = realPnlAcc;
                         }
 
-                        bool hasActivity = pos != null || settings.SessionRealizedPnl != 0 || settings.TradesClosed > 0;
-
                         // Límite de Pérdida Diaria
-                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
+                        if (settings.DailyStatus == "EN PROCESO" && eff.DailyLossLimit > 0 && (dailyPnlFloating <= -eff.DailyLossLimit || (settings.SessionRealizedPnl <= -eff.DailyLossLimit && settings.SessionRealizedPnl != 0)))
                         {
                             settings.DailyStatus = "LOSS_LIMIT_REACHED";
                             settings.Enabled = false;
@@ -1658,7 +1683,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         }
 
                         // Objetivo de Ganancia Diaria (Max Profit / Target)
-                        if (hasActivity && settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
+                        if (settings.DailyStatus == "EN PROCESO" && ((eff.DailyProfitLimit > 0 && (dailyPnlRealized >= eff.DailyProfitLimit || dailyPnlFloating >= eff.DailyProfitLimit)) || (eff.Target > 0 && (dailyPnlRealized >= eff.Target || dailyPnlFloating >= eff.Target))))
                         {
                             settings.DailyStatus = "TARGET_REACHED";
                             settings.Status = "PASS";

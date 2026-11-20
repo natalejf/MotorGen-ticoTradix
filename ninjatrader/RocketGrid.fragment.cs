@@ -106,7 +106,7 @@
                 var p=acc.Positions.Cast<Position>().FirstOrDefault(x=>x.Instrument.FullName==Instrument.FullName&&x.MarketPosition!=MarketPosition.Flat);
                 RocketBasket b;if(!rocketBaskets.TryGetValue(name,out b)){b=new RocketBasket();rocketBaskets[name]=b;}
                 foreach(var o in acc.Orders.Cast<Order>().Where(o=>o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o)))b.Grid[o.Name]=o;
-                if(!CanManageCandle(acc,Instrument)){RocketCancelGrid(acc);if(p!=null&&candleOwnedAccounts.Contains(name))PauseEntries("OWNERSHIP_CONFLICT","RocketPass no gestionará una posición mezclada: "+name);continue;}
+                if(!CanManageCandle(acc,Instrument)){RocketCancelGrid(acc);if(p!=null&&candleOwnedAccounts.Contains(name)&&s.DailyStatus=="EN PROCESO"&&s.Status=="EN PROCESO")PauseEntries("OWNERSHIP_CONFLICT","RocketPass no gestionará una posición mezclada: "+name);continue;}
                 double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),equity=cash+acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
                 string day=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");
                 if(s.DailyStartBalance<=0 || s.LastResetDate!=day){s.LastResetDate=day;s.DailyStartBalance=cash;s.StartBalance=cash;s.DailyCommissions=0;s.DailyStatus="EN PROCESO";SaveConfiguration();}
@@ -128,7 +128,15 @@
                 if(b.Closing){
                     RocketCancelGrid(acc);var entries=acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o));
                     if(!entries&&p!=null){CancelTpSlOrders(acc,s);if(!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o)))QueueFlatten(acc,new[]{Instrument});}
-                    if(!entries&&p==null&&!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o))){if(b.FlatAt==DateTime.MinValue)b.FlatAt=DateTime.UtcNow;if((DateTime.UtcNow-b.FlatAt).TotalSeconds>=2){b.Closing=false;b.FlatAt=DateTime.MinValue;b.Used.Clear();b.Grid.Clear();b.Quantity=0;RocketSave();SaveConfiguration();}}
+                    if(!entries&&p==null&&!acc.Orders.Cast<Order>().Any(o=>o.Instrument.FullName==Instrument.FullName&&EngineWorking(o))){
+                        if(b.FlatAt==DateTime.MinValue)b.FlatAt=DateTime.UtcNow;
+                        if((DateTime.UtcNow-b.FlatAt).TotalSeconds>=1){
+                            b.Closing=false;b.FlatAt=DateTime.MinValue;b.Used.Clear();b.Grid.Clear();b.Quantity=0;
+                            candleOwnedAccounts.Remove(name);candleOwnershipConflicts.Remove(name);candleFlatSince.Remove(name);
+                            RocketSave();SaveConfiguration();
+                            RocketTryEntry();
+                        }
+                    }
                     continue;
                 }
                 if(p==null){RocketCancelGrid(acc);if((DateTime.UtcNow-s.LastEntryTime).TotalSeconds>3){b.Used.Clear();b.Grid.Clear();b.Quantity=0;RocketSave();}continue;}

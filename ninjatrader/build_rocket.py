@@ -16,7 +16,7 @@ def main():
     code=code.replace('CandleServiceConfig.txt','RocketServiceConfig.txt').replace('CandleServiceScope.txt','RocketServiceScope.txt')
     code=code.replace('EntryLong','RocketEntryLong').replace('EntryShort','RocketEntryShort')
     code=code.replace('"TP_"','"ROCKET_TP_"').replace('"SL_"','"ROCKET_SL_"')
-    code=code.replace('return order!=null&&(', 'return order!=null&&(RocketGridOrder(order)||')
+    code=code.replace('if(n.StartsWith("TP_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("SL_",StringComparison.OrdinalIgnoreCase))return true;\n            return false;', 'if(n.StartsWith("TP_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("SL_",StringComparison.OrdinalIgnoreCase))return true;\n            if(RocketGridOrder(order))return true;\n            return false;')
     code=code.replace('EngineExecution(e);ObserveCandleExecution(e);','EngineExecution(e);RocketExecution(e);ObserveCandleExecution(e);')
     start=code.index('                if(CurrentBar>=2 && masterTradingEnabled')
     end=code.index('\n            }\n        }',start)
