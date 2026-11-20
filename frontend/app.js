@@ -3907,17 +3907,35 @@ window.loadUserProfile = loadUserProfile;
 function renderUserProfileUI() {
   if (!userProfile) return;
   
+  const isAdmin = userProfile.is_admin || userProfile.plan_tier === 'ADMIN';
+
   // Header mini-profile
   const headerAvatar = document.getElementById('header-user-avatar');
   if (headerAvatar && userProfile.avatar_url) headerAvatar.src = userProfile.avatar_url;
   const headerName = document.getElementById('header-user-name');
   if (headerName && userProfile.name) headerName.textContent = userProfile.name;
   const headerBadge = document.getElementById('header-user-badge');
-  if (headerBadge && userProfile.plan_tier) headerBadge.textContent = userProfile.plan_tier;
+  if (headerBadge) {
+    if (isAdmin) {
+      headerBadge.textContent = '👑 ADMIN';
+      headerBadge.className = 'text-[9px] px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500/30 via-yellow-500/25 to-amber-500/30 text-amber-300 font-extrabold border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]';
+    } else {
+      headerBadge.textContent = userProfile.plan_tier || 'PRO';
+      headerBadge.className = 'text-[9px] px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30';
+    }
+  }
 
   // Sidebar badge
   const sidebarBadge = document.getElementById('sidebar-user-plan-badge');
-  if (sidebarBadge && userProfile.plan_tier) sidebarBadge.textContent = userProfile.plan_tier;
+  if (sidebarBadge) {
+    if (isAdmin) {
+      sidebarBadge.textContent = '👑 ADMIN';
+      sidebarBadge.className = 'text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
+    } else {
+      sidebarBadge.textContent = userProfile.plan_tier || 'PRO';
+      sidebarBadge.className = 'text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30';
+    }
+  }
 
   // Modal header
   const modalAvatar = document.getElementById('modal-header-avatar');
@@ -3925,7 +3943,15 @@ function renderUserProfileUI() {
   const modalName = document.getElementById('modal-user-display-name');
   if (modalName && userProfile.name) modalName.textContent = userProfile.name;
   const modalBadge = document.getElementById('modal-user-plan-badge');
-  if (modalBadge && userProfile.plan_tier) modalBadge.textContent = `PLAN ${userProfile.plan_tier}`;
+  if (modalBadge) {
+    if (isAdmin) {
+      modalBadge.textContent = '👑 SUPER ADMINISTRADOR / FUNDADOR';
+      modalBadge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/30 via-yellow-500/25 to-amber-500/30 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]';
+    } else {
+      modalBadge.textContent = `PLAN ${userProfile.plan_tier || 'PRO'}`;
+      modalBadge.className = 'text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30';
+    }
+  }
   const modalEmailText = document.getElementById('modal-user-email-text');
   if (modalEmailText && userProfile.email) modalEmailText.textContent = userProfile.email;
 
@@ -3942,10 +3968,55 @@ function renderUserProfileUI() {
   if (selectRole && userProfile.role) selectRole.value = userProfile.role;
 
   // Tab 2 Subscription
+  const planTagLabel = document.getElementById('plan-tag-label');
+  if (planTagLabel) planTagLabel.textContent = isAdmin ? 'Nivel de Cuenta' : 'Plan Activo';
+
   const planNameDisplay = document.getElementById('plan-name-display');
-  if (planNameDisplay && userProfile.plan_name) planNameDisplay.textContent = userProfile.plan_name;
+  if (planNameDisplay) planNameDisplay.textContent = isAdmin ? 'STRATIX MASTER ADMIN (Sin Límites · Lifetime VIP)' : (userProfile.plan_name || 'STRATIX PRO TRADER');
+
+  const planPriceDisplay = document.getElementById('plan-price-display');
+  if (planPriceDisplay) {
+    if (isAdmin) {
+      planPriceDisplay.innerHTML = '<span class="text-amber-300 font-bold">$0.00</span> <span class="text-xs text-amber-200/70 font-normal">/ Free de por vida</span>';
+    } else {
+      planPriceDisplay.innerHTML = `$${userProfile.price_usd || 69} <span class="text-xs text-[#71717a] font-normal">/mes</span>`;
+    }
+  }
+
+  const planStatusBadge = document.getElementById('plan-status-badge');
+  if (planStatusBadge) {
+    if (isAdmin) {
+      planStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Administrador Vitalicio';
+      planStatusBadge.className = 'inline-flex items-center gap-1 text-[10px] text-amber-300 font-semibold';
+    } else {
+      planStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Suscripción Activa';
+      planStatusBadge.className = 'inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold';
+    }
+  }
+
   const planAccountsDisplay = document.getElementById('plan-accounts-display');
-  if (planAccountsDisplay && userProfile.max_accounts) planAccountsDisplay.textContent = `${userProfile.max_accounts} Cuentas (Prop & Live)`;
+  if (planAccountsDisplay) {
+    planAccountsDisplay.textContent = isAdmin ? 'Ilimitadas (999+ Cuentas Simultáneas)' : `${userProfile.max_accounts || 5} Cuentas (Prop & Live)`;
+    if (isAdmin) planAccountsDisplay.className = 'text-amber-300 font-mono font-bold';
+  }
+
+  const planRenewalDisplay = document.getElementById('plan-renewal-display');
+  if (planRenewalDisplay) {
+    planRenewalDisplay.textContent = isAdmin ? 'De por vida (Acceso Maestro Permanente)' : (userProfile.renewal_date || '19 de Diciembre de 2026');
+  }
+
+  // Admin perks box visibility
+  const adminPerksBox = document.getElementById('admin-perks-box');
+  if (adminPerksBox) {
+    if (isAdmin) adminPerksBox.classList.remove('hidden');
+    else adminPerksBox.classList.add('hidden');
+  }
+
+  const upgradePromoBox = document.getElementById('upgrade-promo-box');
+  if (upgradePromoBox) {
+    if (isAdmin) upgradePromoBox.classList.add('hidden');
+    else upgradePromoBox.classList.remove('hidden');
+  }
 
   // Tab 3 License
   const licenseInput = document.getElementById('profile-license-key-input');

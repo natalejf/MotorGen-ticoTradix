@@ -897,22 +897,27 @@ USER_PROFILE_FILE = Path("data/user_profile.json")
 def get_default_profile():
     return {
         "name": "Julián F.",
-        "email": "julian.trader@stratix.io",
-        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=stratix-master",
-        "plan": "Stratix PRO (Anual)",
-        "plan_tier": "PRO",
-        "billing_period": "annual",
-        "price_usd": 69,
-        "discount_code": "STRATIX30",
-        "status": "active",
-        "renewal_date": "2025-11-20",
+        "email": "julian.admin@stratix.io",
+        "avatar_url": "https://api.dicebear.com/7.x/bottts/svg?seed=stratix-master",
+        "role": "Super Administrador & Fundador",
+        "is_admin": True,
+        "plan": "Stratix ADMIN (Lifetime Unlimited)",
+        "plan_name": "STRATIX ADMIN / MASTER VIP (Ilimitado)",
+        "plan_tier": "ADMIN",
+        "billing_period": "lifetime",
+        "price_usd": 0,
+        "discount_code": "ADMIN_FOUNDER",
+        "status": "active_lifetime",
+        "renewal_date": "De por vida (Acceso Total Ilimitado)",
         "member_since": "Noviembre 2024",
-        "license_key": "STX-PRO-9842-8710-LIVE",
-        "max_accounts": 5,
+        "license_key": "STX-ADMIN-MASTER-UNLIMITED",
+        "max_accounts": 999,
         "linked_services": {
             "ninjatrader": True,
             "mt5": True,
-            "cloud_sync": True
+            "cloud_sync": True,
+            "unlimited_accounts": True,
+            "master_override": True
         }
     }
 
@@ -948,7 +953,11 @@ def regen_license():
     import secrets
     part1 = secrets.token_hex(2).upper()
     part2 = secrets.token_hex(2).upper()
-    profile["license_key"] = f"STX-{profile.get('plan_tier', 'PRO')}-{part1}-{part2}-LIVE"
+    tier = profile.get('plan_tier', 'ADMIN')
+    if profile.get('is_admin') or tier == 'ADMIN':
+        profile["license_key"] = f"STX-ADMIN-MASTER-{part1}-{part2}"
+    else:
+        profile["license_key"] = f"STX-{tier}-{part1}-{part2}-LIVE"
     save_user_profile(profile)
     return {"ok": True, "license_key": profile["license_key"]}
 

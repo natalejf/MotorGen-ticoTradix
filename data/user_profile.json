@@ -1,0 +1,25 @@
+{
+  "name": "Julián F.",
+  "email": "julian.admin@stratix.io",
+  "avatar_url": "https://api.dicebear.com/7.x/bottts/svg?seed=stratix-master",
+  "role": "Super Administrador & Fundador",
+  "is_admin": true,
+  "plan": "Stratix ADMIN (Lifetime Unlimited)",
+  "plan_name": "STRATIX ADMIN / MASTER VIP (Ilimitado)",
+  "plan_tier": "ADMIN",
+  "billing_period": "lifetime",
+  "price_usd": 0,
+  "discount_code": "ADMIN_FOUNDER",
+  "status": "active_lifetime",
+  "renewal_date": "De por vida (Acceso Total Ilimitado)",
+  "member_since": "Noviembre 2024",
+  "license_key": "STX-ADMIN-MASTER-UNLIMITED",
+  "max_accounts": 999,
+  "linked_services": {
+    "ninjatrader": true,
+    "mt5": true,
+    "cloud_sync": true,
+    "unlimited_accounts": true,
+    "master_override": true
+  }
+}

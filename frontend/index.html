@@ -1991,6 +1991,7 @@
             <div>
               <label class="block text-xs font-medium text-[#71717a] uppercase mb-1">Especialidad / Perfil</label>
               <select id="profile-select-role" class="w-full bg-[#14141d] border border-[#22222e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                <option value="Super Administrador & Fundador">👑 Super Administrador & Fundador (Acceso Total Ilimitado)</option>
                 <option value="Prop Firm Funded Trader">Trader de Cuentas Fondeadas (Prop Trader)</option>
                 <option value="Quantitative Algo Trader">Trader Algorítmico Cuantitativo</option>
                 <option value="Portfolio Risk Manager">Gestor de Portafolios & Riesgo</option>
@@ -2012,15 +2013,15 @@
 
         <!-- TAB 2: SUSCRIPCIÓN & PLAN -->
         <div id="profile-tab-content-subscription" class="space-y-4 hidden">
-          <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-950/40 via-[#14141d] to-[#14141d] border border-indigo-500/30">
+          <div id="subscription-card-container" class="p-4 rounded-xl bg-gradient-to-br from-indigo-950/40 via-[#14141d] to-[#14141d] border border-indigo-500/30">
             <div class="flex items-center justify-between mb-3">
               <div>
-                <span class="text-[10px] text-indigo-400 uppercase font-mono tracking-wider font-semibold">Plan Activo</span>
+                <span id="plan-tag-label" class="text-[10px] text-indigo-400 uppercase font-mono tracking-wider font-semibold">Plan Activo</span>
                 <h3 id="plan-name-display" class="text-base font-bold text-white">STRATIX PRO TRADER</h3>
               </div>
               <div class="text-right">
-                <div class="text-sm font-mono font-bold text-white">$69 <span class="text-xs text-[#71717a] font-normal">/mes</span></div>
-                <span class="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                <div id="plan-price-display" class="text-sm font-mono font-bold text-white">$69 <span class="text-xs text-[#71717a] font-normal">/mes</span></div>
+                <span id="plan-status-badge" class="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Suscripción Activa
                 </span>
               </div>
@@ -2032,20 +2033,31 @@
               </div>
               <div class="flex items-center justify-between">
                 <span>Conexión MetaTrader 5:</span>
-                <span class="text-emerald-400 font-semibold">✓ Ilimitada (Demo & Real)</span>
+                <span id="plan-mt5-display" class="text-emerald-400 font-semibold">✓ Ilimitada (Demo & Real)</span>
               </div>
               <div class="flex items-center justify-between">
                 <span>Motor Genético & Portafolios:</span>
-                <span class="text-emerald-400 font-semibold">✓ Sin límites de generación</span>
+                <span id="plan-engine-display" class="text-emerald-400 font-semibold">✓ Sin límites de generación</span>
               </div>
               <div class="flex items-center justify-between">
                 <span>Próxima Renovación:</span>
-                <span class="text-white font-mono">19 de Diciembre de 2026</span>
+                <span id="plan-renewal-display" class="text-white font-mono">19 de Diciembre de 2026</span>
               </div>
             </div>
           </div>
 
-          <div class="flex items-center justify-between p-3 rounded-lg bg-[#14141d] border border-[#22222e]">
+          <!-- ADMIN PERKS BANNER -->
+          <div id="admin-perks-box" class="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/15 border border-amber-500/30 text-amber-200 text-xs hidden space-y-1.5">
+            <div class="flex items-center gap-2 font-bold text-amber-300">
+              <span class="text-sm">👑</span>
+              <span>Modo Administrador & Fundador Activo (Sin Límites)</span>
+            </div>
+            <p class="text-[11px] text-amber-200/90 leading-relaxed">
+              Tu cuenta tiene privilegios maestros de por vida: <strong>100% Free</strong>, 0 cuotas, ejecuciones paralelas ilimitadas, 999+ cuentas en NinjaTrader 8 y MT5, y desbloqueo total del motor genético y creador de portafolios.
+            </p>
+          </div>
+
+          <div id="upgrade-promo-box" class="flex items-center justify-between p-3 rounded-lg bg-[#14141d] border border-[#22222e]">
             <div>
               <div class="text-white font-medium">¿Deseas escalar tu capacidad operativa?</div>
               <div class="text-[11px] text-[#71717a]">Mejora a Plan Institucional para hasta 20 cuentas simultáneas y servidor dedicado.</div>
