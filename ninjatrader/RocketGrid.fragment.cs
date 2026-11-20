@@ -173,7 +173,7 @@
                 Order o;if(b.Grid.TryGetValue(name,out o)){
                     if(o.Filled>0){b.Used.Add(name);RocketSave();continue;}
                     if(o.OrderState==OrderState.Rejected||o.OrderState==OrderState.Cancelled){b.Used.Add(name);RocketSave();continue;}
-                    if((o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted)&&(favor?o.StopPrice:o.LimitPrice)!=price&&(favor?o.StopPriceChanged:o.LimitPriceChanged)!=price){if(favor)o.StopPriceChanged=price;else o.LimitPriceChanged=price;var change=o;acc.Dispatcher.BeginInvoke(new Action(()=>acc.Change(new[]{change})));Print("RocketPass · reposición "+name+" · precio="+N(price));}
+                    // Los niveles limits y stops colocados no se recalculan ni mueven; se quedan fijos en su precio original.
                     continue;
                 }
                 int pending=b.Grid.Values.Where(EngineWorking).Sum(x=>x.Quantity-x.Filled);if(p.Quantity+pending+contracts>rocketMax)continue;

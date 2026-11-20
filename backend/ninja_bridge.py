@@ -141,8 +141,57 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
             raise HTTPException(409,'Ya hay un vínculo guardado. Abre NinjaTrader para reutilizarlo; crea otro vínculo solo para otro equipo.')
         key=uuid.uuid4().hex;token=secrets.token_urlsafe(32)
         store.put('ninja_connection',key,dict(id=key,name=('PropPass' if namespace=='ninja' else 'RocketPass')+' · NinjaTrader',
-                  hash=hashlib.sha256(token.encode()).hexdigest(),created=time.time()))
+                  hash=hashlib.sha256(token.encode()).hexdigest(),token=token,created=time.time()))
         return dict(id=key,token=token,url='http://127.0.0.1:8000',account='Sim101')
+
+    @app.post(prefix+'/auto-link')
+    async def auto_link():
+        import os, shutil
+        from pathlib import Path
+        localapp = os.environ.get('LOCALAPPDATA')
+        if not localapp:
+            raise HTTPException(400, 'No se encontró la variable LOCALAPPDATA')
+        folder_name = 'RocketPass' if namespace == 'rocket' else 'NinjaTrader'
+        key_filename = 'RocketBridge.key' if namespace == 'rocket' else 'CandleBridge.key'
+        target_dir = Path(localapp) / 'Stratix' / folder_name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        key_path = target_dir / key_filename
+
+        conns = store.listing('ninja_connection')
+        if conns:
+            conn = conns[0]
+            token = conn.get('token') or secrets.token_urlsafe(32)
+            conn['token'] = token
+            conn['hash'] = hashlib.sha256(token.encode()).hexdigest()
+            store.put('ninja_connection', conn['id'], conn)
+            cid = conn['id']
+        else:
+            cid = uuid.uuid4().hex
+            token = secrets.token_urlsafe(32)
+            conn = dict(id=cid, name=('PropPass' if namespace=='ninja' else 'RocketPass')+' · NinjaTrader',
+                        hash=hashlib.sha256(token.encode()).hexdigest(), token=token, created=time.time())
+            store.put('ninja_connection', cid, conn)
+
+        key_path.write_text(f"{cid}\n{token}\n", encoding='utf-8')
+
+        addon_name = 'RocketPassService.cs' if namespace == 'rocket' else 'StratixCandleService.cs'
+        source_addon = store.ROOT / 'ninjatrader' / addon_name
+        addon_dest_installed = None
+        user_home = Path(os.path.expanduser('~'))
+        candidate_dirs = [
+            user_home / 'OneDrive' / 'Documentos' / 'NinjaTrader 8' / 'bin' / 'Custom' / 'AddOns',
+            user_home / 'Documentos' / 'NinjaTrader 8' / 'bin' / 'Custom' / 'AddOns',
+            user_home / 'Documents' / 'NinjaTrader 8' / 'bin' / 'Custom' / 'AddOns'
+        ]
+        for cdir in candidate_dirs:
+            if cdir.exists() and source_addon.exists():
+                dest = cdir / addon_name
+                shutil.copy2(source_addon, dest)
+                addon_dest_installed = str(dest)
+                break
+
+        return dict(ok=True, id=cid, key_file=str(key_path), addon_installed=addon_dest_installed,
+                    message='Vinculación automática completada exitosamente en este equipo.')
 
     @app.get(prefix+'/download')
     def download():
