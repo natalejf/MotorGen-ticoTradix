@@ -84,6 +84,11 @@
             rocketLastClosed=closed;CurrentBar=rocketVotes.Count;
             if(live&&hadHistory)RocketTryEntry();
         }
+        private string RocketTrendJson() {
+            int up=rocketVotes.Count(v=>v>0),dn=rocketVotes.Count(v=>v<0),neu=rocketVotes.Count(v=>v==0);
+            string sig=rocketVotes.Count<rocketTrend?"ANALIZANDO":(up>dn?"ALCISTA":dn>up?"BAJISTA":"NEUTRAL");
+            return ",\"trend_signal\":"+J(sig)+",\"bullish_votes\":"+up+",\"bearish_votes\":"+dn+",\"neutral_votes\":"+neu+",\"trend_period\":"+rocketTrend+",\"trend_direction_mode\":"+J(rocketDirection);
+        }
         private void RocketTryEntry() {
             if(rocketVotes.Count<rocketTrend||!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
             CheckBridgeHealth();if(!masterTradingEnabled||(DateTime.UtcNow-lastTick).TotalSeconds>15)return;

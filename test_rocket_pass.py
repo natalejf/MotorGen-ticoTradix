@@ -115,6 +115,40 @@ def test_delete_group_clears_paused_queue_and_config_ack():
     assert c.get('/api/rocket/status').json()['groups']==[]
 
 
+def test_delete_connection_removes_old_links():
+    c=TestClient(app);p,h,s=native(c,'rocket')
+    assert any(x['id']==p['id'] for x in c.get('/api/rocket/status').json()['connections'])
+    res=c.delete('/api/rocket/connections/'+p['id'])
+    assert res.status_code==200 and res.json()['deleted'] is True
+    assert not any(x['id']==p['id'] for x in c.get('/api/rocket/status').json()['connections'])
+
+
+def test_license_lifecycle_wire_validation_and_trend_pulse():
+    c=TestClient(app)
+    created=c.post('/api/licenses',json=dict(holder='Cliente VPS',email='vps@test.com',plan='PRO',max_accounts=5,days_valid=30))
+    assert created.status_code==200,created.text
+    key=created.json()['license']['key']
+    wire=c.post('/api/licenses/validate?format=wire',json=dict(license_key=key,machine_name='VPS-01'))
+    assert wire.status_code==200 and 'ok=1' in wire.text and 'proppass_id=' in wire.text and 'rocket_id=' in wire.text
+    # Revoke and ensure 403
+    assert c.patch('/api/licenses/'+key,json=dict(active=False)).status_code==200
+    assert c.post('/api/licenses/validate',json=dict(license_key=key)).status_code==403
+    # Delete client license
+    assert c.delete('/api/licenses/'+key).status_code==200
+    # Download unified AddOn
+    dl=c.get('/api/stratix/download-addon')
+    assert dl.status_code==200 and 'StratixSuiteMenu' in dl.text and 'RocketTrendJson' in dl.text
+    # Verify auto-provisioned RocketPass credentials from license can pulse trend telemetry -> status
+    wmap=dict(line.split('=',1) for line in wire.text.splitlines() if '=' in line)
+    rk_id,rk_tok=wmap['rocket_id'],wmap['rocket_token']
+    pulse=dict(instance='vps1',version='1.9.0-vote40',realtime=True,account_available=True,master_enabled=False,
+               position_quantity=0,kind='candle_service_v1',data_ready=True,accounts=[],
+               trend_signal='BAJISTA',bullish_votes=12,bearish_votes=28,neutral_votes=0,trend_period=40,trend_direction_mode='AUTO')
+    assert c.post('/api/rocket/bridge/'+rk_id+'/pulse',headers={'X-Stratix-Key':rk_tok},json=pulse).status_code==200
+    snap=c.get('/api/rocket/status').json()['connections'][-1]['snapshot']
+    assert snap['trend_signal']=='BAJISTA' and snap['bullish_votes']==12 and snap['bearish_votes']==28
+
+
 def test_release_clears_confirmed_group_and_prevents_unconfigured_start():
     c=TestClient(app);p,h,s=native(c,'ninja')
     store.put('ninja_config_ack',p['id'],dict(instance='native1',group_id='old',settings={'accounts':['Eval-123']}))

@@ -1,14 +1,11 @@
-﻿{
-    "source":  "C:\\Users\\yo\\OneDrive\\Escritorio\\NinjaTrader EA Evals\\CandleController.cs",
-    "sha256":  "9de25da5b34bca10bf70a997d9d0b1bfe056aa6088c7e6b7995f7c8ef4bc9b0b",
-    "original_unchanged":  true,
-    "platform":  "NinjaTrader 8 AddOn",
-    "ui":  "WEB_ONLY",
-    "execution":  "SIM_ACCOUNTS_ONLY",
-    "candle_source":  "LIVE_TICKS_UTC",
-    "warmup":  "2 closed candles",
-    "compile_status":  "PENDING",
-    "native_compile_status":  "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
-    "compile_checked_at":  "2026-11-20T16:01:03.2287555Z",
-    "integrated_sha256":  "e344a2626715f512720defcf2d3fbc0b131df8c49fea3b227a0a1ffbb0146050"
+{
+  "source": "C:\\Users\\yo\\OneDrive\\Escritorio\\NinjaTrader EA Evals\\CandleController.cs",
+  "sha256": "9de25da5b34bca10bf70a997d9d0b1bfe056aa6088c7e6b7995f7c8ef4bc9b0b",
+  "original_unchanged": true,
+  "platform": "NinjaTrader 8 AddOn",
+  "ui": "WEB_ONLY",
+  "execution": "SIM_ACCOUNTS_ONLY",
+  "candle_source": "LIVE_TICKS_UTC",
+  "warmup": "2 closed candles",
+  "compile_status": "PENDING"
 }

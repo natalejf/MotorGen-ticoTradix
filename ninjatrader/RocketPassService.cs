@@ -564,6 +564,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
             rocketLastClosed=closed;CurrentBar=rocketVotes.Count;
             if(live&&hadHistory)RocketTryEntry();
         }
+        private string RocketTrendJson() {
+            int up=rocketVotes.Count(v=>v>0),dn=rocketVotes.Count(v=>v<0),neu=rocketVotes.Count(v=>v==0);
+            string sig=rocketVotes.Count<rocketTrend?"ANALIZANDO":(up>dn?"ALCISTA":dn>up?"BAJISTA":"NEUTRAL");
+            return ",\"trend_signal\":"+J(sig)+",\"bullish_votes\":"+up+",\"bearish_votes\":"+dn+",\"neutral_votes\":"+neu+",\"trend_period\":"+rocketTrend+",\"trend_direction_mode\":"+J(rocketDirection);
+        }
         private void RocketTryEntry() {
             if(rocketVotes.Count<rocketTrend||!masterTradingEnabled||PendingOrOpen()||rocketBaskets.Values.Any(x=>x.Closing))return;
             CheckBridgeHealth();if(!masterTradingEnabled||(DateTime.UtcNow-lastTick).TotalSeconds>15)return;
@@ -813,16 +818,20 @@ namespace NinjaTrader.NinjaScript.AddOns {
                     payload="{\"engine_results\":"+EngineResults()+",\"pause_code\":"+J(bridgeHealth.PauseCode)+",\"pause_reason\":"+J(bridgeHealth.PauseReason)+",\"bridge_failures\":"+bridgeHealth.Failures+",\"bridge_last_error\":"+J(bridgeHealth.LastError)+",\"pause_at\":"+J(bridgeHealth.PauseAt==DateTime.MinValue?"":bridgeHealth.PauseAt.ToString("o"))+",\"version\":\"1.9.0-vote40\",\"kind\":\"candle_service_v1\",\"account\":\"Sim101\",\"instance\":"+J(instance)+
                         ",\"realtime\":true,\"account_available\":"+B(rows.Count>0)+",\"master_enabled\":"+B(masterTradingEnabled)+
                         ",\"symbol\":"+J(Instrument==null?"":Instrument.FullName)+",\"timeframe_minutes\":"+timeframeMinutes+
-                        ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+
+                        ",\"data_ready\":"+B(Instrument!=null&&(DateTime.UtcNow-lastTick).TotalSeconds<15)+",\"closed_bars\":"+CurrentBar+RocketTrendJson()+
                         ",\"next_account\":"+J(groupAccounts.FirstOrDefault(n=>accountsConfig.ContainsKey(n)&&accountsConfig[n].Enabled&&accountsConfig[n].Status=="EN PROCESO"&&accountsConfig[n].DailyStatus=="EN PROCESO"))+
                         ",\"position_quantity\":"+quantity+",\"accounts\":["+string.Join(",",rows)+"],\"events\":["+events+"]"+
                         ",\"last_ack\":"+J(lastAck)+",\"ack_status\":"+J(ackStatus)+",\"ack_detail\":"+J(ackDetail)+"}";
                 }
-                if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey)) {
-                    string pairing=Path.Combine(Path.GetDirectoryName(configFilePath),"RocketBridge.key");
-                    if(File.Exists(pairing)){string[] lines=File.ReadAllLines(pairing);if(lines.Length>=2){connectionId=lines[0].Trim();connectionKey=lines[1].Trim();}}
-                    if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey))return;
+                string pairing=Path.Combine(Path.GetDirectoryName(configFilePath),"RocketBridge.key");
+                if(File.Exists(pairing)) {
+                    DateTime wt=File.GetLastWriteTimeUtc(pairing);
+                    if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey)||wt!=lastKeyFileWrite) {
+                        string[] lines=File.ReadAllLines(pairing);
+                        if(lines.Length>=2){connectionId=lines[0].Trim();connectionKey=lines[1].Trim();lastKeyFileWrite=wt;}
+                    }
                 }
+                if(string.IsNullOrEmpty(connectionId)||string.IsNullOrEmpty(connectionKey))return;
                 if(System.Threading.Interlocked.CompareExchange(ref pulseBusy,1,0)!=0)return;
                 System.Threading.Tasks.Task.Run(()=>SendPulse(payload));
             } catch(Exception ex) {PauseEntries("SERVICE_ERROR",ex.Message);}
@@ -841,10 +850,25 @@ namespace NinjaTrader.NinjaScript.AddOns {
             if(symbol==null)throw new Exception("Falta instrumento");
             return NinjaTrader.Cbi.Instrument.GetInstrument(symbol.Substring(7));
         }
+        private DateTime lastKeyFileWrite=DateTime.MinValue;
+        private string StratixServerUrl() {
+            try {
+                string cfg=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Stratix","StratixLicense.cfg");
+                if(File.Exists(cfg)) {
+                    foreach(string line in File.ReadAllLines(cfg)) {
+                        if(line.StartsWith("url=",StringComparison.OrdinalIgnoreCase)) {
+                            string u=line.Substring(4).Trim().TrimEnd('/');
+                            if(u.StartsWith("http://",StringComparison.OrdinalIgnoreCase)||u.StartsWith("https://",StringComparison.OrdinalIgnoreCase))return u;
+                        }
+                    }
+                }
+            }catch{}
+            return "http://127.0.0.1:8000";
+        }
         private void SendPulse(string payload) {
             Instrument prepared=null,previous=null;bool subscribed=false;
             try {
-                var request=(System.Net.HttpWebRequest)System.Net.WebRequest.Create("http://127.0.0.1:8000/api/rocket/bridge/"+Uri.EscapeDataString(connectionId)+"/pulse");
+                var request=(System.Net.HttpWebRequest)System.Net.WebRequest.Create(StratixServerUrl()+"/api/rocket/bridge/"+Uri.EscapeDataString(connectionId)+"/pulse");
                 request.Method="POST";request.ContentType="application/json";request.Timeout=2000;request.ReadWriteTimeout=2000;
                 request.Headers["X-Stratix-Key"]=connectionKey;
                 byte[] bytes=Encoding.UTF8.GetBytes(payload);request.ContentLength=bytes.Length;

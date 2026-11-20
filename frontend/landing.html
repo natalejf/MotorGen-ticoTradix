@@ -4,197 +4,201 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>STRATIX · Plataforma Cuantitativa y Motor Genético</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #07070a; color: #f3f4f6; }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    :root {
+      --stx-bg: #101210;
+      --stx-bg-alt: #12150f;
+      --stx-card: #1b1e19;
+      --stx-border: #38362c;
+      --stx-border-strong: #52442e;
+      --stx-gold: #bc8a50;
+      --stx-gold-light: #d6ae79;
+      --stx-gold-hover: #d0a36c;
+      --stx-text: #e8ece2;
+      --stx-secondary: #aeb5a4;
+      --stx-muted: #8f978b;
+      --stx-green: #51d58a;
+      --stx-red: #ef7171;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background-color: var(--stx-bg); color: var(--stx-text); }
+    .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
     .hero-glow {
-      background: radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.08) 35%, transparent 70%);
+      background: radial-gradient(circle at 50% 18%, rgba(188, 138, 80, 0.16) 0%, rgba(81, 213, 138, 0.05) 38%, transparent 72%);
     }
-    .glass-card {
-      background: rgba(16, 16, 24, 0.7);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+    .stx-glass {
+      background: linear-gradient(135deg, #20251b 0%, #151811 100%);
+      border: 1px solid var(--stx-border);
     }
-    .glass-card:hover {
-      border-color: rgba(255, 255, 255, 0.18);
+    .stx-glass:hover {
+      border-color: var(--stx-border-strong);
     }
-    .pro-card {
-      background: linear-gradient(180deg, rgba(23, 27, 44, 0.9) 0%, rgba(13, 14, 22, 0.95) 100%);
-      border: 1px solid rgba(99, 102, 241, 0.4);
-      box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.25);
+    .stx-pro-card {
+      background: linear-gradient(180deg, #242117 0%, #151811 100%);
+      border: 1px solid var(--stx-gold);
+      box-shadow: 0 0 40px -8px rgba(188, 138, 80, 0.28);
     }
-    .badge-pulse {
-      animation: pulseGlow 2.5s infinite;
+    .stx-btn-gold {
+      background: var(--stx-gold);
+      color: #14120c;
+      border: 1px solid #d0a36c;
+      transition: all 0.2s ease;
     }
+    .stx-btn-gold:hover {
+      background: var(--stx-gold-hover);
+      box-shadow: 0 8px 24px -6px rgba(188, 138, 80, 0.45);
+    }
+    .stx-btn-outline {
+      background: #24271f;
+      color: var(--stx-text);
+      border: 1px solid #414535;
+      transition: all 0.2s ease;
+    }
+    .stx-btn-outline:hover {
+      background: #2d3226;
+      border-color: var(--stx-gold);
+    }
+    .badge-pulse { animation: pulseGlow 2.5s infinite; }
     @keyframes pulseGlow {
-      0%, 100% { opacity: 0.9; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.98); }
+      0%, 100% { opacity: 0.95; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.95); }
     }
   </style>
 </head>
-<body class="selection:bg-indigo-500 selection:text-white antialiased overflow-x-hidden">
+<body class="selection:bg-[#bc8a50] selection:text-[#14120c] antialiased overflow-x-hidden">
 
-  <!-- ========================================== -->
-  <!-- TOP ANNOUNCEMENT BANNER                     -->
-  <!-- ========================================== -->
-  <div class="bg-gradient-to-r from-indigo-900/60 via-purple-900/60 to-blue-900/60 border-b border-indigo-500/20 py-2 px-4 text-center text-xs text-indigo-200">
+  <!-- TOP ANNOUNCEMENT BANNER -->
+  <div class="bg-[#1b1e19] border-b border-[#52442e] py-2 px-4 text-center text-xs text-[#d6ae79]">
     <span class="inline-flex items-center gap-1.5 font-semibold">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 badge-pulse"></span>
-      🎉 <strong>LANZAMIENTO OFICIAL STRATIX v2.5:</strong> Obtén <strong>30% OFF</strong> en planes anuales con el código <code class="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono font-bold">STRATIX30</code>
+      <span class="w-2 h-2 rounded-full bg-[#51d58a] badge-pulse"></span>
+      <strong>LANZAMIENTO OFICIAL STRATIX v2.5:</strong> Obtén <strong>30% OFF</strong> en planes anuales con el código <code class="bg-[#2b2418] border border-[#685234] px-1.5 py-0.5 rounded text-[#e8ece2] font-mono font-bold">STRATIX30</code>
     </span>
-    <a href="#pricing" class="ml-3 underline hover:text-white font-medium transition-colors">Aprovechar oferta →</a>
+    <a href="#pricing" class="ml-3 underline hover:text-[#e8ece2] font-medium transition-colors">Aprovechar oferta →</a>
   </div>
 
-  <!-- ========================================== -->
-  <!-- NAVIGATION BAR                             -->
-  <!-- ========================================== -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#07070a]/80 border-b border-white/5">
+  <!-- NAVIGATION BAR -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#12150f]/90 border-b border-[#38362c]">
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-      <!-- Logo -->
       <a href="/landing" class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-blue-600 flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-indigo-500/25 border border-indigo-400/30">
+        <div class="w-10 h-10 rounded-xl bg-[#2b2418] border border-[#8d683d] flex items-center justify-center font-extrabold text-[#d6ae79] text-base">
           STX
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <span class="text-xl font-extrabold tracking-tight text-white">STRATIX</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 font-semibold">QUANT LAB</span>
+            <span class="text-xl font-extrabold tracking-tight text-[#e8ece2]">STRATIX</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#302719] text-[#d6ae79] border border-[#685234] font-semibold">QUANT LAB</span>
           </div>
-          <span class="text-[10px] text-[#71717a] block -mt-0.5 font-medium">Algorithmic Trading & Execution</span>
+          <span class="text-[10px] text-[#8f978b] block -mt-0.5 font-medium">Algorithmic Trading & Execution</span>
         </div>
       </a>
 
-      <!-- Desktop Links -->
-      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-[#a0a0ab]">
-        <a href="#features" class="hover:text-white transition-colors">Características</a>
-        <a href="#methodology" class="hover:text-white transition-colors">Metodología</a>
-        <a href="#pricing" class="hover:text-white transition-colors">Planes y Precios</a>
-        <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-[#aeb5a4]">
+        <a href="#features" class="hover:text-[#d6ae79] transition-colors">Características</a>
+        <a href="#methodology" class="hover:text-[#d6ae79] transition-colors">Metodología</a>
+        <a href="#pricing" class="hover:text-[#d6ae79] transition-colors">Planes y Precios</a>
+        <a href="#faq" class="hover:text-[#d6ae79] transition-colors">FAQ</a>
       </nav>
 
-      <!-- Action Buttons -->
       <div class="flex items-center gap-3">
-        <a href="/app" class="relative group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:brightness-110 active:scale-95 transition-all">
+        <a href="/app" class="stx-btn-gold inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold active:scale-95">
           <span>Ingresar a la Plataforma</span>
-          <span class="group-hover:translate-x-0.5 transition-transform">→</span>
+          <span>→</span>
         </a>
       </div>
     </div>
   </header>
 
-  <!-- ========================================== -->
-  <!-- HERO SECTION                               -->
-  <!-- ========================================== -->
+  <!-- HERO SECTION -->
   <section class="relative pt-24 pb-20 overflow-hidden hero-glow">
     <div class="max-w-7xl mx-auto px-6 relative z-10 text-center">
-      <!-- Badge -->
-      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs font-semibold mb-8">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#2b2418] border border-[#685234] text-[#d6ae79] text-xs font-semibold mb-8">
+        <span class="w-2 h-2 rounded-full bg-[#51d58a]"></span>
         <span>MOTOR GENÉTICO EVOLUTIVO & AUTOMATIZACIÓN DE FUTUROS</span>
       </div>
 
-      <!-- Main Headline -->
-      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.12]">
-        Crea, Valida y Opera <span class="bg-gradient-to-r from-indigo-400 via-purple-300 to-blue-400 bg-clip-text text-transparent">Estrategias Rentables</span> en Piloto Automático.
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-[#e8ece2] max-w-4xl mx-auto leading-[1.12]">
+        Crea, Valida y Opera <span class="bg-gradient-to-r from-[#d6ae79] via-[#e5c898] to-[#bc8a50] bg-clip-text text-transparent">Estrategias Rentables</span> en Piloto Automático.
       </h1>
 
-      <!-- Subtitle -->
-      <p class="mt-6 text-base sm:text-xl text-[#a0a0ab] max-w-2xl mx-auto font-normal leading-relaxed">
-        El ecosistema cuantitativo institucional para traders y cuentas de fondeo. Encuentra ventaja estadística con algoritmos genéticos, verifica robustez con Monte Carlo y ejecuta en <strong>NinjaTrader 8</strong> sin latencia.
+      <p class="mt-6 text-base sm:text-xl text-[#aeb5a4] max-w-2xl mx-auto font-normal leading-relaxed">
+        El ecosistema cuantitativo institucional para traders y cuentas de fondeo. Encuentra ventaja estadística con algoritmos genéticos, verifica robustez con Monte Carlo y ejecuta en <strong class="text-[#e8ece2]">NinjaTrader 8</strong> con un único conector unificado.
       </p>
 
-      <!-- CTA Buttons -->
       <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="/app" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-blue-600 hover:brightness-110 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 group">
+        <a href="/app" class="stx-btn-gold w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
           <span>⚡ Abrir Plataforma Web</span>
-          <span class="group-hover:translate-x-1 transition-transform">→</span>
+          <span>→</span>
         </a>
-        <a href="#pricing" class="w-full sm:w-auto px-8 py-4 rounded-xl glass-card hover:bg-white/5 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2">
-          <span>💎 Ver Paquetes y Precios</span>
+        <a href="#pricing" class="stx-btn-outline w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+          <span>Ver Paquetes y Licencias</span>
         </a>
       </div>
 
       <!-- Trust Badges -->
-      <div class="mt-14 pt-10 border-t border-white/5 flex flex-wrap items-center justify-center gap-8 text-xs font-medium text-[#71717a]">
-        <div class="flex items-center gap-2">
-          <span class="text-emerald-400">✔</span> NinjaTrader 8 Nativo
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-emerald-400">✔</span> Apto Apex, Topstep & FTMO
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-emerald-400">✔</span> Tests Monte Carlo 1.000 Sims
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-emerald-400">✔</span> Descorrelación & Portafolios
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-emerald-400">✔</span> 100% Cero Código Necesario
-        </div>
+      <div class="mt-14 pt-10 border-t border-[#38362c] flex flex-wrap items-center justify-center gap-8 text-xs font-medium text-[#8f978b]">
+        <div class="flex items-center gap-2"><span class="text-[#51d58a]">✔</span> NinjaTrader 8 Nativo (Local & VPS)</div>
+        <div class="flex items-center gap-2"><span class="text-[#51d58a]">✔</span> Apto Apex, Topstep & FTMO</div>
+        <div class="flex items-center gap-2"><span class="text-[#51d58a]">✔</span> Tests Monte Carlo 1.000 Sims</div>
+        <div class="flex items-center gap-2"><span class="text-[#51d58a]">✔</span> AddOn Único con Licencia</div>
+        <div class="flex items-center gap-2"><span class="text-[#51d58a]">✔</span> 100% Cero Código Necesario</div>
       </div>
     </div>
 
     <!-- UI Mockup Preview -->
     <div class="max-w-6xl mx-auto px-6 mt-16 relative">
-      <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-2xl shadow-indigo-950/40 relative overflow-hidden border border-white/10">
-        <div class="flex items-center justify-between pb-4 border-b border-white/5">
+      <div class="stx-glass rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden border border-[#52442e]">
+        <div class="flex items-center justify-between pb-4 border-b border-[#38362c]">
           <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
-            <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
-            <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
-            <span class="ml-2 text-xs font-mono text-[#71717a]">stratix-lab // suite.preview</span>
+            <span class="w-3 h-3 rounded-full bg-[#ef7171]/80"></span>
+            <span class="w-3 h-3 rounded-full bg-[#bc8a50]/90"></span>
+            <span class="w-3 h-3 rounded-full bg-[#51d58a]/80"></span>
+            <span class="ml-2 text-xs font-mono text-[#8f978b]">stratix-lab // suite.preview</span>
           </div>
-          <div class="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> MOTOR ONLINE
+          <div class="flex items-center gap-2 text-xs font-mono text-[#51d58a] bg-[#163322] px-2.5 py-1 rounded-full border border-[#39684a]">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#51d58a] animate-pulse"></span> MOTOR ONLINE
           </div>
         </div>
 
-        <!-- Inner Preview Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <!-- Card 1 -->
-          <div class="bg-[#0b0b10] border border-white/5 rounded-xl p-4">
+          <div class="bg-[#101210] border border-[#38362c] rounded-xl p-4">
             <div class="flex justify-between items-start text-xs">
-              <span class="text-[#a0a0ab]">Portafolio Multi-Par #1</span>
-              <span class="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded font-mono">SQ 0.12 · Excelente</span>
+              <span class="text-[#aeb5a4]">Portafolio Multi-Par #1</span>
+              <span class="text-[#51d58a] font-bold bg-[#163322] border border-[#39684a] px-2 py-0.5 rounded font-mono">SQ 0.12 · Excelente</span>
             </div>
-            <div class="text-2xl font-bold font-mono text-white mt-2">+$144,445.85</div>
-            <div class="flex gap-4 mt-3 text-[11px] font-mono text-[#a0a0ab]">
-              <div>Ret/DD: <strong class="text-white">28.4x</strong></div>
-              <div>Max DD: <strong class="text-rose-400">10.5%</strong></div>
-              <div>Reducción: <strong class="text-emerald-400 font-bold">44.7%</strong></div>
+            <div class="text-2xl font-bold font-mono text-[#51d58a] mt-2">+$144,445.85</div>
+            <div class="flex gap-4 mt-3 text-[11px] font-mono text-[#aeb5a4]">
+              <div>Ret/DD: <strong class="text-[#e8ece2]">28.4x</strong></div>
+              <div>Max DD: <strong class="text-[#ef7171]">10.5%</strong></div>
+              <div>Reducción: <strong class="text-[#51d58a] font-bold">44.7%</strong></div>
             </div>
           </div>
 
-          <!-- Card 2 -->
-          <div class="bg-[#0b0b10] border border-white/5 rounded-xl p-4">
+          <div class="bg-[#101210] border border-[#38362c] rounded-xl p-4">
             <div class="flex justify-between items-start text-xs">
-              <span class="text-[#a0a0ab]">Retest de Robustez</span>
-              <span class="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded font-mono">SCORE 92/100</span>
+              <span class="text-[#aeb5a4]">Retest de Robustez</span>
+              <span class="text-[#d6ae79] font-bold bg-[#302719] border border-[#685234] px-2 py-0.5 rounded font-mono">SCORE 92/100</span>
             </div>
-            <div class="text-lg font-bold text-white mt-2 flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Aprobado Institucional
+            <div class="text-lg font-bold text-[#e8ece2] mt-2 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#51d58a]"></span> Aprobado Institucional
             </div>
-            <div class="mt-3 text-[11px] font-mono text-[#a0a0ab] space-y-1">
-              <div>Walk-Forward OOS: <span class="text-emerald-400 font-semibold">100% Positivo</span></div>
-              <div>Monte Carlo: <span class="text-emerald-400 font-semibold">98.4% Rentable</span></div>
+            <div class="mt-3 text-[11px] font-mono text-[#aeb5a4] space-y-1">
+              <div>Walk-Forward OOS: <span class="text-[#51d58a] font-semibold">100% Positivo</span></div>
+              <div>Monte Carlo: <span class="text-[#51d58a] font-semibold">98.4% Rentable</span></div>
             </div>
           </div>
 
-          <!-- Card 3 -->
-          <div class="bg-[#0b0b10] border border-white/5 rounded-xl p-4">
+          <div class="bg-[#101210] border border-[#38362c] rounded-xl p-4">
             <div class="flex justify-between items-start text-xs">
-              <span class="text-[#a0a0ab]">RocketPass & PropPass</span>
-              <span class="text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded font-mono">SECUENCIAL</span>
+              <span class="text-[#aeb5a4]">RocketPass & PropPass</span>
+              <span class="text-[#d6ae79] font-bold bg-[#302719] border border-[#685234] px-2 py-0.5 rounded font-mono">SECUENCIAL</span>
             </div>
-            <div class="text-2xl font-bold font-mono text-white mt-2">5 Cuentas</div>
-            <div class="mt-3 text-[11px] font-mono text-[#a0a0ab]">
-              <div>Estado: <span class="text-emerald-400 font-semibold">NinjaTrader Conectado</span></div>
-              <div class="text-[10px] text-[#71717a] mt-1">Cascada automática al alcanzar TP o SL</div>
+            <div class="text-2xl font-bold font-mono text-[#e8ece2] mt-2">5 Cuentas</div>
+            <div class="mt-3 text-[11px] font-mono text-[#aeb5a4]">
+              <div>Estado: <span class="text-[#51d58a] font-semibold">StratixConnector Activo</span></div>
+              <div class="text-[10px] text-[#8f978b] mt-1">Cascada automática al alcanzar TP o SL</div>
             </div>
           </div>
         </div>
@@ -202,213 +206,176 @@
     </div>
   </section>
 
-  <!-- ========================================== -->
-  <!-- FEATURES SECTION                           -->
-  <!-- ========================================== -->
-  <section id="features" class="py-24 border-t border-white/5 relative">
+  <!-- FEATURES SECTION -->
+  <section id="features" class="py-24 border-t border-[#38362c] relative">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center max-w-2xl mx-auto mb-16">
-        <h2 class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest">Capacidades del Ecosistema</h2>
-        <p class="text-3xl sm:text-4xl font-extrabold text-white mt-3">Diseñado para crear ventaja competitiva real.</p>
-        <p class="text-sm text-[#a0a0ab] mt-3">Cuatro módulos interconectados que convierten datos históricos brutos en portafolios blindados listos para ejecutar en vivo.</p>
+        <h2 class="text-xs font-mono font-bold text-[#bc8a50] uppercase tracking-widest">Capacidades del Ecosistema</h2>
+        <p class="text-3xl sm:text-4xl font-extrabold text-[#e8ece2] mt-3">Diseñado para crear ventaja competitiva real.</p>
+        <p class="text-sm text-[#aeb5a4] mt-3">Cuatro módulos interconectados que convierten datos históricos brutos en portafolios blindados listos para ejecutar en vivo.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Feature 1 -->
-        <div class="glass-card rounded-2xl p-6 transition-all">
-          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl mb-5">
-            🧬
-          </div>
-          <h3 class="text-lg font-bold text-white mb-2">Motor Genético Evolutivo</h3>
-          <p class="text-xs text-[#a0a0ab] leading-relaxed">
-            Combina automáticamente más de 20 indicadores técnicos, filtros de volatilidad y tipos de órdenes de mercado y límite en millones de permutaciones mediante algoritmos de selección genética.
-          </p>
+        <div class="stx-glass rounded-2xl p-6 transition-all">
+          <div class="w-12 h-12 rounded-xl bg-[#2b2418] border border-[#685234] text-[#d6ae79] flex items-center justify-center text-2xl mb-5">🧬</div>
+          <h3 class="text-lg font-bold text-[#e8ece2] mb-2">Motor Genético Evolutivo</h3>
+          <p class="text-xs text-[#aeb5a4] leading-relaxed">Combina automáticamente más de 20 indicadores técnicos, filtros de volatilidad y tipos de órdenes en millones de permutaciones mediante selección genética.</p>
         </div>
 
-        <!-- Feature 2 -->
-        <div class="glass-card rounded-2xl p-6 transition-all">
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mb-5">
-            🛡️
-          </div>
-          <h3 class="text-lg font-bold text-white mb-2">Ruta de Robustez Institucional</h3>
-          <p class="text-xs text-[#a0a0ab] leading-relaxed">
-            Filtra sobreajustes con 4 capas estrictas: Walk-Forward Out-of-Sample, simulación Monte Carlo con desorden de operaciones y prueba de estrés en multiverso de mercados.
-          </p>
+        <div class="stx-glass rounded-2xl p-6 transition-all">
+          <div class="w-12 h-12 rounded-xl bg-[#163322] border border-[#39684a] text-[#51d58a] flex items-center justify-center text-2xl mb-5">🛡️</div>
+          <h3 class="text-lg font-bold text-[#e8ece2] mb-2">Ruta de Robustez Institucional</h3>
+          <p class="text-xs text-[#aeb5a4] leading-relaxed">Filtra sobreajustes con 4 capas estrictas: Walk-Forward Out-of-Sample, simulación Monte Carlo con desorden de operaciones y estrés multi-mercado.</p>
         </div>
 
-        <!-- Feature 3 -->
-        <div class="glass-card rounded-2xl p-6 transition-all">
-          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-2xl mb-5">
-            📊
-          </div>
-          <h3 class="text-lg font-bold text-white mb-2">Creador de Portafolios Multi-Par</h3>
-          <p class="text-xs text-[#a0a0ab] leading-relaxed">
-            Mezcla estrategias de NASDAQ, Oro, EURUSD y USDJPY. Su matriz de correlación estilo StrategyQuant reduce drásticamente el Drawdown conjunto y estabiliza el crecimiento del capital.
-          </p>
+        <div class="stx-glass rounded-2xl p-6 transition-all">
+          <div class="w-12 h-12 rounded-xl bg-[#2b2418] border border-[#685234] text-[#d6ae79] flex items-center justify-center text-2xl mb-5">📊</div>
+          <h3 class="text-lg font-bold text-[#e8ece2] mb-2">Portafolios Multi-Par</h3>
+          <p class="text-xs text-[#aeb5a4] leading-relaxed">Mezcla estrategias de NASDAQ, Oro, EURUSD y USDJPY. Su matriz de correlación reduce drásticamente el Drawdown conjunto y estabiliza la curva.</p>
         </div>
 
-        <!-- Feature 4 -->
-        <div class="glass-card rounded-2xl p-6 transition-all">
-          <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-2xl mb-5">
-            ⚡
-          </div>
-          <h3 class="text-lg font-bold text-white mb-2">Stratix Pass (Prop & Rocket)</h3>
-          <p class="text-xs text-[#a0a0ab] leading-relaxed">
-            Ejecuta de manera secuencial o en cuadrícula de tendencia en NinjaTrader 8. Vinculación en 1 clic en tu máquina, con límites en USD y gestión de cuentas sin necesidad de programar.
-          </p>
+        <div class="stx-glass rounded-2xl p-6 transition-all">
+          <div class="w-12 h-12 rounded-xl bg-[#2b2418] border border-[#8d683d] text-[#d6ae79] flex items-center justify-center text-2xl mb-5">⚡</div>
+          <h3 class="text-lg font-bold text-[#e8ece2] mb-2">Stratix Pass (Prop & Rocket)</h3>
+          <p class="text-xs text-[#aeb5a4] leading-relaxed">Un único AddOn (<code class="text-[#d6ae79]">StratixConnector.cs</code>) para PC local o VPS. Conecta con tu Clave de Licencia y opera cuentas secuencialmente en NinjaTrader 8.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ========================================== -->
-  <!-- METHODOLOGY / LA RUTA STRATIX             -->
-  <!-- ========================================== -->
-  <section id="methodology" class="py-24 border-t border-white/5 bg-[#0a0a0f]">
+  <!-- METHODOLOGY -->
+  <section id="methodology" class="py-24 border-t border-[#38362c] bg-[#12150f]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center max-w-2xl mx-auto mb-16">
-        <h2 class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest">Flujo de Trabajo</h2>
-        <p class="text-3xl sm:text-4xl font-extrabold text-white mt-3">La Ruta Stratix: De la Idea a la Ejecución.</p>
+        <h2 class="text-xs font-mono font-bold text-[#bc8a50] uppercase tracking-widest">Flujo de Trabajo</h2>
+        <p class="text-3xl sm:text-4xl font-extrabold text-[#e8ece2] mt-3">La Ruta Stratix: De la Idea a la Ejecución.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Step 1 -->
-        <div class="p-6 rounded-2xl border border-white/5 bg-[#0f0f16] relative">
-          <span class="text-3xl font-extrabold font-mono text-indigo-500/30">01</span>
-          <h4 class="text-base font-bold text-white mt-2">Creación Genética</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2">El motor genera poblaciones de estrategias buscando alpha sobre datos históricos reales.</p>
+        <div class="p-6 rounded-2xl border border-[#38362c] bg-[#1b1e19]">
+          <span class="text-3xl font-extrabold font-mono text-[#bc8a50]/50">01</span>
+          <h4 class="text-base font-bold text-[#e8ece2] mt-2">Creación Genética</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2">El motor genera poblaciones de estrategias buscando alpha sobre datos históricos reales.</p>
         </div>
-
-        <!-- Step 2 -->
-        <div class="p-6 rounded-2xl border border-white/5 bg-[#0f0f16] relative">
-          <span class="text-3xl font-extrabold font-mono text-indigo-500/30">02</span>
-          <h4 class="text-base font-bold text-white mt-2">Retest & Filtro</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2">Solo las estrategias que sobreviven a Walk-Forward y Monte Carlo obtienen el pase a la siguiente fase.</p>
+        <div class="p-6 rounded-2xl border border-[#38362c] bg-[#1b1e19]">
+          <span class="text-3xl font-extrabold font-mono text-[#bc8a50]/50">02</span>
+          <h4 class="text-base font-bold text-[#e8ece2] mt-2">Retest & Filtro</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2">Solo las estrategias que sobreviven a Walk-Forward y Monte Carlo obtienen el pase a la siguiente fase.</p>
         </div>
-
-        <!-- Step 3 -->
-        <div class="p-6 rounded-2xl border border-white/5 bg-[#0f0f16] relative">
-          <span class="text-3xl font-extrabold font-mono text-indigo-500/30">03</span>
-          <h4 class="text-base font-bold text-white mt-2">Ensamblado de Portafolio</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2">Se combinan algoritmos descorrelacionados para amortiguar el drawdown y maximizar el Sharpe Ratio.</p>
+        <div class="p-6 rounded-2xl border border-[#38362c] bg-[#1b1e19]">
+          <span class="text-3xl font-extrabold font-mono text-[#bc8a50]/50">03</span>
+          <h4 class="text-base font-bold text-[#e8ece2] mt-2">Ensamblado de Portafolio</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2">Se combinan algoritmos descorrelacionados para amortiguar el drawdown y maximizar el Sharpe Ratio.</p>
         </div>
-
-        <!-- Step 4 -->
-        <div class="p-6 rounded-2xl border border-white/5 bg-[#0f0f16] relative">
-          <span class="text-3xl font-extrabold font-mono text-indigo-500/30">04</span>
-          <h4 class="text-base font-bold text-white mt-2">Pase a Fondeo / Live</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2">Stratix Pass opera automáticamente tus cuentas en NinjaTrader 8 con límites de pérdida y target estricto.</p>
+        <div class="p-6 rounded-2xl border border-[#38362c] bg-[#1b1e19]">
+          <span class="text-3xl font-extrabold font-mono text-[#bc8a50]/50">04</span>
+          <h4 class="text-base font-bold text-[#e8ece2] mt-2">Pase a Fondeo / Live</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2">Stratix Pass opera automáticamente tus cuentas en NinjaTrader 8 con límites de pérdida y target estricto.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ========================================== -->
-  <!-- PRICING & SUBSCRIPTION PACKAGES            -->
-  <!-- ========================================== -->
-  <section id="pricing" class="py-24 border-t border-white/5 relative">
+  <!-- PRICING & SUBSCRIPTION PACKAGES -->
+  <section id="pricing" class="py-24 border-t border-[#38362c] relative">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center max-w-2xl mx-auto mb-16">
-        <h2 class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest">Precios Transparentes</h2>
-        <p class="text-3xl sm:text-5xl font-extrabold text-white mt-3">Planes Adaptados a tu Escala.</p>
-        <p class="text-sm text-[#a0a0ab] mt-3">Desde traders independientes hasta gestores profesionales de cuentas de evaluación.</p>
+        <h2 class="text-xs font-mono font-bold text-[#bc8a50] uppercase tracking-widest">Precios Transparentes</h2>
+        <p class="text-3xl sm:text-5xl font-extrabold text-[#e8ece2] mt-3">Planes Adaptados a tu Escala.</p>
+        <p class="text-sm text-[#aeb5a4] mt-3">Desde traders independientes hasta gestores profesionales de cuentas de evaluación.</p>
 
-        <!-- Billing Toggle -->
-        <div class="mt-8 inline-flex items-center gap-3 p-1 rounded-xl bg-[#12121a] border border-white/10 text-xs font-semibold">
-          <span class="px-3 py-1.5 text-white">Facturación Mensual</span>
-          <span class="px-3 py-1.5 rounded-lg bg-indigo-500 text-white font-bold flex items-center gap-1 shadow-md">
-            <span>Anual (30% OFF)</span>
-          </span>
+        <div class="mt-8 inline-flex items-center gap-3 p-1 rounded-xl bg-[#1b1e19] border border-[#52442e] text-xs font-semibold">
+          <span class="px-3 py-1.5 text-[#aeb5a4]">Facturación Mensual</span>
+          <span class="px-3 py-1.5 rounded-lg bg-[#bc8a50] text-[#14120c] font-bold">Anual (30% OFF)</span>
         </div>
       </div>
 
-      <!-- Pricing Cards Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
         <!-- Plan 1: Starter -->
-        <div class="glass-card rounded-2xl p-8 flex flex-col justify-between">
+        <div class="stx-glass rounded-2xl p-8 flex flex-col justify-between">
           <div>
-            <div class="text-xs font-bold text-[#a0a0ab] tracking-wider uppercase font-mono">STARTER</div>
-            <h3 class="text-2xl font-bold text-white mt-1">Trader Individual</h3>
-            <p class="text-xs text-[#71717a] mt-2">Ideal para iniciarse en la creación de algoritmos genéticos y pruebas.</p>
+            <div class="text-xs font-bold text-[#8f978b] tracking-wider uppercase font-mono">STARTER</div>
+            <h3 class="text-2xl font-bold text-[#e8ece2] mt-1">Trader Individual</h3>
+            <p class="text-xs text-[#8f978b] mt-2">Ideal para iniciarse en la creación de algoritmos genéticos y pruebas.</p>
 
             <div class="mt-6 flex items-baseline gap-2">
-              <span class="text-4xl font-extrabold font-mono text-white">$34</span>
-              <span class="text-xs text-[#a0a0ab] font-medium">USD / mes (facturado anual)</span>
+              <span class="text-4xl font-extrabold font-mono text-[#e8ece2]">$34</span>
+              <span class="text-xs text-[#aeb5a4] font-medium">USD / mes (anual)</span>
             </div>
-            <div class="text-[11px] text-[#71717a] mt-1">o $49 USD pago mensual</div>
+            <div class="text-[11px] text-[#8f978b] mt-1">o $49 USD pago mensual</div>
 
-            <ul class="mt-8 space-y-3.5 text-xs text-[#a0a0ab]">
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Motor Genético hasta 50 generaciones</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> 1 Cuenta simulada en NinjaTrader 8</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Estrategias y Portafolios guardados</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Exportación de datos históricos</li>
-              <li class="flex items-center gap-2.5 text-[#52525b]"><span class="text-[#52525b]">✕</span> Sin módulo Monte Carlo 1.000 sims</li>
-              <li class="flex items-center gap-2.5 text-[#52525b]"><span class="text-[#52525b]">✕</span> Sin ejecución de cuentas en paralelo</li>
+            <ul class="mt-8 space-y-3.5 text-xs text-[#aeb5a4]">
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Motor Genético hasta 50 generaciones</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> 1 Licencia NinjaTrader 8 (PC o VPS)</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Estrategias y Portafolios guardados</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Exportación de datos históricos</li>
+              <li class="flex items-center gap-2.5 text-[#5c6356]"><span>✕</span> Sin módulo Monte Carlo 1.000 sims</li>
+              <li class="flex items-center gap-2.5 text-[#5c6356]"><span>✕</span> Sin ejecución multi-cuenta en cascada</li>
             </ul>
           </div>
 
-          <a href="/app" class="mt-8 w-full py-3 px-4 rounded-xl border border-white/10 hover:border-white/30 text-white font-semibold text-xs text-center transition-all">
+          <a href="/app" class="stx-btn-outline mt-8 w-full py-3 px-4 rounded-xl font-semibold text-xs text-center">
             Comenzar con Starter →
           </a>
         </div>
 
-        <!-- Plan 2: PRO (Recomendado) -->
-        <div class="pro-card rounded-2xl p-8 flex flex-col justify-between relative transform lg:-translate-y-2">
-          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-extrabold text-[10px] tracking-wider uppercase shadow-lg shadow-indigo-500/30">
-            🔥 MÁS POPULAR · RECOMENDADO
+        <!-- Plan 2: PRO -->
+        <div class="stx-pro-card rounded-2xl p-8 flex flex-col justify-between relative transform lg:-translate-y-2">
+          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-[#bc8a50] text-[#14120c] font-extrabold text-[10px] tracking-wider uppercase shadow-lg">
+            MÁS POPULAR · RECOMENDADO
           </div>
 
           <div>
-            <div class="text-xs font-bold text-indigo-400 tracking-wider uppercase font-mono">PRO QUANT</div>
-            <h3 class="text-2xl font-bold text-white mt-1">Ecosistema Completo</h3>
-            <p class="text-xs text-indigo-200/70 mt-2">Para traders que buscan pasar exámenes de fondeo y gestionar carteras.</p>
+            <div class="text-xs font-bold text-[#d6ae79] tracking-wider uppercase font-mono">PRO QUANT</div>
+            <h3 class="text-2xl font-bold text-[#e8ece2] mt-1">Ecosistema Completo</h3>
+            <p class="text-xs text-[#aeb5a4] mt-2">Para traders que buscan pasar exámenes de fondeo y gestionar carteras.</p>
 
             <div class="mt-6 flex items-baseline gap-2">
-              <span class="text-5xl font-extrabold font-mono text-white">$69</span>
-              <span class="text-xs text-indigo-200/80 font-medium">USD / mes (facturado anual)</span>
+              <span class="text-5xl font-extrabold font-mono text-[#e8ece2]">$69</span>
+              <span class="text-xs text-[#d6ae79] font-medium">USD / mes (anual)</span>
             </div>
-            <div class="text-[11px] text-indigo-300/60 mt-1">o $99 USD pago mensual</div>
+            <div class="text-[11px] text-[#8f978b] mt-1">o $99 USD pago mensual</div>
 
-            <ul class="mt-8 space-y-3.5 text-xs text-indigo-100">
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <strong>Motor Genético Ilimitado</strong> (sin tope de gens)</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <strong>Ruta de Robustez Completa</strong> (Walk-Forward + Monte Carlo)</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <strong>Creador de Portafolios Multi-Activo</strong> con reducción de DD</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <strong>Stratix Pass (PropPass + RocketPass)</strong></li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Hasta <strong>10 cuentas simultáneas</strong> en NinjaTrader 8</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <strong>Auto-vinculación en 1 Clic</strong> en este equipo</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Soporte prioritario vía Discord / Telegram</li>
+            <ul class="mt-8 space-y-3.5 text-xs text-[#e8ece2]">
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> <strong>Motor Genético Ilimitado</strong></li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> <strong>Ruta de Robustez Completa</strong> (WF + Monte Carlo)</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> <strong>Portafolios Multi-Activo</strong> con reducción de DD</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> <strong>AddOn Unificado</strong> (PropPass + RocketPass)</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Hasta <strong>10 cuentas simultáneas</strong> en NinjaTrader 8</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> <strong>Licencia válida en PC Local o VPS</strong></li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Soporte prioritario Discord / Telegram</li>
             </ul>
           </div>
 
-          <a href="/app" class="mt-8 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-blue-600 hover:brightness-110 text-white font-bold text-xs text-center shadow-lg shadow-indigo-600/40 transition-all">
+          <a href="/app" class="stx-btn-gold mt-8 w-full py-3.5 px-4 rounded-xl font-bold text-xs text-center">
             ⚡ Obtener Plan PRO →
           </a>
         </div>
 
         <!-- Plan 3: Institutional -->
-        <div class="glass-card rounded-2xl p-8 flex flex-col justify-between">
+        <div class="stx-glass rounded-2xl p-8 flex flex-col justify-between">
           <div>
-            <div class="text-xs font-bold text-[#a0a0ab] tracking-wider uppercase font-mono">INSTITUCIONAL</div>
-            <h3 class="text-2xl font-bold text-white mt-1">Master & Academias</h3>
-            <p class="text-xs text-[#71717a] mt-2">Para gestores, prop firms y operadores con múltiples terminales.</p>
+            <div class="text-xs font-bold text-[#8f978b] tracking-wider uppercase font-mono">INSTITUCIONAL</div>
+            <h3 class="text-2xl font-bold text-[#e8ece2] mt-1">Master & Academias</h3>
+            <p class="text-xs text-[#8f978b] mt-2">Para gestores, prop firms y operadores con múltiples terminales.</p>
 
             <div class="mt-6 flex items-baseline gap-2">
-              <span class="text-4xl font-extrabold font-mono text-white">$139</span>
-              <span class="text-xs text-[#a0a0ab] font-medium">USD / mes (facturado anual)</span>
+              <span class="text-4xl font-extrabold font-mono text-[#e8ece2]">$139</span>
+              <span class="text-xs text-[#aeb5a4] font-medium">USD / mes (anual)</span>
             </div>
-            <div class="text-[11px] text-[#71717a] mt-1">o $199 USD pago mensual</div>
+            <div class="text-[11px] text-[#8f978b] mt-1">o $199 USD pago mensual</div>
 
-            <ul class="mt-8 space-y-3.5 text-xs text-[#a0a0ab]">
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <strong>Todo lo incluido en PRO</strong> sin restricciones</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Cuentas <strong>Ilimitadas</strong> en NinjaTrader y MT5</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Puente Copy Trading multi-instancia</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Acceso a APIs institucionales privadas</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Sesión 1 a 1 de onboarding y optimización</li>
-              <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> Soporte VIP directo 24/7</li>
+            <ul class="mt-8 space-y-3.5 text-xs text-[#aeb5a4]">
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> <strong class="text-[#e8ece2]">Todo lo incluido en PRO</strong> sin restricciones</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Cuentas <strong class="text-[#e8ece2]">Ilimitadas</strong> en NinjaTrader y MT5</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Puente Copy Trading multi-instancia</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Panel de gestión de licencias para clientes</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Onboarding 1 a 1 y optimización</li>
+              <li class="flex items-center gap-2.5"><span class="text-[#51d58a] font-bold">✓</span> Soporte VIP directo 24/7</li>
             </ul>
           </div>
 
-          <a href="/app" class="mt-8 w-full py-3 px-4 rounded-xl border border-white/10 hover:border-white/30 text-white font-semibold text-xs text-center transition-all">
+          <a href="/app" class="stx-btn-outline mt-8 w-full py-3 px-4 rounded-xl font-semibold text-xs text-center">
             Contactar para Institucional →
           </a>
         </div>
@@ -416,66 +383,58 @@
     </div>
   </section>
 
-  <!-- ========================================== -->
-  <!-- FAQ SECTION                                -->
-  <!-- ========================================== -->
-  <section id="faq" class="py-24 border-t border-white/5 bg-[#0a0a0f]">
+  <!-- FAQ SECTION -->
+  <section id="faq" class="py-24 border-t border-[#38362c] bg-[#12150f]">
     <div class="max-w-4xl mx-auto px-6">
       <div class="text-center mb-16">
-        <h2 class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest">Preguntas Frecuentes</h2>
-        <p class="text-3xl font-extrabold text-white mt-3">Todo lo que necesitas saber.</p>
+        <h2 class="text-xs font-mono font-bold text-[#bc8a50] uppercase tracking-widest">Preguntas Frecuentes</h2>
+        <p class="text-3xl font-extrabold text-[#e8ece2] mt-3">Todo lo que necesitas saber.</p>
       </div>
 
       <div class="space-y-4">
-        <!-- Q1 -->
-        <div class="glass-card rounded-xl p-5">
-          <h4 class="text-sm font-bold text-white">¿Cómo se conecta Stratix con NinjaTrader 8?</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2 leading-relaxed">
-            Hemos integrado un sistema de <strong>Auto-Vinculación en 1 Clic</strong>. Al pulsar el botón dentro de la plataforma, el sistema instala el AddOn en tu carpeta de NinjaTrader y configura la clave de comunicación local en tu equipo automáticamente. Solo debes presionar F5 en NinjaScript Editor para compilar.
+        <div class="stx-glass rounded-xl p-5">
+          <h4 class="text-sm font-bold text-[#e8ece2]">¿Cómo se conecta Stratix con NinjaTrader 8 (en mi PC o en un VPS)?</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2 leading-relaxed">
+            Usas un único AddOn unificado (<code class="text-[#d6ae79]">StratixConnector.cs</code>) que incluye PropPass y RocketPass. En tu propia PC basta pulsar <strong>Instalar y Conectar (1 Clic)</strong>. En un VPS u otra PC, copias el archivo en <code class="text-[#d6ae79]">AddOns</code>, abres <strong>New → Stratix Connector (Licencia)</strong> dentro de NinjaTrader y pegas tu Clave de Licencia: ambos motores se vinculan solos.
           </p>
         </div>
 
-        <!-- Q2 -->
-        <div class="glass-card rounded-xl p-5">
-          <h4 class="text-sm font-bold text-white">¿Es compatible con firmas de fondeo como Apex, Topstep o MyFundedFutures?</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2 leading-relaxed">
-            Totalmente. Stratix Pass cuenta con autorización explícita de cuentas y control estricto de Stop Loss y Take Profit globales en USD. Su lógica en cascada opera una cuenta por vez y avanza a la siguiente sin violar las reglas de drawdown diario ni contratos máximos.
+        <div class="stx-glass rounded-xl p-5">
+          <h4 class="text-sm font-bold text-[#e8ece2]">¿Es compatible con firmas de fondeo como Apex, Topstep o MyFundedFutures?</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2 leading-relaxed">
+            Totalmente. Stratix Pass cuenta con autorización explícita de cuentas y control estricto de Stop Loss y Take Profit globales en USD. Su lógica secuencial opera una cuenta por vez y avanza a la siguiente al alcanzar objetivo o stop.
           </p>
         </div>
 
-        <!-- Q3 -->
-        <div class="glass-card rounded-xl p-5">
-          <h4 class="text-sm font-bold text-white">¿Necesito saber programar en C# o Python?</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2 leading-relaxed">
-            No, cero código. La plataforma genera, optimiza y analiza los algoritmos visualmente desde el navegador web. Cuando decides ejecutarlos, se transmiten en segundo plano a NinjaTrader de forma transparente.
+        <div class="stx-glass rounded-xl p-5">
+          <h4 class="text-sm font-bold text-[#e8ece2]">¿Necesito saber programar en C# o Python?</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2 leading-relaxed">
+            No, cero código. La plataforma genera, optimiza y analiza los algoritmos visualmente desde el navegador web y ejecuta las órdenes en segundo plano en NinjaTrader.
           </p>
         </div>
 
-        <!-- Q4 -->
-        <div class="glass-card rounded-xl p-5">
-          <h4 class="text-sm font-bold text-white">¿Cómo gestiono mi suscripción o mi licencia?</h4>
-          <p class="text-xs text-[#a0a0ab] mt-2 leading-relaxed">
-            Dentro de la plataforma tienes la sección <strong>Mi Cuenta & Licencia</strong>, donde puedes ver tu plan activo, fecha de renovación, clave de licencia y cambiar de plan o cancelar en cualquier momento con un solo clic.
+        <div class="stx-glass rounded-xl p-5">
+          <h4 class="text-sm font-bold text-[#e8ece2]">¿Cómo gestiono mi suscripción o licencias?</h4>
+          <p class="text-xs text-[#aeb5a4] mt-2 leading-relaxed">
+            Dentro de la plataforma cuentas con la sección <strong>Conexiones & Licencias</strong> y <strong>Mi Cuenta</strong>, donde puedes copiar tu clave, emitir licencias para clientes, revocar accesos o verificar qué equipo está conectado en tiempo real.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ========================================== -->
-  <!-- FOOTER                                     -->
-  <!-- ========================================== -->
-  <footer class="py-12 border-t border-white/5 bg-[#07070a] text-center text-xs text-[#71717a]">
+  <!-- FOOTER -->
+  <footer class="py-12 border-t border-[#38362c] bg-[#101210] text-center text-xs text-[#8f978b]">
     <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-2">
-        <span class="font-extrabold text-white tracking-wider">STRATIX</span>
-        <span>© 2026 Stratix Technologies Inc. Todos los derechos reservados.</span>
+        <span class="font-extrabold text-[#d6ae79] tracking-wider">STRATIX</span>
+        <span>© 2026 Stratix Quantitative Systems. Todos los derechos reservados.</span>
       </div>
       <div class="flex items-center gap-6">
-        <a href="/app" class="hover:text-white transition-colors">Plataforma Web</a>
-        <a href="#features" class="hover:text-white transition-colors">Características</a>
-        <a href="#pricing" class="hover:text-white transition-colors">Precios</a>
-        <a href="#faq" class="hover:text-white transition-colors">Soporte</a>
+        <a href="/app" class="hover:text-[#d6ae79] transition-colors">Plataforma Web</a>
+        <a href="#features" class="hover:text-[#d6ae79] transition-colors">Características</a>
+        <a href="#pricing" class="hover:text-[#d6ae79] transition-colors">Precios</a>
+        <a href="#faq" class="hover:text-[#d6ae79] transition-colors">Soporte</a>
       </div>
     </div>
   </footer>

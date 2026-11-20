@@ -959,7 +959,12 @@ def regen_license():
     else:
         profile["license_key"] = f"STX-{tier}-{part1}-{part2}-LIVE"
     save_user_profile(profile)
+    from backend.licenses import ensure_master_license
+    ensure_master_license()
     return {"ok": True, "license_key": profile["license_key"]}
+
+from backend.licenses import install_license_routes
+install_license_routes(app)
 
 # Frontend routing: /landing (Marketing SaaS), /app (Platform), / (Landing with direct access)
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

@@ -1,0 +1,13 @@
+﻿{
+    "unified_addon":  "C:\\Users\\yo\\OneDrive\\Escritorio\\Motor Genetico TradingNote\\ninjatrader\\StratixConnector.cs",
+    "modules":  [
+                    "StratixSuiteMenu",
+                    "StratixCandleService",
+                    "RocketPassService"
+                ],
+    "sha256":  "3ea0941228ad767b98c3ff4960e15a8b34756b59e6750e53e8ef745fef740422",
+    "compile_status":  "PENDING",
+    "native_compile_status":  "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
+    "compile_checked_at":  "2026-11-20T17:07:14.5655660Z",
+    "integrated_sha256":  "5ed469b11c9f9ecb339c047d03d718be8c04c8e0d6000e4e80fc396866deb8eb"
+}

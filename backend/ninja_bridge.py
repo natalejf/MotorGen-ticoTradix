@@ -187,6 +187,23 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
                   hash=hashlib.sha256(token.encode()).hexdigest(),token=token,created=time.time()))
         return dict(id=key,token=token,url='http://127.0.0.1:8000',account='Sim101')
 
+    @app.delete(prefix+'/connections/{key}')
+    def delete_connection(key:str):
+        required(key)
+        try:
+            snapshot=store.get('ninja_snapshot',key)
+        except KeyError:
+            snapshot={}
+        if snapshot.get('master_enabled') and snapshot.get('position_quantity',0)!=0 and time.time()-snapshot.get('at',0)<15:
+            raise HTTPException(409,'Pausa el servicio y cierra posiciones abiertas antes de eliminar este vínculo.')
+        with store.connect() as db:
+            db.execute("DELETE FROM records WHERE kind='ninja_connection' AND id=?",(key,))
+            db.execute("DELETE FROM records WHERE kind='ninja_snapshot' AND id=?",(key,))
+            db.execute("DELETE FROM records WHERE kind='ninja_config_ack' AND id=?",(key,))
+            db.execute("DELETE FROM records WHERE kind='ninja_queue' AND id=?",(key,))
+            db.execute("DELETE FROM records WHERE kind='ninja_command' AND json_extract(body,'$.connection')=?",(key,))
+        return {'deleted':True,'id':key}
+
     @app.post(prefix+'/auto-link')
     async def auto_link():
         import os, shutil
