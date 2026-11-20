@@ -5,9 +5,9 @@
                     "StratixCandleService",
                     "RocketPassService"
                 ],
-    "sha256":  "3ea0941228ad767b98c3ff4960e15a8b34756b59e6750e53e8ef745fef740422",
+    "sha256":  "1692c8ac828ea3f926300dd0d75094b521d3534846b171f370c849638cb84251",
     "compile_status":  "PENDING",
     "native_compile_status":  "COMPILECHECK_OK_NT8_REFERENCES_RUNTIME_PENDING",
-    "compile_checked_at":  "2026-11-20T17:07:14.5655660Z",
-    "integrated_sha256":  "5ed469b11c9f9ecb339c047d03d718be8c04c8e0d6000e4e80fc396866deb8eb"
+    "compile_checked_at":  "2026-11-20T17:41:47.2761951Z",
+    "integrated_sha256":  "f9796a17e54fcf6bc2fc5782aabdda1177a6d7c1f1d063220d61c5cfe62d4fcd"
 }

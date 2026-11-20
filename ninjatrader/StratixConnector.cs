@@ -977,6 +977,19 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         Instrument=next;timeframeMinutes=minutes;candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
                     }
                     Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
+                    if(action=="reset") {
+                        lock(accountsConfig) {
+                            foreach(string name in selected) {
+                                AccountRiskSettings s;if(!accountsConfig.TryGetValue(name,out s)){s=new AccountRiskSettings(name);accountsConfig[name]=s;}
+                                s.Status="EN PROCESO";s.Direction="FLAT";s.DailyStatus="EN PROCESO";s.SessionRealizedPnl=0;s.DailyCommissions=0;
+                                var accReset=GetAccountCached(name);
+                                if(accReset!=null)s.DailyStartBalance=accReset.Get(AccountItem.CashValue,Currency.UsDollar);
+                                s.LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");s.LastEntryBar=-1;s.LastEntryTime=DateTime.MinValue;
+                                s.TradesClosed=s.TradesWon=s.TradesLost=0;s.Enabled=true;
+                            }
+                        }
+                        SaveConfiguration();
+                    }
                     ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
                     lock(accountsConfig) {
                         foreach(var settings in accountsConfig.Values)settings.Enabled=false;
@@ -2699,6 +2712,19 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         Instrument=next;timeframeMinutes=minutes;RocketStopFeed();candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
                     }
                     Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
+                    if(action=="reset") {
+                        lock(accountsConfig) {
+                            foreach(string name in selected) {
+                                AccountRiskSettings s;if(!accountsConfig.TryGetValue(name,out s)){s=new AccountRiskSettings(name);accountsConfig[name]=s;}
+                                s.Status="EN PROCESO";s.Direction="FLAT";s.DailyStatus="EN PROCESO";s.SessionRealizedPnl=0;s.DailyCommissions=0;
+                                var accReset=GetAccountCached(name);
+                                if(accReset!=null)s.DailyStartBalance=accReset.Get(AccountItem.CashValue,Currency.UsDollar);
+                                s.LastResetDate=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");s.LastEntryBar=-1;s.LastEntryTime=DateTime.MinValue;
+                                s.TradesClosed=s.TradesWon=s.TradesLost=0;s.Enabled=true;
+                            }
+                        }
+                        SaveConfiguration();
+                    }
                     RocketConfigure(values);ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
                     lock(accountsConfig) {
                         foreach(var settings in accountsConfig.Values)settings.Enabled=false;
