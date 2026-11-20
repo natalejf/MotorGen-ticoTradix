@@ -406,7 +406,17 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
                             a['direction']='Flat'
                     store.put('ninja_snapshot',key,snapshot)
             except KeyError:pass
-            try:enqueue(key,'reset',Settings(**group['settings']),group_id,from_queue=True)
+            try:
+                snap_now = store.get('ninja_snapshot', key)
+                allowed_set = {a['name'] for a in visible_accounts(snap_now) if a.get('execution_allowed', True)}
+                reset_cfg = copy.deepcopy(group['settings'])
+                filtered = [acc for acc in reset_cfg.get('accounts', []) if acc in allowed_set]
+                unauth = [acc for acc in reset_cfg.get('accounts', []) if acc not in allowed_set]
+                if filtered:
+                    reset_cfg['accounts'] = filtered
+                    enqueue(key, 'reset', Settings(**reset_cfg), group_id, from_queue=True)
+                if unauth:
+                    reset_warnings.append(f"Cuentas sin autorizar ({', '.join(unauth)}): autorízalas en Conexiones → Cuentas de examen o quítalas del grupo para operar")
             except HTTPException as exc:
                 reset_warnings.append(str(exc.detail))
             except Exception as exc:
