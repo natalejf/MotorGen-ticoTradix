@@ -1,4 +1,5 @@
 """Discover connected NT8 accounts; current execution tests require local simulators."""
+import copy
 import hashlib
 import hmac
 import json
@@ -173,6 +174,10 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
                     raise HTTPException(409, 'Pausa el servicio y cierra las posiciones abiertas antes de eliminar el grupo activo.')
                 applied['group_id'] = None
                 store.put('ninja_config_ack', c_id, applied)
+                try:
+                    enqueue(c_id, 'release', from_queue=True)
+                except Exception:
+                    pass
 
         with store.connect() as db:
             db.execute("DELETE FROM records WHERE kind='ninja_group' AND id=?", (key,))
