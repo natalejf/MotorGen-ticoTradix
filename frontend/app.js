@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderTfPills();
   updateCombinationsCounter();
   initNeuralExplorer();
+  loadUserProfile();
 
   // Keep multi-TF pills in sync with the primary timeframe select
   const tfSel = document.getElementById('select-timeframe');
@@ -3885,3 +3886,177 @@ document.addEventListener('DOMContentLoaded',async()=>{
     }catch(error){result.textContent=error.message;}finally{button.disabled=false;}
   };
 });
+
+// ============================================================================
+// STRATIX USER PROFILE & SUBSCRIPTION MANAGEMENT
+// ============================================================================
+let userProfile = null;
+
+async function loadUserProfile() {
+  try {
+    const res = await fetch('/api/user/profile');
+    if (!res.ok) return;
+    userProfile = await res.json();
+    renderUserProfileUI();
+  } catch (e) {
+    console.warn('Error loading user profile:', e);
+  }
+}
+window.loadUserProfile = loadUserProfile;
+
+function renderUserProfileUI() {
+  if (!userProfile) return;
+  
+  // Header mini-profile
+  const headerAvatar = document.getElementById('header-user-avatar');
+  if (headerAvatar && userProfile.avatar_url) headerAvatar.src = userProfile.avatar_url;
+  const headerName = document.getElementById('header-user-name');
+  if (headerName && userProfile.name) headerName.textContent = userProfile.name;
+  const headerBadge = document.getElementById('header-user-badge');
+  if (headerBadge && userProfile.plan_tier) headerBadge.textContent = userProfile.plan_tier;
+
+  // Sidebar badge
+  const sidebarBadge = document.getElementById('sidebar-user-plan-badge');
+  if (sidebarBadge && userProfile.plan_tier) sidebarBadge.textContent = userProfile.plan_tier;
+
+  // Modal header
+  const modalAvatar = document.getElementById('modal-header-avatar');
+  if (modalAvatar && userProfile.avatar_url) modalAvatar.src = userProfile.avatar_url;
+  const modalName = document.getElementById('modal-user-display-name');
+  if (modalName && userProfile.name) modalName.textContent = userProfile.name;
+  const modalBadge = document.getElementById('modal-user-plan-badge');
+  if (modalBadge && userProfile.plan_tier) modalBadge.textContent = `PLAN ${userProfile.plan_tier}`;
+  const modalEmailText = document.getElementById('modal-user-email-text');
+  if (modalEmailText && userProfile.email) modalEmailText.textContent = userProfile.email;
+
+  // Tab 1 Inputs
+  const previewAvatar = document.getElementById('profile-preview-avatar');
+  if (previewAvatar && userProfile.avatar_url) previewAvatar.src = userProfile.avatar_url;
+  const inputAvatar = document.getElementById('profile-input-avatar');
+  if (inputAvatar && userProfile.avatar_url) inputAvatar.value = userProfile.avatar_url;
+  const inputName = document.getElementById('profile-input-name');
+  if (inputName && userProfile.name) inputName.value = userProfile.name;
+  const inputEmail = document.getElementById('profile-input-email');
+  if (inputEmail && userProfile.email) inputEmail.value = userProfile.email;
+  const selectRole = document.getElementById('profile-select-role');
+  if (selectRole && userProfile.role) selectRole.value = userProfile.role;
+
+  // Tab 2 Subscription
+  const planNameDisplay = document.getElementById('plan-name-display');
+  if (planNameDisplay && userProfile.plan_name) planNameDisplay.textContent = userProfile.plan_name;
+  const planAccountsDisplay = document.getElementById('plan-accounts-display');
+  if (planAccountsDisplay && userProfile.max_accounts) planAccountsDisplay.textContent = `${userProfile.max_accounts} Cuentas (Prop & Live)`;
+
+  // Tab 3 License
+  const licenseInput = document.getElementById('profile-license-key-input');
+  if (licenseInput && userProfile.license_key) licenseInput.value = userProfile.license_key;
+}
+
+function openUserProfileModal() {
+  const modal = document.getElementById('user-profile-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    switchProfileTab('profile');
+    if (!userProfile) loadUserProfile();
+  }
+}
+window.openUserProfileModal = openUserProfileModal;
+
+function closeUserProfileModal() {
+  const modal = document.getElementById('user-profile-modal');
+  if (modal) modal.classList.add('hidden');
+}
+window.closeUserProfileModal = closeUserProfileModal;
+
+function switchProfileTab(tabName) {
+  const tabs = ['profile', 'subscription', 'license', 'security'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tab-btn-${t}`);
+    const content = document.getElementById(`profile-tab-content-${t}`);
+    if (btn) {
+      if (t === tabName) {
+        btn.classList.add('border-indigo-500', 'text-white');
+        btn.classList.remove('border-transparent', 'text-[#8e8e9c]');
+      } else {
+        btn.classList.remove('border-indigo-500', 'text-white');
+        btn.classList.add('border-transparent', 'text-[#8e8e9c]');
+      }
+    }
+    if (content) {
+      if (t === tabName) content.classList.remove('hidden');
+      else content.classList.add('hidden');
+    }
+  });
+}
+window.switchProfileTab = switchProfileTab;
+
+function selectAvatar(url) {
+  const preview = document.getElementById('profile-preview-avatar');
+  if (preview) preview.src = url;
+  const input = document.getElementById('profile-input-avatar');
+  if (input) input.value = url;
+}
+window.selectAvatar = selectAvatar;
+
+function previewCustomAvatar(url) {
+  if (!url) return;
+  const preview = document.getElementById('profile-preview-avatar');
+  if (preview) preview.src = url;
+}
+window.previewCustomAvatar = previewCustomAvatar;
+
+async function saveUserProfileModalAction() {
+  const name = document.getElementById('profile-input-name')?.value?.trim() || 'Trader Pro';
+  const email = document.getElementById('profile-input-email')?.value?.trim() || 'trader@stratixquant.io';
+  const avatar_url = document.getElementById('profile-input-avatar')?.value?.trim() || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80';
+  const role = document.getElementById('profile-select-role')?.value || 'Prop Firm Funded Trader';
+
+  try {
+    const res = await fetch('/api/user/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, avatar_url, role })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      userProfile = data.profile;
+      renderUserProfileUI();
+      closeUserProfileModal();
+    } else {
+      alert('No se pudo guardar los cambios del perfil');
+    }
+  } catch (e) {
+    console.error('Error saving profile:', e);
+    alert('Error al guardar el perfil');
+  }
+}
+window.saveUserProfileModalAction = saveUserProfileModalAction;
+
+async function regenerateLicenseAction() {
+  if (!confirm('¿Deseas generar una nueva clave de licencia? Tu clave anterior dejará de ser válida.')) return;
+  try {
+    const res = await fetch('/api/user/regenerate-license', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      if (userProfile) userProfile.license_key = data.license_key;
+      renderUserProfileUI();
+      alert('✓ Nueva clave de licencia generada: ' + data.license_key);
+    }
+  } catch (e) {
+    console.error('Error regenerating license:', e);
+  }
+}
+window.regenerateLicenseAction = regenerateLicenseAction;
+
+function copyLicenseKeyAction() {
+  const input = document.getElementById('profile-license-key-input');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert('✓ Clave de licencia copiada al portapapeles');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    alert('✓ Clave de licencia copiada');
+  });
+}
+window.copyLicenseKeyAction = copyLicenseKeyAction;

@@ -891,9 +891,88 @@ install_ninja_routes(app)
 from backend.rocket_bridge import install_routes as install_rocket_routes
 install_rocket_routes(app)
 
-# Mount static frontend files if folder exists
+from fastapi.responses import FileResponse
+USER_PROFILE_FILE = Path("data/user_profile.json")
+
+def get_default_profile():
+    return {
+        "name": "Julián F.",
+        "email": "julian.trader@stratix.io",
+        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=stratix-master",
+        "plan": "Stratix PRO (Anual)",
+        "plan_tier": "PRO",
+        "billing_period": "annual",
+        "price_usd": 69,
+        "discount_code": "STRATIX30",
+        "status": "active",
+        "renewal_date": "2025-11-20",
+        "member_since": "Noviembre 2024",
+        "license_key": "STX-PRO-9842-8710-LIVE",
+        "max_accounts": 5,
+        "linked_services": {
+            "ninjatrader": True,
+            "mt5": True,
+            "cloud_sync": True
+        }
+    }
+
+def load_user_profile():
+    if USER_PROFILE_FILE.exists():
+        try:
+            return json.loads(USER_PROFILE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    profile = get_default_profile()
+    USER_PROFILE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    USER_PROFILE_FILE.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+    return profile
+
+def save_user_profile(profile_data):
+    USER_PROFILE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    USER_PROFILE_FILE.write_text(json.dumps(profile_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+@app.get("/api/user/profile")
+def get_profile():
+    return load_user_profile()
+
+@app.put("/api/user/profile")
+def update_profile(data: dict):
+    profile = load_user_profile()
+    profile.update(data)
+    save_user_profile(profile)
+    return {"ok": True, "profile": profile}
+
+@app.post("/api/user/regenerate-license")
+def regen_license():
+    profile = load_user_profile()
+    import secrets
+    part1 = secrets.token_hex(2).upper()
+    part2 = secrets.token_hex(2).upper()
+    profile["license_key"] = f"STX-{profile.get('plan_tier', 'PRO')}-{part1}-{part2}-LIVE"
+    save_user_profile(profile)
+    return {"ok": True, "license_key": profile["license_key"]}
+
+# Frontend routing: /landing (Marketing SaaS), /app (Platform), / (Landing with direct access)
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+
+@app.get("/landing", response_class=FileResponse)
+def serve_landing_page():
+    return FileResponse(os.path.join(frontend_dir, "landing.html"))
+
+@app.get("/app", response_class=FileResponse)
+def serve_app_platform():
+    return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+@app.get("/", response_class=FileResponse)
+def serve_root_page():
+    landing = os.path.join(frontend_dir, "landing.html")
+    if os.path.exists(landing):
+        return FileResponse(landing)
+    return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+# Mount static frontend files if folder exists
 if os.path.exists(frontend_dir):
+    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 if __name__ == "__main__":

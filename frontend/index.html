@@ -22,7 +22,7 @@
   <!-- ================================================================== -->
   <div class="flex min-h-screen">
 
-    <!-- SIDEBAR NAVIGATION (estilo TradingNote - Mejorada Estética & Divisor Marcado) -->
+    <!-- SIDEBAR NAVIGATION (Stratix Quant - Estructura & Navegación) -->
     <aside id="app-sidebar" class="sidebar-nav">
       <!-- Logo Header -->
       <div class="sidebar-header">
@@ -55,7 +55,7 @@
           <span id="badge-sidebar-strategies" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-[#a0a0ab] border border-white/5">0</span>
         </button>
 
-        <!-- Robustez y Retest (Ruta TradingNote) -->
+        <!-- Robustez y Retest (Ruta Estratégica Stratix) -->
         <div class="sidebar-section-label mt-4">Validación & Robustez</div>
         <button class="sidebar-item" data-section="retest-validation" onclick="showSection('retest-validation')">
           <span class="sidebar-item-icon">🛡️</span>
@@ -74,6 +74,19 @@
           <span class="flex-1">Portafolios Guardados</span>
           <span id="badge-sidebar-portfolios" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-[#a0a0ab] border border-white/5">0</span>
         </button>
+
+        <!-- Cuenta & Suscripción -->
+        <div class="sidebar-section-label mt-4">Cuenta & Suscripción</div>
+        <button class="sidebar-item text-left" onclick="openUserProfileModal()">
+          <span class="sidebar-item-icon">👤</span>
+          <span class="flex-1">Mi Cuenta & Licencia</span>
+          <span id="sidebar-user-plan-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">PRO</span>
+        </button>
+        <a href="/landing" class="sidebar-item text-[#a0a0ab] hover:text-white flex items-center">
+          <span class="sidebar-item-icon">🌐</span>
+          <span class="flex-1">Web Stratix & Planes</span>
+          <span class="text-[10px] text-zinc-500">↗</span>
+        </a>
       </nav>
 
       <!-- Footer with Engine Pulse -->
@@ -125,6 +138,16 @@
             </button>
             <button id="btn-stop-exploration" class="btn-secondary text-xs py-1.5 px-4 hidden text-white border-white font-bold bg-[#1e1e24]">
               <span>⏹</span> Detener Motor
+            </button>
+            <div class="h-5 w-px bg-white/10 mx-1 hidden sm:block"></div>
+            <button id="user-header-pill" onclick="openUserProfileModal()" class="flex items-center gap-2.5 px-2.5 py-1 rounded-lg bg-[#141419] border border-white/10 hover:border-white/30 transition-all text-left">
+              <img id="header-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-6 h-6 rounded-full object-cover border border-white/20">
+              <div class="leading-tight hidden md:block">
+                <div class="flex items-center gap-1.5">
+                  <span id="header-user-name" class="text-xs font-semibold text-white max-w-[100px] truncate">Trader Pro</span>
+                  <span id="header-user-badge" class="text-[9px] px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">PRO</span>
+                </div>
+              </div>
             </button>
           </div>
         </header>
@@ -1105,7 +1128,7 @@
       <!-- END SECTION: SAVED STRATEGIES -->
 
       <!-- ============================================================ -->
-      <!-- SECTION: RETEST & ROBUSTNESS (Ruta TradingNote)               -->
+      <!-- SECTION: RETEST & ROBUSTNESS (Ruta Stratix)                   -->
       <!-- ============================================================ -->
       <div id="section-retest-validation" class="app-section hidden">
         <header class="border-b border-[#1c1c22] bg-[#0c0c10] px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
@@ -1881,6 +1904,223 @@
           <div>Linajes: <span class="text-white font-mono">Axones de mutación</span></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- MODAL: PERFIL DE USUARIO, SUSCRIPCIÓN & LICENCIA STRATIX            -->
+  <!-- ================================================================== -->
+  <div id="user-profile-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-[#0e0e14] border border-[#22222e] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-[#14141d] border-b border-[#22222e] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img id="modal-header-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/50 shadow-md">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="modal-user-display-name" class="text-base font-bold text-white">Trader Pro</h2>
+              <span id="modal-user-plan-badge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30">PLAN PRO</span>
+            </div>
+            <p id="modal-user-email-text" class="text-xs text-[#8e8e9c]">trader@stratixquant.io</p>
+          </div>
+        </div>
+        <button onclick="closeUserProfileModal()" class="w-8 h-8 rounded-lg bg-[#1a1a24] hover:bg-[#252533] text-zinc-400 hover:text-white flex items-center justify-center transition-colors">
+          ✕
+        </button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex border-b border-[#22222e] bg-[#0b0b10] px-6 text-xs font-semibold">
+        <button id="tab-btn-profile" onclick="switchProfileTab('profile')" class="py-3 px-3 border-b-2 border-indigo-500 text-white transition-colors">
+          👤 Perfil
+        </button>
+        <button id="tab-btn-subscription" onclick="switchProfileTab('subscription')" class="py-3 px-3 border-b-2 border-transparent text-[#8e8e9c] hover:text-white transition-colors">
+          💳 Suscripción & Plan
+        </button>
+        <button id="tab-btn-license" onclick="switchProfileTab('license')" class="py-3 px-3 border-b-2 border-transparent text-[#8e8e9c] hover:text-white transition-colors">
+          🔑 Licencia NinjaTrader
+        </button>
+        <button id="tab-btn-security" onclick="switchProfileTab('security')" class="py-3 px-3 border-b-2 border-transparent text-[#8e8e9c] hover:text-white transition-colors">
+          🔒 Seguridad
+        </button>
+      </div>
+
+      <!-- Modal Body (Tab Panels) -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-5 text-xs text-[#a0a0ab]">
+        
+        <!-- TAB 1: PERFIL -->
+        <div id="profile-tab-content-profile" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-[#71717a] uppercase mb-1.5">Foto de Perfil (Avatar)</label>
+            <div class="flex items-center gap-3 mb-3">
+              <img id="profile-preview-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Preview" class="w-14 h-14 rounded-full object-cover border-2 border-indigo-500 shadow-md">
+              <div class="flex-1">
+                <div class="text-[11px] text-white font-medium mb-1.5">Seleccionar Avatar Rápido:</div>
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="selectAvatar('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80')" class="w-8 h-8 rounded-full overflow-hidden border border-white/20 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 transition-all">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" class="w-full h-full object-cover">
+                  </button>
+                  <button type="button" onclick="selectAvatar('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80')" class="w-8 h-8 rounded-full overflow-hidden border border-white/20 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 transition-all">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" class="w-full h-full object-cover">
+                  </button>
+                  <button type="button" onclick="selectAvatar('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80')" class="w-8 h-8 rounded-full overflow-hidden border border-white/20 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 transition-all">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80" class="w-full h-full object-cover">
+                  </button>
+                  <button type="button" onclick="selectAvatar('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80')" class="w-8 h-8 rounded-full overflow-hidden border border-white/20 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 transition-all">
+                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80" class="w-full h-full object-cover">
+                  </button>
+                </div>
+              </div>
+            </div>
+            <input id="profile-input-avatar" type="text" placeholder="O pega una URL de imagen personalizada..." class="w-full bg-[#14141d] border border-[#22222e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" onchange="previewCustomAvatar(this.value)">
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-[#71717a] uppercase mb-1">Nombre Completo</label>
+              <input id="profile-input-name" type="text" value="Trader Pro" class="w-full bg-[#14141d] border border-[#22222e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#71717a] uppercase mb-1">Correo Electrónico</label>
+              <input id="profile-input-email" type="email" value="trader@stratixquant.io" class="w-full bg-[#14141d] border border-[#22222e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-[#71717a] uppercase mb-1">Especialidad / Perfil</label>
+              <select id="profile-select-role" class="w-full bg-[#14141d] border border-[#22222e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                <option value="Prop Firm Funded Trader">Trader de Cuentas Fondeadas (Prop Trader)</option>
+                <option value="Quantitative Algo Trader">Trader Algorítmico Cuantitativo</option>
+                <option value="Portfolio Risk Manager">Gestor de Portafolios & Riesgo</option>
+                <option value="Futures Scalper">Operador de Futuros CME (NQ / ES / CL)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-[#71717a] uppercase mb-1">Zona Horaria de Operaciones</label>
+              <select id="profile-select-tz" class="w-full bg-[#14141d] border border-[#22222e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                <option value="America/New_York">Nueva York (EST / EDT - CME)</option>
+                <option value="America/Argentina/Buenos_Aires">Buenos Aires (ART)</option>
+                <option value="Europe/Madrid">Madrid (CET / CEST)</option>
+                <option value="America/Mexico_City">Ciudad de México (CST)</option>
+                <option value="America/Bogota">Bogotá (COT)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: SUSCRIPCIÓN & PLAN -->
+        <div id="profile-tab-content-subscription" class="space-y-4 hidden">
+          <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-950/40 via-[#14141d] to-[#14141d] border border-indigo-500/30">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <span class="text-[10px] text-indigo-400 uppercase font-mono tracking-wider font-semibold">Plan Activo</span>
+                <h3 id="plan-name-display" class="text-base font-bold text-white">STRATIX PRO TRADER</h3>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-mono font-bold text-white">$69 <span class="text-xs text-[#71717a] font-normal">/mes</span></div>
+                <span class="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Suscripción Activa
+                </span>
+              </div>
+            </div>
+            <div class="space-y-1.5 text-[11px] text-[#a0a0b2] border-t border-white/5 pt-3">
+              <div class="flex items-center justify-between">
+                <span>Cuentas Simultáneas NinjaTrader 8:</span>
+                <span id="plan-accounts-display" class="text-white font-mono font-bold">5 Cuentas (Prop & Live)</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Conexión MetaTrader 5:</span>
+                <span class="text-emerald-400 font-semibold">✓ Ilimitada (Demo & Real)</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Motor Genético & Portafolios:</span>
+                <span class="text-emerald-400 font-semibold">✓ Sin límites de generación</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Próxima Renovación:</span>
+                <span class="text-white font-mono">19 de Diciembre de 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[#14141d] border border-[#22222e]">
+            <div>
+              <div class="text-white font-medium">¿Deseas escalar tu capacidad operativa?</div>
+              <div class="text-[11px] text-[#71717a]">Mejora a Plan Institucional para hasta 20 cuentas simultáneas y servidor dedicado.</div>
+            </div>
+            <a href="/landing#pricing" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shrink-0">
+              Ver Planes ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- TAB 3: LICENCIA NINJATRADER -->
+        <div id="profile-tab-content-license" class="space-y-4 hidden">
+          <div class="p-4 rounded-xl bg-[#14141d] border border-[#22222e]">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] text-[#71717a] uppercase font-mono tracking-wider font-semibold">Clave de Licencia Activa</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">VÁLIDA</span>
+            </div>
+            <div class="flex items-center gap-2 mb-3">
+              <input id="profile-license-key-input" type="text" readonly value="STX-PRO-9842-8710-LIVE" class="flex-1 bg-[#09090d] border border-[#22222e] rounded-lg px-3 py-2 text-xs font-mono font-bold text-indigo-300 tracking-wider">
+              <button type="button" onclick="copyLicenseKeyAction()" class="px-3 py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 font-semibold text-xs flex items-center gap-1 transition-colors">
+                <span>📋</span> Copiar
+              </button>
+              <button type="button" onclick="regenerateLicenseAction()" class="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-zinc-300 font-medium text-xs transition-colors" title="Generar una nueva clave">
+                <span>🔄</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-[#8e8e9c]">
+              Esta clave vincula tu cuenta Stratix con tus AddOns de NinjaTrader 8 (RocketPass y StratixCandle).
+            </p>
+          </div>
+
+          <div class="p-3.5 rounded-lg bg-blue-950/20 border border-blue-500/20 text-[11px] space-y-2">
+            <div class="font-semibold text-blue-300 flex items-center gap-1.5">
+              <span>💡</span> ¿Dónde se coloca esta clave?
+            </div>
+            <p class="text-zinc-300 leading-relaxed">
+              <strong>1. En esta máquina (Modo Automático):</strong> En la sección de NinjaTrader pulsa <em>"1-Click Auto-Link"</em> y el sistema guardará la clave automáticamente en tu carpeta de NinjaTrader.<br>
+              <strong>2. En otros equipos / VPS:</strong> La clave se guarda automáticamente en <code class="bg-black/40 px-1 py-0.5 rounded font-mono text-zinc-200">%LOCALAPPDATA%\Stratix\CandleBridge.key</code> o se introduce en la ventana de configuración del AddOn.
+            </p>
+          </div>
+        </div>
+
+        <!-- TAB 4: SEGURIDAD -->
+        <div id="profile-tab-content-security" class="space-y-4 hidden">
+          <div class="p-3.5 rounded-lg bg-[#14141d] border border-[#22222e] space-y-3">
+            <div class="font-medium text-white">Seguridad de la Cuenta</div>
+            <div class="flex items-center justify-between py-2 border-b border-white/5">
+              <div>
+                <div class="text-white">Autenticación de 2 Factores (2FA)</div>
+                <div class="text-[11px] text-[#71717a]">Protege el acceso a tus claves API y credenciales.</div>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">Activado</span>
+            </div>
+            <div class="flex items-center justify-between py-2">
+              <div>
+                <div class="text-white">Sesiones Activas</div>
+                <div class="text-[11px] text-[#71717a]">1 Sesión Local (Windows 11 · Stratix Desktop UI)</div>
+              </div>
+              <span class="text-[10px] text-zinc-400 font-mono">127.0.0.1</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 bg-[#14141d] border-t border-[#22222e] flex items-center justify-between">
+        <button type="button" onclick="closeUserProfileModal()" class="btn-secondary text-xs py-1.5 px-4">
+          Cancelar
+        </button>
+        <button type="button" onclick="saveUserProfileModalAction()" class="btn-primary text-xs py-1.5 px-5 font-bold shadow-lg shadow-indigo-500/20">
+          Guardar Cambios
+        </button>
+      </div>
+
     </div>
   </div>
 
