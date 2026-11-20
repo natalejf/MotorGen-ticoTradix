@@ -586,7 +586,18 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         AccountRiskSettings settings;accountsConfig.TryGetValue(name,out settings);
                         var working=acc.Orders.Cast<Order>().Where(o=>(Instrument!=null&&o.Instrument.FullName==Instrument.FullName||engineLeases.Values.Any(l=>l.Account==name&&l.Symbol==o.Instrument.FullName))&&(o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled)).Select(o=>"{\"name\":"+J(o.Name)+",\"type\":"+J(o.OrderType.ToString())+",\"state\":"+J(o.OrderState.ToString())+",\"quantity\":"+o.Quantity+",\"limit\":"+N(o.LimitPrice)+",\"stop\":"+N(o.StopPrice)+"}");
                         double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),open=acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
-                        double daily=settings==null?acc.Get(AccountItem.RealizedProfitLoss,Currency.UsDollar)+open:cash+open-settings.DailyStartBalance-(settings.NinjaTraderHandlesCommissions?0:settings.DailyCommissions);
+                        double ntRealized=acc.Get(AccountItem.RealizedProfitLoss,Currency.UsDollar);
+                        if(settings!=null && qty==0 && acc.Provider==Provider.Simulator && (settings.Status=="PASS"||settings.Status=="BURNED"||settings.DailyStatus=="TARGET_REACHED"||settings.DailyStatus=="LOSS_LIMIT_REACHED")) {
+                            double refBal=settings.StartBalance>0?settings.StartBalance:50000.0;
+                            if(Math.Abs(ntRealized)<0.01 && Math.Abs(cash-refBal)<1.0) {
+                                settings.Status="EN PROCESO";settings.DailyStatus="EN PROCESO";settings.Direction="FLAT";
+                                settings.SessionRealizedPnl=0;settings.DailyCommissions=0;settings.DailyStartBalance=cash;
+                                settings.TradesClosed=settings.TradesWon=settings.TradesLost=0;settings.Enabled=true;
+                                SaveConfiguration();
+                                Print("Reset detectado en NinjaTrader para "+name+" ($"+N(cash)+"): estado restablecido a EN PROCESO.");
+                            }
+                        }
+                        double daily=settings==null?ntRealized+open:cash+open-settings.DailyStartBalance-(settings.NinjaTraderHandlesCommissions?0:settings.DailyCommissions);
                         rows.Add("{\"name\":"+J(name)+",\"connected\":true,\"execution_allowed\":"+B(CanExecute(acc))+",\"provider\":"+J(acc.Provider.ToString())+",\"enabled\":"+B(settings!=null&&settings.Enabled)+",\"position_quantity\":"+qty+
                             ",\"direction\":"+J(pos==null?"Flat":pos.MarketPosition.ToString())+",\"balance\":"+N(acc.Get(AccountItem.CashValue,Currency.UsDollar))+
                             ",\"unrealized\":"+N(acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar))+
@@ -715,18 +726,6 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 else if(action=="configure" || action=="reset") {
                     if(masterTradingEnabled)throw new Exception("Pausa primero las entradas");
                     string[] selected=values["accounts"].Split(',');
-                    if(values["accounts"].Split(',').Any(n=>engineLeases.Values.Any(l=>l.Account==n)))throw new Exception("Una cuenta seleccionada pertenece a un algoritmo del motor; detén esa asignación primero");
-                    foreach(string name in selected) {
-                        Account acc=GetAccountCached(name);if(acc!=null && acc.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat))throw new Exception("Configura con las cuentas simuladas sin posiciones");
-                        if(acc!=null && acc.Orders.Cast<Order>().Any(o=>o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled))throw new Exception("Hay órdenes pendientes en la cuenta simulada");
-                    }
-                    if(selected.Length==0||selected.Any(a=>!allowedAccounts.Contains(a)||GetAccountCached(a)==null))throw new Exception("Solo cuentas simuladas autorizadas y disponibles");
-                    Instrument next=prepared;if(next==null)throw new Exception("Instrumento no disponible");
-                    int minutes=int.Parse(values["timeframe_minutes"]);if(minutes<1||minutes>60)throw new Exception("Temporalidad inválida");
-                    if(Instrument==null||Instrument.FullName!=next.FullName||minutes!=timeframeMinutes) {
-                        Instrument=next;timeframeMinutes=minutes;candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
-                    }
-                    Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
                     if(action=="reset") {
                         lock(accountsConfig) {
                             foreach(string name in selected) {
@@ -740,6 +739,18 @@ namespace NinjaTrader.NinjaScript.AddOns {
                         }
                         SaveConfiguration();
                     }
+                    if(values["accounts"].Split(',').Any(n=>engineLeases.Values.Any(l=>l.Account==n)))throw new Exception("Una cuenta seleccionada pertenece a un algoritmo del motor; detén esa asignación primero");
+                    foreach(string name in selected) {
+                        Account acc=GetAccountCached(name);if(acc!=null && acc.Positions.Cast<Position>().Any(p=>p.MarketPosition!=MarketPosition.Flat))throw new Exception("Configura con las cuentas simuladas sin posiciones");
+                        if(acc!=null && acc.Orders.Cast<Order>().Any(o=>o.OrderState==OrderState.Working||o.OrderState==OrderState.Accepted||o.OrderState==OrderState.Submitted||o.OrderState==OrderState.PartFilled))throw new Exception("Hay órdenes pendientes en la cuenta simulada");
+                    }
+                    if(selected.Length==0||selected.Any(a=>!allowedAccounts.Contains(a)||GetAccountCached(a)==null))throw new Exception("Solo cuentas simuladas autorizadas y disponibles");
+                    Instrument next=prepared;if(next==null)throw new Exception("Instrumento no disponible");
+                    int minutes=int.Parse(values["timeframe_minutes"]);if(minutes<1||minutes>60)throw new Exception("Temporalidad inválida");
+                    if(Instrument==null||Instrument.FullName!=next.FullName||minutes!=timeframeMinutes) {
+                        Instrument=next;timeframeMinutes=minutes;candleSlot=-1;CurrentBar=0;lastTick=DateTime.MinValue;
+                    }
+                    Func<string,double> number=name=>double.Parse(values[name],System.Globalization.CultureInfo.InvariantCulture);
                     ReserveAccounts(selected.Concat(engineLeases.Values.Select(l=>l.Account)));groupAccounts=selected;
                     lock(accountsConfig) {
                         foreach(var settings in accountsConfig.Values)settings.Enabled=false;
