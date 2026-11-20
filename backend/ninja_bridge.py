@@ -124,16 +124,36 @@ def install_routes(app,namespace='ninja',settings_model=Settings,group_model=Gro
 
     @app.delete(prefix+'/groups/{key}')
     def delete_group(key:str):
+        # 1. Limpiar de cualquier cola de ejecución para no bloquear la eliminación
         for pending in store.listing('ninja_queue'):
-            if pending.get('state') not in ('COMPLETED','STOPPED') and any(i['group_id']==key for i in pending['items']):raise HTTPException(409,'El grupo pertenece a una cola pendiente; no se puede eliminar')
+            items = pending.get('items', [])
+            if any(i.get('group_id') == key for i in items):
+                new_items = [i for i in items if i.get('group_id') != key]
+                pending['items'] = new_items
+                if not new_items:
+                    pending['state'] = 'STOPPED'
+                    pending['index'] = 0
+                else:
+                    pending['index'] = min(pending.get('index', 0), max(0, len(new_items) - 1))
+                store.put('ninja_queue', pending['id'], pending)
+
+        # 2. Verificar conexiones activas: solo bloquear si hay posición de mercado abierta en vivo
         for connection in store.listing('ninja_connection'):
             try:
-                snapshot=store.get('ninja_snapshot',connection['id']);applied=store.get('ninja_config_ack',connection['id'])
-            except KeyError:continue
-            if applied.get('group_id')==key and (snapshot.get('master_enabled') or snapshot.get('position_quantity')):
-                raise HTTPException(409,'Pausa y espera a estar flat antes de retirar el grupo aplicado')
-        with store.connect() as db:db.execute("DELETE FROM records WHERE kind='ninja_group' AND id=?",(key,))
-        return {'deleted':True}
+                snapshot = store.get('ninja_snapshot', connection['id'])
+                applied = store.get('ninja_config_ack', connection['id'])
+            except KeyError:
+                continue
+            if applied.get('group_id') == key:
+                is_live = bool(snapshot.get('master_enabled') and snapshot.get('position_quantity', 0) != 0)
+                if is_live:
+                    raise HTTPException(409, 'Pausa el servicio y cierra las posiciones abiertas antes de eliminar el grupo activo.')
+                applied['group_id'] = None
+                store.put('ninja_config_ack', connection['id'], applied)
+
+        with store.connect() as db:
+            db.execute("DELETE FROM records WHERE kind='ninja_group' AND id=?", (key,))
+        return {'deleted': True}
 
     @app.post(prefix+'/connections')
     async def create(new_device:bool=False):
