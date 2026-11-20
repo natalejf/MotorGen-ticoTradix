@@ -662,7 +662,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
             Instrument prepared=null,previous=null;bool subscribed=false;
             try {
                 var request=(System.Net.HttpWebRequest)System.Net.WebRequest.Create(StratixServerUrl()+"/api/ninja/bridge/"+Uri.EscapeDataString(connectionId)+"/pulse");
-                request.Method="POST";request.ContentType="application/json";request.Timeout=2000;request.ReadWriteTimeout=2000;
+                request.Method="POST";request.ContentType="application/json";request.Timeout=5000;request.ReadWriteTimeout=5000;
                 request.Headers["X-Stratix-Key"]=connectionKey;
                 byte[] bytes=Encoding.UTF8.GetBytes(payload);request.ContentLength=bytes.Length;
                 using(var stream=request.GetRequestStream())stream.Write(bytes,0,bytes.Length);

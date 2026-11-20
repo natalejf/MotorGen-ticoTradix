@@ -20,14 +20,12 @@ from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / 'data' / 'copy_trading.sqlite3'
+_INITIALIZED_DBS = set()
 
 
-@contextmanager
-def connect():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(str(DB_PATH), timeout=15)
-    db.row_factory = sqlite3.Row
+def _init_schema(db):
     db.execute('PRAGMA journal_mode=WAL')
+    db.execute('PRAGMA synchronous=NORMAL')
     db.executescript('''
         CREATE TABLE IF NOT EXISTS records(kind TEXT, id TEXT, body TEXT NOT NULL, PRIMARY KEY(kind,id));
         CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, created REAL, account TEXT, deployment TEXT, message TEXT);
@@ -50,6 +48,18 @@ def connect():
         with db:
             db.execute("INSERT OR IGNORE INTO ea_queue SELECT id,json_extract(body,'$.account'),json_extract(body,'$.state'),json_extract(body,'$.created') FROM records WHERE kind='ea_command'")
             db.execute("INSERT OR IGNORE INTO records VALUES('schema','ea_queue_v1','{}')")
+
+
+@contextmanager
+def connect():
+    db_str = str(DB_PATH)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(db_str, timeout=15)
+    db.row_factory = sqlite3.Row
+    db.execute('PRAGMA busy_timeout=15000')
+    if db_str not in _INITIALIZED_DBS:
+        _init_schema(db)
+        _INITIALIZED_DBS.add(db_str)
     try:
         with db:
             yield db
