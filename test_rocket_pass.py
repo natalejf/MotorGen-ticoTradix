@@ -104,6 +104,17 @@ def test_evaluation_authorization_can_be_revoked_without_selecting_another_accou
     assert response.json()['settings']=={'accounts':[]}
 
 
+def test_delete_group_clears_paused_queue_and_config_ack():
+    c=TestClient(app);p,h,s=native(c,'rocket')
+    s['accounts'][0]['execution_allowed']=True
+    c.post('/api/rocket/bridge/'+p['id']+'/pulse',headers=h,json=s)
+    group=c.post('/api/rocket/groups',json=dict(name='Rocket Del',settings=dict(accounts=['Eval-123']))).json()
+    assert c.post('/api/rocket/queues/'+p['id']+'/groups/'+group['id'],json={}).status_code==200
+    res=c.delete('/api/rocket/groups/'+group['id'])
+    assert res.status_code==200 and res.json()=={'deleted':True}
+    assert c.get('/api/rocket/status').json()['groups']==[]
+
+
 def test_release_clears_confirmed_group_and_prevents_unconfigured_start():
     c=TestClient(app);p,h,s=native(c,'ninja')
     store.put('ninja_config_ack',p['id'],dict(instance='native1',group_id='old',settings={'accounts':['Eval-123']}))
