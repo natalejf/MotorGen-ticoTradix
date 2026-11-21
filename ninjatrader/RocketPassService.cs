@@ -411,7 +411,7 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private bool IsCandleOrder(string account,Order order) {
             if(order==null)return false;
             string n=order.Name??"";
-            if(string.IsNullOrEmpty(n)||n.Equals("Close",StringComparison.OrdinalIgnoreCase)||n.Equals("Flatten",StringComparison.OrdinalIgnoreCase)||n.IndexOf("Flatten",StringComparison.OrdinalIgnoreCase)>=0)return true;
+            if(string.IsNullOrEmpty(n)||n.IndexOf("Close",StringComparison.OrdinalIgnoreCase)>=0||n.IndexOf("Flatten",StringComparison.OrdinalIgnoreCase)>=0)return true;
             if(n.StartsWith("ROCKET_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("STX",StringComparison.OrdinalIgnoreCase))return true;
             if(n.StartsWith("Entry",StringComparison.OrdinalIgnoreCase)||n.StartsWith("RocketEntry",StringComparison.OrdinalIgnoreCase))return true;
             if(n.StartsWith("ROCKET_TP_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("ROCKET_SL_",StringComparison.OrdinalIgnoreCase))return true;
@@ -579,10 +579,26 @@ namespace NinjaTrader.NinjaScript.AddOns {
         private bool RocketGridOrder(Order o) {return o!=null&&(o.Name.StartsWith("ROCKET_LIMIT_")||o.Name.StartsWith("ROCKET_STOP_"));}
         private void RocketCancelGrid(Account acc) {var orders=acc.Orders.Cast<Order>().Where(o=>Instrument!=null&&o.Instrument.FullName==Instrument.FullName&&RocketGridOrder(o)&&EngineWorking(o)).ToArray();if(orders.Length>0)QueueCancel(acc,orders);}
         private void RocketExecution(ExecutionEventArgs e) {
-            if(e.Execution==null||e.Execution.Order==null||!rocketBaskets.ContainsKey(e.Execution.Account.Name))return;
-            var order=e.Execution.Order;var basket=rocketBaskets[e.Execution.Account.Name];
+            if(e.Execution==null||e.Execution.Order==null||e.Execution.Account==null)return;
+            string accName=e.Execution.Account.Name;
+            RocketBasket basket;if(!rocketBaskets.TryGetValue(accName,out basket)){basket=new RocketBasket();rocketBaskets[accName]=basket;}
+            var order=e.Execution.Order;
             if(RocketGridOrder(order))basket.Used.Add(order.Name);
-            if(order.Name.StartsWith("ROCKET_TP_")||order.Name.StartsWith("ROCKET_SL_")){basket.Closing=true;RocketCancelGrid(e.Execution.Account);}
+            if(order.Name.StartsWith("ROCKET_TP_",StringComparison.OrdinalIgnoreCase)||order.Name.StartsWith("ROCKET_SL_",StringComparison.OrdinalIgnoreCase)){
+                basket.Closing=true;RocketCancelGrid(e.Execution.Account);
+                AccountRiskSettings s;
+                if(accountsConfig.TryGetValue(accName,out s)&&s.Status=="EN PROCESO"){
+                    if(order.Name.StartsWith("ROCKET_TP_",StringComparison.OrdinalIgnoreCase)&&s.Target>0&&s.TpUsd>=s.Target){
+                        s.Status="PASS";s.DailyStatus="TARGET_REACHED";s.Enabled=false;
+                        Print("RocketPass: [TP ALCANZADO] Cuenta "+accName+" completó objetivo. Avanzando automáticamente a la siguiente cuenta...");
+                        SaveConfiguration();
+                    }else if(order.Name.StartsWith("ROCKET_SL_",StringComparison.OrdinalIgnoreCase)&&s.MaxLoss>0&&s.SlUsd>=s.MaxLoss){
+                        s.Status="BURNED";s.DailyStatus="LOSS_LIMIT_REACHED";s.Enabled=false;
+                        Print("RocketPass: [SL ALCANZADO] Cuenta "+accName+" alcanzó stop máximo. Avanzando automáticamente a la siguiente cuenta...");
+                        SaveConfiguration();
+                    }
+                }
+            }
             RocketSave();
         }
         private void RocketMonitor() {

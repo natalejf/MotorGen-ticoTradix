@@ -4,7 +4,7 @@
         private bool IsCandleOrder(string account,Order order) {
             if(order==null)return false;
             string n=order.Name??"";
-            if(string.IsNullOrEmpty(n)||n.Equals("Close",StringComparison.OrdinalIgnoreCase)||n.Equals("Flatten",StringComparison.OrdinalIgnoreCase)||n.IndexOf("Flatten",StringComparison.OrdinalIgnoreCase)>=0)return true;
+            if(string.IsNullOrEmpty(n)||n.IndexOf("Close",StringComparison.OrdinalIgnoreCase)>=0||n.IndexOf("Flatten",StringComparison.OrdinalIgnoreCase)>=0)return true;
             if(n.StartsWith("ROCKET_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("STX",StringComparison.OrdinalIgnoreCase))return true;
             if(n.StartsWith("Entry",StringComparison.OrdinalIgnoreCase)||n.StartsWith("RocketEntry",StringComparison.OrdinalIgnoreCase))return true;
             if(n.StartsWith("TP_",StringComparison.OrdinalIgnoreCase)||n.StartsWith("SL_",StringComparison.OrdinalIgnoreCase))return true;
