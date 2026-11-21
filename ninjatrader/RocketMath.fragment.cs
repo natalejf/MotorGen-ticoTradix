@@ -18,6 +18,10 @@
             }
             public static double[] Protection(double average,int quantity,double point,double loss,double profit,int side,double tick) {
                 if(quantity<=0||point<=0||tick<=0||loss<=0||profit<=0||Math.Abs(side)!=1)throw new ArgumentException("Riesgo de cesta invÃ¡lido");
-                return new[]{Math.Round((average-side*loss/(quantity*point))/tick)*tick,Math.Round((average+side*profit/(quantity*point))/tick)*tick};
+                double rawSl=average-side*loss/(quantity*point);
+                double rawTp=average+side*profit/(quantity*point);
+                double sl=side==1?Math.Ceiling(rawSl/tick)*tick:Math.Floor(rawSl/tick)*tick;
+                double tp=side==1?Math.Ceiling(rawTp/tick)*tick:Math.Floor(rawTp/tick)*tick;
+                return new[]{sl,tp};
             }
         }

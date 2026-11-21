@@ -1245,8 +1245,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
             if (eff.DailyLossLimit > 0 && dailyLossRoom > 0) tradeSlUsd = Math.Min(tradeSlUsd, dailyLossRoom);
             tradeSlUsd = Math.Max(1.0, tradeSlUsd);
 
-            double tpDelta = tradeTpUsd / (qty * ptVal);
-            double slDelta = tradeSlUsd / (qty * ptVal);
+            double commBuffer = qty * (settings.CommissionPerContract > 0 ? settings.CommissionPerContract * 2.0 : 4.50) + (Instrument.MasterInstrument.TickSize * ptVal * qty * 2.0);
+            double tpDelta = (tradeTpUsd + commBuffer) / (qty * ptVal);
+            double slDelta = Math.Max(Instrument.MasterInstrument.TickSize * ptVal * qty, tradeSlUsd - commBuffer) / (qty * ptVal);
 
             double tpPrice = 0.0;
             double slPrice = 0.0;
@@ -1265,8 +1266,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 exitAction = OrderAction.Buy;
             }
 
-            tpPrice = Math.Round(tpPrice / Instrument.MasterInstrument.TickSize) * Instrument.MasterInstrument.TickSize;
-            slPrice = Math.Round(slPrice / Instrument.MasterInstrument.TickSize) * Instrument.MasterInstrument.TickSize;
+            tpPrice = (pos.MarketPosition == MarketPosition.Long ? Math.Ceiling(tpPrice / Instrument.MasterInstrument.TickSize) : Math.Floor(tpPrice / Instrument.MasterInstrument.TickSize)) * Instrument.MasterInstrument.TickSize;
+            slPrice = (pos.MarketPosition == MarketPosition.Long ? Math.Ceiling(slPrice / Instrument.MasterInstrument.TickSize) : Math.Floor(slPrice / Instrument.MasterInstrument.TickSize)) * Instrument.MasterInstrument.TickSize;
 
             double currentPrice = lastRealtimePrice > 0 ? lastRealtimePrice : avgPrice;
             double tickSize = Instrument.MasterInstrument.TickSize;

@@ -1495,8 +1495,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
             if (eff.DailyLossLimit > 0 && dailyLossRoom > 0) tradeSlUsd = Math.Min(tradeSlUsd, dailyLossRoom);
             tradeSlUsd = Math.Max(1.0, tradeSlUsd);
 
-            double tpDelta = tradeTpUsd / (qty * ptVal);
-            double slDelta = tradeSlUsd / (qty * ptVal);
+            double commBuffer = qty * (settings.CommissionPerContract > 0 ? settings.CommissionPerContract * 2.0 : 4.50) + (Instrument.MasterInstrument.TickSize * ptVal * qty * 2.0);
+            double tpDelta = (tradeTpUsd + commBuffer) / (qty * ptVal);
+            double slDelta = Math.Max(Instrument.MasterInstrument.TickSize * ptVal * qty, tradeSlUsd - commBuffer) / (qty * ptVal);
 
             double tpPrice = 0.0;
             double slPrice = 0.0;
@@ -1515,8 +1516,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 exitAction = OrderAction.Buy;
             }
 
-            tpPrice = Math.Round(tpPrice / Instrument.MasterInstrument.TickSize) * Instrument.MasterInstrument.TickSize;
-            slPrice = Math.Round(slPrice / Instrument.MasterInstrument.TickSize) * Instrument.MasterInstrument.TickSize;
+            tpPrice = (pos.MarketPosition == MarketPosition.Long ? Math.Ceiling(tpPrice / Instrument.MasterInstrument.TickSize) : Math.Floor(tpPrice / Instrument.MasterInstrument.TickSize)) * Instrument.MasterInstrument.TickSize;
+            slPrice = (pos.MarketPosition == MarketPosition.Long ? Math.Ceiling(slPrice / Instrument.MasterInstrument.TickSize) : Math.Floor(slPrice / Instrument.MasterInstrument.TickSize)) * Instrument.MasterInstrument.TickSize;
 
             double currentPrice = lastRealtimePrice > 0 ? lastRealtimePrice : avgPrice;
             double tickSize = Instrument.MasterInstrument.TickSize;
@@ -2252,7 +2253,11 @@ namespace NinjaTrader.NinjaScript.AddOns {
             }
             public static double[] Protection(double average,int quantity,double point,double loss,double profit,int side,double tick) {
                 if(quantity<=0||point<=0||tick<=0||loss<=0||profit<=0||Math.Abs(side)!=1)throw new ArgumentException("Riesgo de cesta invÃ¡lido");
-                return new[]{Math.Round((average-side*loss/(quantity*point))/tick)*tick,Math.Round((average+side*profit/(quantity*point))/tick)*tick};
+                double rawSl=average-side*loss/(quantity*point);
+                double rawTp=average+side*profit/(quantity*point);
+                double sl=side==1?Math.Ceiling(rawSl/tick)*tick:Math.Floor(rawSl/tick)*tick;
+                double tp=side==1?Math.Ceiling(rawTp/tick)*tick:Math.Floor(rawTp/tick)*tick;
+                return new[]{sl,tp};
             }
         }
 
@@ -2364,18 +2369,6 @@ namespace NinjaTrader.NinjaScript.AddOns {
             if(RocketGridOrder(order))basket.Used.Add(order.Name);
             if(order.Name.StartsWith("ROCKET_TP_",StringComparison.OrdinalIgnoreCase)||order.Name.StartsWith("ROCKET_SL_",StringComparison.OrdinalIgnoreCase)){
                 basket.Closing=true;RocketCancelGrid(e.Execution.Account);
-                AccountRiskSettings s;
-                if(accountsConfig.TryGetValue(accName,out s)&&s.Status=="EN PROCESO"){
-                    if(order.Name.StartsWith("ROCKET_TP_",StringComparison.OrdinalIgnoreCase)&&s.Target>0&&s.TpUsd>=s.Target){
-                        s.Status="PASS";s.DailyStatus="TARGET_REACHED";s.Enabled=false;
-                        Print("RocketPass: [TP ALCANZADO] Cuenta "+accName+" completó objetivo. Avanzando automáticamente a la siguiente cuenta...");
-                        SaveConfiguration();
-                    }else if(order.Name.StartsWith("ROCKET_SL_",StringComparison.OrdinalIgnoreCase)&&s.MaxLoss>0&&s.SlUsd>=s.MaxLoss){
-                        s.Status="BURNED";s.DailyStatus="LOSS_LIMIT_REACHED";s.Enabled=false;
-                        Print("RocketPass: [SL ALCANZADO] Cuenta "+accName+" alcanzó stop máximo. Avanzando automáticamente a la siguiente cuenta...");
-                        SaveConfiguration();
-                    }
-                }
             }
             RocketSave();
         }
@@ -2390,19 +2383,23 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 double cash=acc.Get(AccountItem.CashValue,Currency.UsDollar),equity=cash+acc.Get(AccountItem.UnrealizedProfitLoss,Currency.UsDollar);
                 string day=DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd");
                 if(s.DailyStartBalance<=0 || s.LastResetDate!=day){s.LastResetDate=day;s.DailyStartBalance=cash;s.StartBalance=cash;s.DailyCommissions=0;s.DailyStatus="EN PROCESO";SaveConfiguration();}
-                double dailyFloating=equity-s.DailyStartBalance;
-                double dailyRealized=cash-s.DailyStartBalance;
-                if(dailyRealized<=0&&s.SessionRealizedPnl>0)dailyRealized=s.SessionRealizedPnl;
-                if(dailyRealized>=0&&s.SessionRealizedPnl<0)dailyRealized=s.SessionRealizedPnl;
+                double dailyComm=s.NinjaTraderHandlesCommissions?0:s.DailyCommissions;
+                int openQty=p==null?0:p.Quantity;
+                double commPerRt=s.CommissionPerContract>0?s.CommissionPerContract*2.0:4.50;
+                double closeCommEst=openQty*commPerRt+(openQty>0?Instrument.MasterInstrument.TickSize*Instrument.MasterInstrument.PointValue*openQty*2.0:0);
+                double dailyFloating=equity-s.DailyStartBalance-dailyComm;
+                double dailyRealized=cash-s.DailyStartBalance-dailyComm;
                 bool hasActivity=p!=null||s.SessionRealizedPnl!=0||s.TradesClosed>0;
                 if(hasActivity&&s.DailyStatus=="EN PROCESO") {
-                    if((s.Target>0&&(dailyRealized>=s.Target||dailyFloating>=s.Target))||(s.DailyProfitLimit>0&&(dailyRealized>=s.DailyProfitLimit||dailyFloating>=s.DailyProfitLimit))){
+                    if((s.Target>0&&(dailyRealized>=s.Target||(p!=null&&dailyFloating>=s.Target+closeCommEst)))||(s.DailyProfitLimit>0&&(dailyRealized>=s.DailyProfitLimit||(p!=null&&dailyFloating>=s.DailyProfitLimit+closeCommEst)))){
                         s.Status="PASS";s.DailyStatus="TARGET_REACHED";s.Enabled=false;b.Closing=true;
-                        Print("RocketPass: [TARGET] Cuenta "+name+" alcanzó objetivo ($"+dailyRealized.ToString("F2")+"). Deshabilitada, continuando con la siguiente cuenta...");
+                        Print("RocketPass: [TARGET NETO >= "+N(s.Target)+"] Cuenta "+name+" alcanzó objetivo ($"+dailyFloating.ToString("F2")+"). Deshabilitada, continuando con la siguiente cuenta...");
+                        SaveConfiguration();
                     }
-                    else if((s.MaxLoss>0&&(dailyRealized<=-s.MaxLoss||dailyFloating<=-s.MaxLoss))||(s.DailyLossLimit>0&&(dailyRealized<=-s.DailyLossLimit||dailyFloating<=-s.DailyLossLimit))){
+                    else if((s.MaxLoss>0&&(dailyRealized<=-s.MaxLoss||(p!=null&&dailyFloating<=-(s.MaxLoss-closeCommEst))))||(s.DailyLossLimit>0&&(dailyRealized<=-s.DailyLossLimit||(p!=null&&dailyFloating<=-(s.DailyLossLimit-closeCommEst))))){
                         s.Status="BURNED";s.DailyStatus="LOSS_LIMIT_REACHED";s.Enabled=false;b.Closing=true;
-                        Print("RocketPass: [STOP/MAX LOSS] Cuenta "+name+" alcanzó pérdida máxima ($"+dailyRealized.ToString("F2")+"). Deshabilitada, continuando con la siguiente cuenta...");
+                        Print("RocketPass: [STOP/MAX LOSS] Cuenta "+name+" alcanzó pérdida máxima ($"+dailyFloating.ToString("F2")+"). Deshabilitada, continuando con la siguiente cuenta...");
+                        SaveConfiguration();
                     }
                 }
                 if(b.Closing){
@@ -2426,7 +2423,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 if(s.MaxLoss>0)loss=Math.Min(loss,Math.Max(1.0,s.MaxLoss+dailyRealized));if(s.DailyLossLimit>0)loss=Math.Min(loss,Math.Max(1.0,s.DailyLossLimit+dailyRealized));
                 if(s.Target>0)profit=Math.Min(profit,Math.Max(1.0,s.Target-dailyRealized));if(s.DailyProfitLimit>0)profit=Math.Min(profit,Math.Max(1.0,s.DailyProfitLimit-dailyRealized));
                 if(loss<=0||profit<=0){b.Closing=true;RocketSave();continue;}
-                var protection=RocketMath.Protection(p.AveragePrice,p.Quantity,point,loss,profit,sign,tick);double sl=protection[0],tp=protection[1];
+                double grossProfit=profit+closeCommEst;
+                double grossLoss=Math.Max(tick*point*p.Quantity,loss-closeCommEst);
+                var protection=RocketMath.Protection(p.AveragePrice,p.Quantity,point,grossLoss,grossProfit,sign,tick);double sl=protection[0],tp=protection[1];
                 double quote=sign==1?Instrument.MarketData.Bid.Price:Instrument.MarketData.Ask.Price;
                 if(quote>0&&(sign*(quote-sl)<=0||sign*(tp-quote)<=0)){b.Closing=true;RocketSave();continue;}
                 RocketProtection(acc,s,p,sl,tp);
@@ -3257,8 +3256,9 @@ namespace NinjaTrader.NinjaScript.AddOns {
             if (eff.DailyLossLimit > 0 && dailyLossRoom > 0) tradeSlUsd = Math.Min(tradeSlUsd, dailyLossRoom);
             tradeSlUsd = Math.Max(1.0, tradeSlUsd);
 
-            double tpDelta = tradeTpUsd / (qty * ptVal);
-            double slDelta = tradeSlUsd / (qty * ptVal);
+            double commBuffer = qty * (settings.CommissionPerContract > 0 ? settings.CommissionPerContract * 2.0 : 4.50) + (Instrument.MasterInstrument.TickSize * ptVal * qty * 2.0);
+            double tpDelta = (tradeTpUsd + commBuffer) / (qty * ptVal);
+            double slDelta = Math.Max(Instrument.MasterInstrument.TickSize * ptVal * qty, tradeSlUsd - commBuffer) / (qty * ptVal);
 
             double tpPrice = 0.0;
             double slPrice = 0.0;
@@ -3277,8 +3277,8 @@ namespace NinjaTrader.NinjaScript.AddOns {
                 exitAction = OrderAction.Buy;
             }
 
-            tpPrice = Math.Round(tpPrice / Instrument.MasterInstrument.TickSize) * Instrument.MasterInstrument.TickSize;
-            slPrice = Math.Round(slPrice / Instrument.MasterInstrument.TickSize) * Instrument.MasterInstrument.TickSize;
+            tpPrice = (pos.MarketPosition == MarketPosition.Long ? Math.Ceiling(tpPrice / Instrument.MasterInstrument.TickSize) : Math.Floor(tpPrice / Instrument.MasterInstrument.TickSize)) * Instrument.MasterInstrument.TickSize;
+            slPrice = (pos.MarketPosition == MarketPosition.Long ? Math.Ceiling(slPrice / Instrument.MasterInstrument.TickSize) : Math.Floor(slPrice / Instrument.MasterInstrument.TickSize)) * Instrument.MasterInstrument.TickSize;
 
             double currentPrice = lastRealtimePrice > 0 ? lastRealtimePrice : avgPrice;
             double tickSize = Instrument.MasterInstrument.TickSize;
